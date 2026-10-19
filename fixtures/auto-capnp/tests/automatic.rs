@@ -204,6 +204,21 @@ fn exported_schema_and_official_cli_exchange_native_and_packed_messages() {
 #[rd::capnp_models(id = 0xd80e_54b1_1368_67c1)]
 mod previous {
     #[derive(Debug, PartialEq)]
+    pub enum Role {
+        #[model(capnp_ordinal = 0)]
+        Guest,
+        #[model(capnp_ordinal = 1)]
+        Admin,
+    }
+    #[derive(Debug, PartialEq)]
+    #[model(tag = "kind")]
+    pub enum Action {
+        #[model(capnp_ordinal = 0)]
+        Ping,
+        #[model(capnp_ordinal = 1)]
+        Update { name: String, count: u64 },
+    }
+    #[derive(Debug, PartialEq)]
     pub struct Record {
         #[model(capnp_ordinal = 0)]
         pub name: String,
@@ -214,6 +229,25 @@ mod previous {
 mod enclosing {
     #[rd::capnp_models(id = 0xd80e_54b1_1368_67c1)]
     pub mod reordered {
+        #[derive(Debug, PartialEq)]
+        pub enum Role {
+            #[model(capnp_ordinal = 1)]
+            Admin,
+            #[model(capnp_ordinal = 0)]
+            Guest,
+        }
+        #[derive(Debug, PartialEq)]
+        #[model(tag = "kind")]
+        pub enum Action {
+            Update {
+                #[model(capnp_ordinal = 2)]
+                count: u64,
+                #[model(capnp_ordinal = 1)]
+                name: String,
+            },
+            #[model(capnp_ordinal = 0)]
+            Ping,
+        }
         #[derive(Debug, PartialEq)]
         pub struct Record {
             #[model(capnp_ordinal = 1)]
@@ -260,4 +294,37 @@ fn pinned_ordinals_and_appended_fields_preserve_protocol_compatibility() {
     );
     assert_eq!(previous::CAPNP_SCHEMA_ID, reordered::CAPNP_SCHEMA_ID);
     assert_eq!(previous::CAPNP_SCHEMA_ID, extended::CAPNP_SCHEMA_ID);
+    for (old, next) in [
+        (previous::Role::Guest, reordered::Role::Guest),
+        (previous::Role::Admin, reordered::Role::Admin),
+    ] {
+        assert_eq!(old.dump_capnp().unwrap(), next.dump_capnp().unwrap());
+        assert_eq!(
+            reordered::Role::parse_capnp(&old.dump_capnp().unwrap()).unwrap(),
+            next
+        );
+    }
+    for (old, next) in [
+        (previous::Action::Ping, reordered::Action::Ping),
+        (
+            previous::Action::Update {
+                name: "stable".into(),
+                count: 42,
+            },
+            reordered::Action::Update {
+                name: "stable".into(),
+                count: 42,
+            },
+        ),
+    ] {
+        assert_eq!(old.dump_capnp().unwrap(), next.dump_capnp().unwrap());
+        assert_eq!(
+            reordered::Action::parse_capnp(&old.dump_capnp().unwrap()).unwrap(),
+            next
+        );
+        assert_eq!(
+            previous::Action::parse_capnp(&next.dump_capnp().unwrap()).unwrap(),
+            old
+        );
+    }
 }
