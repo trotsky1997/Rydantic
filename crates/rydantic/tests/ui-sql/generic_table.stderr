@@ -1,0 +1,5 @@
+error: SqlModel requires a concrete owned struct
+ --> tests/ui-sql/generic_table.rs:3:15
+  |
+3 | struct Generic<T> { #[sql(primary_key)] id:i64, value:T }
+  |               ^

@@ -1,0 +1,7 @@
+error: auto_increment requires primary_key
+ --> tests/ui-sql/auto_without_primary.rs:2:16
+  |
+2 | #[derive(Model,SqlModel)]
+  |                ^^^^^^^^
+  |
+  = note: this error originates in the derive macro `SqlModel` (in Nightly builds, run with -Z macro-backtrace for more info)

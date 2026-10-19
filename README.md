@@ -2,7 +2,9 @@
 
 [![CI](https://github.com/trotsky1997/Rydantic/actions/workflows/ci.yml/badge.svg)](https://github.com/trotsky1997/Rydantic/actions/workflows/ci.yml)
 
-Unified data models for Rust, currently **0.3.1**, with JSON and native Cap'n Proto support.
+Unified data models for Rust, currently **0.4.0**, with JSON, native Cap'n Proto, Axum HTTP adapters, and SQLx database models.
+
+Version 0.4 adds validated Axum JSON extractors/responses and SQLModel-style SQLite persistence on SQLx and Tokio. One model can define HTTP input, JSON Schema, database columns, and validated CRUD operations.
 
 Version 0.3 introduces `#[rydantic::capnp_models]`: infer a complete `.capnp` schema from Rust models, generate official Rust bindings, and connect each model automatically. No separate schema, generated source, or `build.rs` needs to be maintained.
 
@@ -16,7 +18,7 @@ Add the crates.io dependency to your Cargo.toml:
 
 ```toml
 [dependencies]
-rydantic = "0.3.1"
+rydantic = "0.4.0"
 ```
 
 ```rust
@@ -254,7 +256,7 @@ Optional flattened fields become `None` when all their keys are absent; partiall
 ## Dates and Decimal
 
 ```toml
-rydantic = { version = "0.3.1", features = ["chrono", "decimal"] }
+rydantic = { version = "0.4.0", features = ["chrono", "decimal"] }
 ```
 
 The `chrono` feature supports `NaiveDate`, `NaiveTime`, `NaiveDateTime`, `DateTime<Utc>`, and `DateTime<FixedOffset>`, re-exported through `rydantic::chrono`. Their formats are `YYYY-MM-DD`, `HH:MM:SS[.fraction]`, an ISO date-time without a time zone, and RFC 3339 date-times. Validation checks calendar dates, four-digit years, at most nine fractional-second digits, and RFC 3339 time zones. UTC types are converted to UTC.
@@ -359,7 +361,7 @@ Schemas can describe API documentation and tool arguments. Use model parsing at 
 The optional `dynamic` feature uses `jsonschema` to compile and reuse schemas at runtime. Network and file resolution are disabled in the default dependency configuration; local `$ref` references are supported.
 
 ```toml
-rydantic = { version = "0.3.1", features = ["dynamic"] }
+rydantic = { version = "0.4.0", features = ["dynamic"] }
 ```
 
 ```rust
@@ -384,6 +386,171 @@ Rust code can directly construct or modify ordinary models. Call `validate()` to
 
 For read-only access, use `User::parse_validated_json(...)` or `Validated::new(user)` to obtain a `Validated<User>` without `DerefMut`. `into_inner()` returns the ordinary model. Custom JsonType implementations with interior mutability are responsible for their own mutation rules.
 
+## Axum and Tokio
+
+Enable the `axum` feature to use Axum 0.8 adapters:
+
+```toml
+[dependencies]
+rydantic = { version = "0.4.0", features = ["axum"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net"] }
+```
+
+```rust
+use rydantic::{Model, axum::{Json, Router, routing::post}};
+
+#[derive(Model)]
+struct User {
+    #[model(trim, min_length = 2)]
+    name: String,
+    #[model(ge = 18)]
+    age: u8,
+}
+
+async fn create_user(Json(user): Json<User>) -> Json<User> {
+    Json(user)
+}
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let app = Router::new().route("/users", post(create_user));
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:3000").await?;
+    rydantic::axum::framework::serve(listener, app).await?;
+    Ok(())
+}
+```
+
+`rydantic::axum::Json<T>` reads raw JSON and applies model normalization and validation. It also supports collections such as `Json<Vec<User>>`. Responses revalidate the model, apply output aliases and exclusions, and set `Content-Type: application/json`. The complete Axum API is re-exported through `rydantic::axum::framework`; `Router` and `routing` are also available directly.
+
+| Failure | HTTP status |
+| --- | --- |
+| Invalid JSON syntax | 400 |
+| Missing or unsupported JSON content type | 415 |
+| Request body over Axum's configured limit | 413 |
+| Input type or model constraint errors | 422 |
+| Invalid model returned by a handler | 500 |
+
+Error bodies use `{"detail": [ValidationError, ...]}` and preserve field paths, codes, stages, and constraint parameters. Axum's `DefaultBodyLimit` applies, and `application/*+json` content types are supported.
+
+For asynchronous validators, extract `AsyncJson<T>` and await output validation explicitly:
+
+```rust
+use rydantic::axum::{AsyncJson, Rejection, framework::response::Response};
+
+async fn create_account(
+    AsyncJson(account): AsyncJson<Account>,
+) -> Result<Response, Rejection> {
+    AsyncJson(account).response().await
+}
+```
+
+Here `Account` is a model with asynchronous validators, as shown in the asynchronous validation section. Tokio provides the asynchronous runtime; Axum supplies the HTTP routing and extraction layer.
+
+## SQLModel-style database models
+
+Enable `sqlx` for SQLx 0.9 integration. The initial database backend is SQLite, with a bundled SQLite library and Tokio runtime support:
+
+```toml
+[dependencies]
+rydantic = { version = "0.4.0", features = ["axum", "sqlx"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+```
+
+```rust
+use rydantic::{Model, SqlModel, sqlx::sqlite::SqlitePoolOptions};
+
+#[derive(Debug, PartialEq, Model, SqlModel)]
+#[sql(table = "users")]
+struct User {
+    #[sql(primary_key, auto_increment)]
+    id: Option<i64>,
+    #[model(trim, min_length = 2)]
+    #[sql(unique)]
+    name: String,
+    #[model(ge = 18)]
+    #[sql(index)]
+    age: u8,
+}
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let pool = SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect("sqlite::memory:")
+        .await?;
+    User::create_table(&pool).await?;
+
+    let user = User::parse_json(r#"{"name":" Alice ","age":25}"#)?;
+    let mut stored = user.insert(&pool).await?;
+    let id = stored.id.expect("generated primary key");
+    assert_eq!(User::get(&pool, &id).await?.as_ref(), Some(&stored));
+    stored.age = 30;
+    let updated = stored.update(&pool).await?;
+    assert_eq!(updated.age, 30);
+    assert!(User::delete(&pool, &id).await?);
+    Ok(())
+}
+```
+
+Derive `Model` and `SqlModel` together. `Model` supplies JSON/Serde/schema/validation behavior; `SqlModel` adds table metadata, a validated SQLx `FromRow` implementation, and asynchronous persistence operations. Each table has one primary key and uses a concrete owned struct with named fields. SQLx is re-exported through `rydantic::sqlx`.
+
+| SQL attribute | Behavior |
+| --- | --- |
+| `#[sql(table = "users")]` | Set the table name; the default is the struct name in snake_case |
+| `#[sql(primary_key)]` | Declare the single primary-key field |
+| `#[sql(auto_increment)]` | Generate an `i64` or `Option<i64>` primary key when its value is zero or None |
+| `#[sql(rename = "display_name")]` | Set the database column name independently of JSON aliases |
+| `#[sql(unique)]` | Generate a database uniqueness constraint |
+| `#[sql(index)]` | Generate an index together with the table |
+| `#[sql(references = "users.id", on_delete = "cascade")]` | Add a foreign key; deletion policies include `no_action`, `restrict`, `cascade`, and `set_null` |
+| `#[sql(skip)]` | Keep a local field outside the table; provide a model default or optional field for row decoding |
+
+SQL identifiers are checked at compile time and quoted in generated statements. CRUD and filter values use bound parameters. Column metadata is exposed as `User::COLUMNS`; `create_table_sql()` and `create_index_sql()` expose generated DDL.
+
+### Queries and transactions
+
+```rust
+use rydantic::sql::{Compare, Order};
+
+let users = User::select()
+    .filter("age", Compare::GreaterOrEqual, &18u8)?
+    .order_by("name", Order::Ascending)?
+    .limit(20)
+    .offset(0)
+    .fetch_all(&pool)
+    .await?;
+
+let mut transaction = pool.begin().await?;
+let stored = user.insert(&mut transaction).await?;
+assert!(User::get(&mut transaction, &stored.id.unwrap()).await?.is_some());
+transaction.rollback().await?;
+```
+
+`where_eq`, comparison filters, ordering, limits, and offsets use checked column names. NULL equality/inequality becomes `IS NULL`/`IS NOT NULL`. Operations accept a pool, mutable connection, or SQLx transaction. Insert/update operations use a transaction or nested savepoint; failed constraints or returned-row validation roll back the write. Missing rows return `None` from `get`, `false` from `delete`, or `SqlError::NotFound` from `update`.
+
+Writes await synchronous and asynchronous model validation before acquiring a connection, then recheck returned rows synchronously before committing. Reads validate stored typed values and release acquired pooled connections before awaiting asynchronous callbacks. Caller-owned transactions retain their normal transaction lifetime. Normalization runs during JSON/model parsing; persistence checks preserve typed field values. Synchronous SQLx `query_as` uses the generated `FromRow` validator; models with asynchronous rules use the awaiting `SqlModel` entry points.
+
+SQLite storage mappings are INTEGER for booleans and integer types through 64 bits, REAL for floats, TEXT for strings, dates, Decimal and 128-bit integers, and BLOB for `Vec<u8>`. Unsigned 64-bit values must fit SQLite's signed integer range; conversions reject overflow. Decimal and 128-bit integer text storage preserves precision. SQL comparisons and ordering on those columns follow SQLite's text semantics. `Option<T>` maps to SQL NULL, and `Box<T>` uses its inner representation. Enable `chrono`/`decimal` for the corresponding field types.
+
+`create_table` creates missing tables and indexes. Use explicit SQLx migrations when changing an existing database schema. Foreign keys describe database references; application queries load related models. The table layer currently covers single-column keys and SQLite scalar columns, with `SqlValue` as the extension point for custom field representations.
+
+### Complete HTTP and database example
+
+The [sqlite_api example](https://github.com/trotsky1997/Rydantic/blob/main/crates/rydantic/examples/sqlite_api.rs) uses the same model for validated HTTP input, JSON responses, table creation and CRUD:
+
+```sh
+cargo run -p rydantic --example sqlite_api --features axum,sqlx
+# POST /users, GET /users, GET/PUT/DELETE /users/{id}
+curl -X POST http://127.0.0.1:3000/users \
+  -H 'Content-Type: application/json' \
+  -d '{"name":" Alice ","age":25}'
+
+# Run the example without starting a persistent server:
+cargo run -p rydantic --example sqlite_api --features axum,sqlx -- --smoke
+```
+
+The example defaults to an in-memory database. Set `DATABASE_URL='sqlite://app.db?mode=rwc'` for a local database file and `LISTEN_ADDR` for the bind address. With both integrations enabled, `SqlError` implements Axum responses: validation errors return 422, missing rows return 404, database constraint violations return 409, and other driver errors return a generic 500 response.
+
 ## Native Cap'n Proto
 
 With the `capnp` feature, models read and build fields in [official Cap'n Proto](https://capnproto.org/) schemas directly. The binary layout interoperates with official implementations in other languages and supports both standard and packed messages.
@@ -394,7 +561,7 @@ Add one dependency:
 
 ```toml
 [dependencies]
-rydantic = { version = "0.3.1", features = ["capnp"] }
+rydantic = { version = "0.4.0", features = ["capnp"] }
 ```
 
 Install the official `capnp` compiler when setting up the development environment: `brew install capnp` on macOS, or `sudo apt-get install capnproto` on Debian/Ubuntu. During compilation, the attribute macro invokes that compiler and uses the official `capnpc` generator for Rust bindings. Set `RYDANTIC_CAPNP_COMPILER` to use a specific compiler executable.
@@ -478,7 +645,7 @@ Existing `.capnp` protocols can use explicit bindings:
 
 ```toml
 [dependencies]
-rydantic = { version = "0.3.1", features = ["capnp"] }
+rydantic = { version = "0.4.0", features = ["capnp"] }
 capnp = { version = "0.27", features = ["unaligned"] }
 
 [build-dependencies]
@@ -574,7 +741,7 @@ Owned models use `JsonType`/`Model`; borrowed models use `BorrowType<'de>`/`Borr
 
 Explicit `Value` fields, `parse_value` inputs, `before` callbacks, and custom types implementing only `decode(Value, …)` use Value through their respective interfaces. Native scalar types reuse lightweight scalar adapters. Custom types can override `JsonType::decode_input` to accept `Input::Borrowed` directly. Arbitrary JSON that requires no traversal can be stored as `Box<RawValue>`, preserving its source text and numeric notation.
 
-Owned-model entry points from 0.1 remain available. `StringType`, `NumericType`, and `LengthType` are independent capability markers; generic helpers must explicitly declare `JsonType` or `BorrowType` bounds. Custom field types also implement `AsyncCheck` and satisfy `Sync`; existing synchronous types can provide an empty `AsyncCheck` implementation. Install with `rydantic = "0.3.1"` from crates.io or use the GitHub v0.3.1 tag. Workspace members use local path dependencies.
+Owned-model entry points from 0.1 remain available. `StringType`, `NumericType`, and `LengthType` are independent capability markers; generic helpers must explicitly declare `JsonType` or `BorrowType` bounds. Custom field types also implement `AsyncCheck` and satisfy `Sync`; existing synchronous types can provide an empty `AsyncCheck` implementation. Install with `rydantic = "0.4.0"` from crates.io or use the GitHub v0.4.0 tag. Workspace members use local path dependencies.
 
 ## Validation
 

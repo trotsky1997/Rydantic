@@ -3,6 +3,14 @@
 //! `Json<T>` validates synchronous models on ingress and response serialization.
 //! `AsyncJson<T>` awaits asynchronous rules; call its `response().await` method
 //! when returning a model with asynchronous validators.
+//!
+//! ```
+//! use rydantic::{Model, axum::{Json, Router, routing::post}};
+//! #[derive(Model)]
+//! struct User { #[model(trim, min_length = 2)] name: String }
+//! async fn echo(Json(user): Json<User>) -> Json<User> { Json(user) }
+//! let _: Router = Router::new().route("/users", post(echo));
+//! ```
 use crate::{
     AsyncCheck, Context, Input, JsonType, RawValue, Stage, ValidationError, ValidationErrors,
 };
@@ -57,6 +65,11 @@ impl std::fmt::Display for Rejection {
     }
 }
 impl std::error::Error for Rejection {}
+impl From<ValidationErrors> for Rejection {
+    fn from(errors: ValidationErrors) -> Self {
+        Self::validation(errors)
+    }
+}
 impl From<JsonRejection> for Rejection {
     fn from(error: JsonRejection) -> Self {
         let status = error.status();

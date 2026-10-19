@@ -5,4 +5,4 @@ edition.workspace = true
 publish = false
 
 [dependencies]
-rd = { package = "rydantic", path = "../../crates/rydantic" }
+rd = { package = "rydantic", path = "../../crates/rydantic", features = ["axum", "sqlx"] }

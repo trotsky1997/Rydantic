@@ -1,0 +1,5 @@
+error: SqlModel requires one #[sql(primary_key)] field
+ --> tests/ui-sql/no_primary_key.rs:3:8
+  |
+3 | struct Missing { name:String }
+  |        ^^^^^^^

@@ -253,3 +253,182 @@ async fn foreign_keys_and_cascade_are_enforced_by_sqlite() {
     User::delete(&db, &parent.id.unwrap()).await.unwrap();
     assert!(Post::select().fetch_all(&db).await.unwrap().is_empty());
 }
+
+#[derive(Debug, PartialEq, Model, SqlModel)]
+#[sql(table = "select")]
+struct Renamed {
+    #[sql(primary_key, rename = "primary_key")]
+    key: String,
+    #[model(rename = "displayName")]
+    #[sql(rename = "display_name")]
+    name: String,
+}
+#[tokio::test]
+async fn sql_names_are_independent_of_json_aliases_and_quoted_identifiers_work() {
+    let db = pool().await;
+    Renamed::create_table(&db).await.unwrap();
+    let value = Renamed::parse_json(r#"{"key":"one","displayName":"Alice"}"#).unwrap();
+    assert_eq!(value.insert(&db).await.unwrap(), value);
+    assert_eq!(Renamed::get(&db, &"one".into()).await.unwrap(), Some(value));
+    assert!(!Renamed::COLUMNS[0].nullable);
+}
+
+#[derive(Debug, Model, SqlModel)]
+struct Generated {
+    #[sql(primary_key, auto_increment)]
+    #[model(ge = 100)]
+    id: Option<i64>,
+}
+#[tokio::test]
+async fn invalid_returning_rows_roll_back_the_entire_write() {
+    let db = pool().await;
+    Generated::create_table(&db).await.unwrap();
+    assert!(matches!(
+        Generated { id: None }.insert(&db).await,
+        Err(SqlError::Validation(_))
+    ));
+    assert!(Generated::select().fetch_all(&db).await.unwrap().is_empty());
+    Generated { id: Some(100) }.insert(&db).await.unwrap();
+    assert_eq!(
+        Generated { id: None }.insert(&db).await.unwrap().id,
+        Some(101)
+    );
+}
+
+async fn not_reserved(name: &str) -> Result<(), rydantic::ValidationError> {
+    tokio::task::yield_now().await;
+    if name == "reserved" {
+        Err(rydantic::ValidationError::new(
+            "reserved",
+            "name is reserved",
+        ))
+    } else {
+        Ok(())
+    }
+}
+#[derive(Debug, Model, SqlModel)]
+struct AsyncRecord {
+    #[sql(primary_key)]
+    id: i64,
+    #[model(async_validate=not_reserved)]
+    name: String,
+}
+#[tokio::test]
+async fn database_reads_and_writes_await_model_validators() {
+    let db = pool().await;
+    AsyncRecord::create_table(&db).await.unwrap();
+    assert!(matches!(
+        AsyncRecord {
+            id: 1,
+            name: "reserved".into()
+        }
+        .insert(&db)
+        .await,
+        Err(SqlError::Validation(_))
+    ));
+    assert!(AsyncRecord::select()
+        .fetch_all(&db)
+        .await
+        .unwrap()
+        .is_empty());
+    AsyncRecord {
+        id: 1,
+        name: "allowed".into(),
+    }
+    .insert(&db)
+    .await
+    .unwrap();
+    assert_eq!(
+        AsyncRecord::get(&db, &1).await.unwrap().unwrap().name,
+        "allowed"
+    );
+    assert!(
+        sqlx::query_as::<_, AsyncRecord>("SELECT * FROM async_record")
+            .fetch_one(&db)
+            .await
+            .is_err()
+    );
+    sqlx::query("UPDATE async_record SET name = 'reserved'")
+        .execute(&db)
+        .await
+        .unwrap();
+    assert!(matches!(
+        AsyncRecord::get(&db, &1).await,
+        Err(SqlError::Validation(_))
+    ));
+}
+
+static CHECK_POOL: std::sync::OnceLock<SqlitePool> = std::sync::OnceLock::new();
+async fn database_check(_: &str) -> Result<(), rydantic::ValidationError> {
+    sqlx::query_scalar::<_, i64>("SELECT 1")
+        .fetch_one(CHECK_POOL.get().unwrap())
+        .await
+        .map(|_| ())
+        .map_err(|_| rydantic::ValidationError::custom("database check failed"))
+}
+#[derive(Debug, Model, SqlModel)]
+struct DatabaseChecked {
+    #[sql(primary_key)]
+    id: i64,
+    #[model(async_validate=database_check)]
+    name: String,
+}
+#[tokio::test]
+async fn async_validators_can_reuse_a_single_connection_pool() {
+    let db = pool().await;
+    CHECK_POOL.set(db.clone()).unwrap();
+    DatabaseChecked::create_table(&db).await.unwrap();
+    let operations = async {
+        let mut value = DatabaseChecked {
+            id: 1,
+            name: "Alice".into(),
+        }
+        .insert(&db)
+        .await
+        .unwrap();
+        value.name = "Bob".into();
+        value.update(&db).await.unwrap();
+        assert_eq!(
+            DatabaseChecked::get(&db, &1).await.unwrap().unwrap().name,
+            "Bob"
+        );
+        assert_eq!(
+            DatabaseChecked::select()
+                .fetch_all(&db)
+                .await
+                .unwrap()
+                .len(),
+            1
+        );
+    };
+    tokio::time::timeout(std::time::Duration::from_secs(3), operations)
+        .await
+        .unwrap();
+    db.close().await;
+}
+
+#[cfg(all(feature = "chrono", feature = "decimal"))]
+#[tokio::test]
+async fn dates_and_decimal_roundtrip_as_exact_text() {
+    #[derive(Debug, PartialEq, Model, SqlModel)]
+    struct Payment {
+        #[sql(primary_key)]
+        id: i64,
+        date: rydantic::chrono::NaiveDate,
+        amount: rydantic::rust_decimal::Decimal,
+    }
+    let db = pool().await;
+    Payment::create_table(&db).await.unwrap();
+    let value = Payment {
+        id: 1,
+        date: rydantic::chrono::NaiveDate::from_ymd_opt(2024, 2, 29).unwrap(),
+        amount: "12345678901234567890.123456789".parse().unwrap(),
+    };
+    assert_eq!(value.insert(&db).await.unwrap(), value);
+    assert_eq!(Payment::get(&db, &1).await.unwrap(), Some(value));
+    let amount: String = sqlx::query_scalar("SELECT amount FROM payment")
+        .fetch_one(&db)
+        .await
+        .unwrap();
+    assert_eq!(amount, "12345678901234567890.123456789");
+}

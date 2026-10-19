@@ -4,4 +4,6 @@ fn invalid_declarations_and_mutation_are_compile_errors() {
     tests.compile_fail("tests/ui/*.rs");
     #[cfg(feature = "capnp")]
     tests.compile_fail("tests/ui-capnp/*.rs");
+    #[cfg(feature = "sqlx")]
+    tests.compile_fail("tests/ui-sql/*.rs");
 }

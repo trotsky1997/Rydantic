@@ -62,6 +62,8 @@ async fn real_tcp_http_server_runs_validated_sqlite_crud_on_tokio() {
         let (status, body) = http(address, "POST", "/users", r#"{"name":"Alice","age":25}"#).await;
         assert_eq!(status, 409);
         assert_eq!(body["detail"][0]["code"], "sql_constraint");
+        assert_eq!(body["detail"][0]["loc"], rydantic::json!([]));
+        assert_eq!(body["detail"][0]["stage"], "validate");
         assert!(!body.to_string().contains("UNIQUE"));
         let (status, body) = http(address, "PUT", "/users/1", r#"{"name":" Bob ","age":30}"#).await;
         assert_eq!(status, 200);

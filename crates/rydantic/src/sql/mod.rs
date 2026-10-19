@@ -1,4 +1,25 @@
 //! SQLModel-style SQLite persistence backed by SQLx and Tokio.
+//!
+//! ```
+//! use rydantic::{Model, SqlModel, sqlx::sqlite::SqlitePoolOptions};
+//! #[derive(Debug, PartialEq, Model, SqlModel)]
+//! struct Note {
+//!     #[sql(primary_key, auto_increment)]
+//!     id: Option<i64>,
+//!     #[model(min_length = 1)]
+//!     text: String,
+//! }
+//! # async fn run() -> Result<(), Box<dyn std::error::Error>> {
+//! let pool = SqlitePoolOptions::new().max_connections(1)
+//!     .connect("sqlite::memory:").await?;
+//! Note::create_table(&pool).await?;
+//! let stored = Note::parse_json(r#"{"text":"hello"}"#)?.insert(&pool).await?;
+//! assert_eq!(stored.id, Some(1));
+//! assert_eq!(Note::get(&pool, &1).await?.as_ref(), Some(&stored));
+//! # Ok(()) }
+//! # tokio::runtime::Runtime::new()?.block_on(run())?;
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
 mod value;
 use crate::{AsyncCheck, Context, Model, ValidationError, ValidationErrors};
 use sqlx::{sqlite::SqliteRow, Acquire, QueryBuilder, Sqlite};
@@ -99,9 +120,10 @@ pub struct Column {
 /// SQLite table and CRUD operations generated from one Rydantic model.
 ///
 /// Operations accept a pool, connection, or mutable SQLx transaction through
-/// `Acquire`. Writes validate before executing and revalidate returned rows
-/// inside a transaction/savepoint. Row reads validate stored typed values;
-/// normalization remains part of model parsing.
+/// `Acquire`. Writes await validation before acquiring a connection and check
+/// returned rows synchronously inside a transaction/savepoint. Pooled reads
+/// release their connection before awaiting model validators. Normalization
+/// remains part of model parsing.
 pub trait SqlModel: Model + AsyncCheck + Send + 'static {
     type Key: SqlValue;
     const TABLE: &'static str;
@@ -230,7 +252,7 @@ pub trait SqlModel: Model + AsyncCheck + Send + 'static {
             query.push(format!(" RETURNING {}", column_list::<Self>()));
             let mut transaction = connection.begin().await?;
             let row = query.build().fetch_one(&mut *transaction).await?;
-            let value = checked_row::<Self>(&row).await?;
+            let value = checked_write_row::<Self>(&row)?;
             transaction.commit().await?;
             Ok(value)
         }
@@ -267,7 +289,8 @@ pub trait SqlModel: Model + AsyncCheck + Send + 'static {
                 self.bind_column(*index, &mut query)?;
             }
             query.push(format!(" WHERE {} = ", quoted(Self::primary_key().name)));
-            key.bind(&mut query)?;
+            key.bind(&mut query)
+                .map_err(|e| e.at(Self::primary_key().name))?;
             query.push(format!(" RETURNING {}", column_list::<Self>()));
             let mut transaction = connection.begin().await?;
             let row = query
@@ -275,7 +298,7 @@ pub trait SqlModel: Model + AsyncCheck + Send + 'static {
                 .fetch_optional(&mut *transaction)
                 .await?
                 .ok_or(SqlError::NotFound)?;
-            let value = checked_row::<Self>(&row).await?;
+            let value = checked_write_row::<Self>(&row)?;
             transaction.commit().await?;
             Ok(value)
         }
@@ -290,9 +313,12 @@ pub trait SqlModel: Model + AsyncCheck + Send + 'static {
         async move {
             let mut query = select_query::<Self>();
             query.push(format!(" WHERE {} = ", quoted(Self::primary_key().name)));
-            key.bind(&mut query)?;
+            key.bind(&mut query)
+                .map_err(|e| e.at(Self::primary_key().name))?;
             let mut connection = connection.acquire().await?;
-            match query.build().fetch_optional(&mut *connection).await? {
+            let row = query.build().fetch_optional(&mut *connection).await?;
+            drop(connection);
+            match row {
                 Some(row) => checked_row::<Self>(&row).await.map(Some),
                 None => Ok(None),
             }
@@ -311,7 +337,8 @@ pub trait SqlModel: Model + AsyncCheck + Send + 'static {
                 quoted(Self::TABLE),
                 quoted(Self::primary_key().name)
             ));
-            key.bind(&mut query)?;
+            key.bind(&mut query)
+                .map_err(|e| e.at(Self::primary_key().name))?;
             let mut connection = connection.acquire().await?;
             Ok(query
                 .build()
@@ -349,6 +376,13 @@ fn select_query<T: SqlModel>() -> QueryBuilder<Sqlite> {
 async fn checked_row<T: SqlModel>(row: &SqliteRow) -> Result<T, SqlError> {
     let value = T::decode_row(row)?;
     value.validate_async().await?;
+    Ok(value)
+}
+fn checked_write_row<T: SqlModel>(row: &SqliteRow) -> Result<T, SqlError> {
+    let value = T::decode_row(row)?;
+    let mut ctx = Context::new();
+    value.validate_into(&mut ctx);
+    ctx.result()?;
     Ok(value)
 }
 
@@ -476,6 +510,7 @@ impl<T: SqlModel> Select<T> {
         }
         let mut connection = connection.acquire().await?;
         let rows = self.query.build().fetch_all(&mut *connection).await?;
+        drop(connection);
         let mut values = Vec::with_capacity(rows.len());
         for row in rows {
             values.push(checked_row::<T>(&row).await?);
@@ -519,10 +554,7 @@ impl ::axum::response::IntoResponse for SqlError {
                 "database operation failed",
             ),
         };
-        (
-            status,
-            ::axum::Json(crate::json!({"detail":[{"code":code,"message":message}]})),
-        )
-            .into_response()
+        let error = ValidationError::new(code, message);
+        (status, ::axum::Json(crate::json!({"detail":[error]}))).into_response()
     }
 }
