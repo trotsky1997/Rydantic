@@ -297,7 +297,7 @@ struct Account {
 
 包含异步规则的模型及其父模型，使用 `parse_json_async`／`parse_value_async`、`validate_async`、`dump_async`／`dump_json_async`。同步解析、Serde 和同步 dump 会返回 `async_validation_required`。拥有所有权的模型可使用 `parse_validated_json_async`／`AsyncValidated::new`，其只读结果支持 Serde 序列化。借用模型也支持异步解析、校验和 dump。
 
-自定义类型通过 `AsyncCheck` 提供异步遍历；存在异步规则时，`JsonType::async_required`／`BorrowType::async_required` 需返回对应元数据。库本身无需依赖执行器。`asynchronous` 示例使用开发依赖 Tokio。
+derive 生成的异步支持要求字段类型实现 `AsyncCheck`，该 trait 要求 `Sync`。纯同步自定义类型可以添加空实现 `impl AsyncCheck for MyType {}`；自定义类型通过它提供异步遍历。存在异步规则时，`JsonType::async_required`／`BorrowType::async_required` 需返回对应元数据。库本身无需依赖执行器。`asynchronous` 示例使用开发依赖 Tokio。
 
 ## 流式解析
 
@@ -388,7 +388,7 @@ Rust 中可直接构造或修改普通模型。调用 `validate()` 检查当前�
 
 拥有所有权的模型使用 `JsonType`／`Model`，借用模型使用 `BorrowType<'de>`／`BorrowModel<'de>`。借用路径基于 `RawValue` 保留字符串引用；拥有所有权的路径在单个文档内使用 `serde_json::Value`。两条路径均支持自定义类型扩展。
 
-0.1 的拥有所有权的模型入口继续可用。`StringType`／`NumericType`／`LengthType` 作为独立能力标记，泛型辅助函数需要显式声明 `JsonType` 或 `BorrowType` 约束。通过 GitHub 的 v0.2.0 标签接入；工作区内部使用本地路径依赖，尚未发布到 crates.io。
+0.1 的拥有所有权的模型入口继续可用。`StringType`／`NumericType`／`LengthType` 作为独立能力标记，泛型辅助函数需要显式声明 `JsonType` 或 `BorrowType` 约束。 自定义字段类型还需实现 `AsyncCheck` 并满足 `Sync`；原有纯同步类型可使用空的 `AsyncCheck` 实现。通过 GitHub 的 v0.2.0 标签接入；工作区内部使用本地路径依赖，尚未发布到 crates.io。
 
 ## 验证
 
