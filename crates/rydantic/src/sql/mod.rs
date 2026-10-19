@@ -22,9 +22,38 @@
 //! ```
 mod value;
 use crate::{AsyncCheck, Context, Model, ValidationError, ValidationErrors};
-use sqlx::{sqlite::SqliteRow, Acquire, QueryBuilder, Sqlite};
+use sqlx::{
+    pool::PoolConnection, sqlite::SqliteRow, Acquire, QueryBuilder, Sqlite, SqliteConnection,
+};
 use std::{future::Future, marker::PhantomData};
 pub use value::{AutoKey, Key, SqlType, SqlValue};
+
+// SQLite extended result codes store their primary result in the low byte.
+#[cfg(feature = "axum")]
+const SQLITE_CONSTRAINT: u32 = 19;
+
+/// Whether dropping an acquired handle returns its connection to a pool.
+///
+/// SQL operations await asynchronous model checks only for pool-owned handles.
+/// Borrowed connections and transactions may retain the pool's only slot.
+pub trait ValidationConnection {
+    const RELEASES_POOL_SLOT: bool;
+}
+impl ValidationConnection for PoolConnection<Sqlite> {
+    const RELEASES_POOL_SLOT: bool = true;
+}
+impl ValidationConnection for &mut SqliteConnection {
+    const RELEASES_POOL_SLOT: bool = false;
+}
+fn check_validation_connection<T: SqlModel, C: ValidationConnection>() -> Result<(), SqlError> {
+    if !C::RELEASES_POOL_SLOT && T::async_required(&mut std::collections::HashSet::new()) {
+        return Err(field_error(
+            "sql_async_connection",
+            "async model checks require a pool; a borrowed connection or transaction retains its connection",
+        ));
+    }
+    Ok(())
+}
 
 /// Model validation errors remain distinct from driver and schema errors.
 #[derive(Debug)]
@@ -122,8 +151,10 @@ pub struct Column {
 /// Operations accept a pool, connection, or mutable SQLx transaction through
 /// `Acquire`. Writes await validation before acquiring a connection and check
 /// returned rows synchronously inside a transaction/savepoint. Pooled reads
-/// release their connection before awaiting model validators. Normalization
-/// remains part of model parsing.
+/// release their connection before awaiting model validators. Models with async
+/// rules require a pool; borrowed connections and transactions return a
+/// `sql_async_connection` error before awaiting a check. Normalization remains
+/// part of model parsing.
 pub trait SqlModel: Model + AsyncCheck + Send + 'static {
     type Key: SqlValue;
     const TABLE: &'static str;
@@ -213,8 +244,10 @@ pub trait SqlModel: Model + AsyncCheck + Send + 'static {
     fn insert<'c, A>(&self, connection: A) -> impl Future<Output = Result<Self, SqlError>> + Send
     where
         A: Acquire<'c, Database = Sqlite> + Send,
+        A::Connection: ValidationConnection,
     {
         async move {
+            check_validation_connection::<Self, A::Connection>()?;
             self.validate_async().await?;
             if self.key().is_none() && !Self::primary_key().auto_increment {
                 return Err(field_error(
@@ -260,8 +293,10 @@ pub trait SqlModel: Model + AsyncCheck + Send + 'static {
     fn update<'c, A>(&self, connection: A) -> impl Future<Output = Result<Self, SqlError>> + Send
     where
         A: Acquire<'c, Database = Sqlite> + Send,
+        A::Connection: ValidationConnection,
     {
         async move {
+            check_validation_connection::<Self, A::Connection>()?;
             self.validate_async().await?;
             let key = self.key().ok_or_else(|| {
                 field_error("sql_primary_key_missing", "update requires a primary key")
@@ -309,8 +344,10 @@ pub trait SqlModel: Model + AsyncCheck + Send + 'static {
     ) -> impl Future<Output = Result<Option<Self>, SqlError>> + Send
     where
         A: Acquire<'c, Database = Sqlite> + Send,
+        A::Connection: ValidationConnection,
     {
         async move {
+            check_validation_connection::<Self, A::Connection>()?;
             let mut query = select_query::<Self>();
             query.push(format!(" WHERE {} = ", quoted(Self::primary_key().name)));
             key.bind(&mut query)
@@ -489,7 +526,9 @@ impl<T: SqlModel> Select<T> {
     pub async fn fetch_all<'c, A>(mut self, connection: A) -> Result<Vec<T>, SqlError>
     where
         A: Acquire<'c, Database = Sqlite> + Send,
+        A::Connection: ValidationConnection,
     {
+        check_validation_connection::<T, A::Connection>()?;
         for (index, (column, order)) in self.order.iter().enumerate() {
             self.query
                 .push(if index == 0 { " ORDER BY " } else { ", " });
@@ -538,9 +577,10 @@ impl ::axum::response::IntoResponse for SqlError {
                 "unknown model column",
             ),
             Self::Database(sqlx::Error::Database(ref error))
-                if error.is_unique_violation()
-                    || error.is_foreign_key_violation()
-                    || error.is_check_violation() =>
+                if error
+                    .code()
+                    .and_then(|code| code.parse::<u32>().ok())
+                    .is_some_and(|code| code & 0xff == SQLITE_CONSTRAINT) =>
             {
                 (
                     StatusCode::CONFLICT,

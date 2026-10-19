@@ -1,7 +1,7 @@
-use crate::{attrs, default_expr, fields};
+use crate::{attrs, field_value, fields, Mode};
 use heck::ToSnakeCase;
 use proc_macro2::{Span, TokenStream as Tokens};
-use quote::{format_ident, quote};
+use quote::{format_ident, quote, quote_spanned};
 use std::collections::HashSet;
 use syn::{spanned::Spanned, Data, DeriveInput, Fields, LitStr};
 
@@ -154,6 +154,7 @@ pub(super) fn expand(input: DeriveInput) -> syn::Result<Tokens> {
     let mut reads = Vec::new();
     let mut bindings = Vec::new();
     let mut included = Vec::new();
+    let mut checks = Vec::new();
     let mut names = HashSet::new();
     let mut primary = None;
     for (field, original) in fields.iter().zip(data.fields.iter()) {
@@ -161,13 +162,20 @@ pub(super) fn expand(input: DeriveInput) -> syn::Result<Tokens> {
         let ident = &field.ident;
         let ty = &field.ty;
         if options.skip {
-            let value = if let Some(default) = default_expr(field, false) {
-                default
-            } else {
-                let location = &field.input;
-                quote!(<#ty as #rd::JsonType>::missing().ok_or_else(||#rd::sqlx::Error::Decode(::std::boxed::Box::new(#rd::ValidationErrors::from(#rd::ValidationError::new("sql_default","skipped SQL field requires a default").at(#location)))))?)
-            };
-            reads.push(quote!(#ident:#value));
+            let location = &field.input;
+            let value = field_value(
+                field,
+                quote!(::core::option::Option::<#rd::Input<'_>>::None),
+                &Mode {
+                    rd: &rd,
+                    borrow: false,
+                },
+            );
+            reads.push(quote!(#ident:{
+                let mut ctx=#rd::Context::new();
+                let value=ctx.at(#location,|__rydantic_ctx|{#value});
+                ctx.finish(value).map_err(|error|#rd::sqlx::Error::Decode(::std::boxed::Box::new(error)))?
+            }));
             continue;
         }
         let column = options
@@ -182,6 +190,12 @@ pub(super) fn expand(input: DeriveInput) -> syn::Result<Tokens> {
         let auto = options.auto_increment;
         let unique = options.unique;
         let indexed = options.index;
+        if options.on_delete.as_deref() == Some("set_null") {
+            checks.push(quote_spanned!(ty.span()=>
+                const _: () = assert!(<#ty as #rd::sql::SqlValue>::NULLABLE && !#pk,
+                    "on_delete = set_null requires a nullable non-primary-key column");
+            ));
+        }
         if pk {
             if primary.is_some() {
                 return Err(syn::Error::new(
@@ -223,6 +237,7 @@ pub(super) fn expand(input: DeriveInput) -> syn::Result<Tokens> {
         ));
     };
     Ok(quote! {
+        #(#checks)*
         impl #rd::SqlModel for #name {
             type Key=<#key_ty as #rd::sql::Key>::Value;
             const TABLE:&'static str=#table;

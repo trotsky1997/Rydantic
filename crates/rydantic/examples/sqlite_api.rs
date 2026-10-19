@@ -88,8 +88,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("Validated HTTP -> SQLite -> JSON: OK");
         return Ok(());
     }
-    let address = std::env::var("LISTEN_ADDR").unwrap_or_else(|_| "127.0.0.1:3000".into());
-    let listener = tokio::net::TcpListener::bind(&address).await?;
+    let address: std::net::SocketAddr = std::env::var("LISTEN_ADDR")
+        .unwrap_or_else(|_| "127.0.0.1:3000".into())
+        .parse()?;
+    if !address.ip().is_loopback() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "the unauthenticated demo requires a loopback LISTEN_ADDR",
+        )
+        .into());
+    }
+    let listener = tokio::net::TcpListener::bind(address).await?;
     println!("Listening on http://{}", listener.local_addr()?);
     rydantic::axum::framework::serve(listener, router(pool)).await?;
     Ok(())

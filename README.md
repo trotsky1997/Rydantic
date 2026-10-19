@@ -502,7 +502,7 @@ Derive `Model` and `SqlModel` together. `Model` supplies JSON/Serde/schema/valid
 | `#[sql(rename = "display_name")]` | Set the database column name independently of JSON aliases |
 | `#[sql(unique)]` | Generate a database uniqueness constraint |
 | `#[sql(index)]` | Generate an index together with the table |
-| `#[sql(references = "users.id", on_delete = "cascade")]` | Add a foreign key; deletion policies include `no_action`, `restrict`, `cascade`, and `set_null` |
+| `#[sql(references = "users.id", on_delete = "cascade")]` | Add a foreign key; deletion policies include `no_action`, `restrict`, `cascade`, and `set_null` (requires a nullable non-key column) |
 | `#[sql(skip)]` | Keep a local field outside the table; provide a model default or optional field for row decoding |
 
 SQL identifiers are checked at compile time and quoted in generated statements. CRUD and filter values use bound parameters. Column metadata is exposed as `User::COLUMNS`; `create_table_sql()` and `create_index_sql()` expose generated DDL.
@@ -528,7 +528,7 @@ transaction.rollback().await?;
 
 `where_eq`, comparison filters, ordering, limits, and offsets use checked column names. NULL equality/inequality becomes `IS NULL`/`IS NOT NULL`. Operations accept a pool, mutable connection, or SQLx transaction. Insert/update operations use a transaction or nested savepoint; failed constraints or returned-row validation roll back the write. Missing rows return `None` from `get`, `false` from `delete`, or `SqlError::NotFound` from `update`.
 
-Writes await synchronous and asynchronous model validation before acquiring a connection, then recheck returned rows synchronously before committing. Reads validate stored typed values and release acquired pooled connections before awaiting asynchronous callbacks. Caller-owned transactions retain their normal transaction lifetime. Normalization runs during JSON/model parsing; persistence checks preserve typed field values. Synchronous SQLx `query_as` uses the generated `FromRow` validator; models with asynchronous rules use the awaiting `SqlModel` entry points.
+Writes await synchronous and asynchronous model validation before acquiring a connection, then recheck returned rows synchronously before committing. Reads validate stored typed values and release acquired pooled connections before awaiting asynchronous callbacks. Models with asynchronous rules require a pool: insert, update, get and select return `sql_async_connection` immediately for borrowed connections and transactions, which can otherwise hold the only pool slot needed by a callback. Synchronous models support all three connection forms. Normalization runs during JSON/model parsing; persistence checks preserve stored typed values. Skipped fields use the same default preparation, `before` callbacks, and normalization as a missing JSON field. Synchronous SQLx `query_as` uses the generated `FromRow` validator; models with asynchronous rules use the awaiting `SqlModel` entry points.
 
 SQLite storage mappings are INTEGER for booleans and integer types through 64 bits, REAL for floats, TEXT for strings, dates, Decimal and 128-bit integers, and BLOB for `Vec<u8>`. Unsigned 64-bit values must fit SQLite's signed integer range; conversions reject overflow. Decimal and 128-bit integer text storage preserves precision. SQL comparisons and ordering on those columns follow SQLite's text semantics. `Option<T>` maps to SQL NULL, and `Box<T>` uses its inner representation. Enable `chrono`/`decimal` for the corresponding field types.
 
@@ -549,7 +549,7 @@ curl -X POST http://127.0.0.1:3000/users \
 cargo run -p rydantic --example sqlite_api --features axum,sqlx -- --smoke
 ```
 
-The example defaults to an in-memory database. Set `DATABASE_URL='sqlite://app.db?mode=rwc'` for a local database file and `LISTEN_ADDR` for the bind address. With both integrations enabled, `SqlError` implements Axum responses: validation errors return 422, missing rows return 404, database constraint violations return 409, and other driver errors return a generic 500 response.
+The example defaults to an in-memory database and only accepts loopback bind addresses. Set `DATABASE_URL='sqlite://app.db?mode=rwc'` for a local database file and `LISTEN_ADDR` for another loopback address or port. With both integrations enabled, `SqlError` implements Axum responses: validation errors return 422, missing rows return 404, database constraint violations return 409, and other driver errors return a generic 500 response.
 
 ## Native Cap'n Proto
 
