@@ -256,3 +256,35 @@ fn schema_keeps_large_integer_constraints_exact() {
         );
     }
 }
+
+#[test]
+fn weaker_length_rules_preserve_fixed_array_bounds() {
+    #[derive(Model)]
+    struct Fixed {
+        #[model(min_length = 1, max_length = 5)]
+        values: [u8; 3],
+    }
+    let schema = Fixed::json_schema(SchemaMode::Input);
+    for value in [
+        json!({"values":[1]}),
+        json!({"values":[1,2]}),
+        json!({"values":[1,2,3]}),
+        json!({"values":[1,2,3,4]}),
+    ] {
+        assert_eq!(
+            jsonschema::is_valid(&schema, &value),
+            Fixed::parse_value(value).is_ok()
+        );
+    }
+}
+
+#[test]
+fn schema_report_treats_defaults_and_examples_as_data() {
+    let report = rydantic::SchemaReport::new(json!({
+        "type":"object",
+        "default":{"x-rydantic-local-rules":["instance data"]},
+        "examples":[{"x-rydantic-local-rules":["instance data"]}],
+        "properties":{"name":{"type":"string"}}
+    }));
+    assert!(report.is_portable());
+}
