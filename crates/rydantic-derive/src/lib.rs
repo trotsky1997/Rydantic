@@ -6,6 +6,7 @@ use syn::{
     Member, Type,
 };
 mod attrs;
+mod capnp;
 
 #[proc_macro_derive(Model, attributes(model))]
 pub fn derive_model(input: TokenStream) -> TokenStream {
@@ -548,6 +549,7 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
         }
     };
     let container = attrs::container(&input.attrs)?;
+    let native_capnp = capnp::expand(&input, &container, &rd)?;
     let name = &input.ident;
     let title = container.title.clone().unwrap_or_else(|| name.to_string());
     let borrowed = input.generics.lifetimes().next().is_some();
@@ -911,7 +913,7 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
             fn kind()->#rd::TypeKind{#kind}
             fn async_required(seen:&mut ::std::collections::HashSet<&'static str>)->bool{if !seen.insert(::core::any::type_name::<Self>()){return false;}#direct_async #(|| #nested_async)*}
         }
-        #model_impl #object_impl #bridge
+        #model_impl #object_impl #bridge #native_capnp
         impl #async_impl_generics #rd::AsyncCheck for #name #ty_generics #async_where_clause{
             fn check_async<'__rydantic_future>(&'__rydantic_future self,__rydantic_ctx:&'__rydantic_future mut #rd::Context)->#rd::BoxFuture<'__rydantic_future,()>{
                 ::std::boxed::Box::pin(async move{let start=__rydantic_ctx.error_count();#asynchronous #custom_async})

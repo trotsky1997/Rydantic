@@ -122,6 +122,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "capnpc"
+version = "0.27.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "82ca16312ddb64529d31c8dc46148671c22e57b80134fa5f17811ad5a6a79492"
+dependencies = [
+ "capnp",
+]
+
+[[package]]
 name = "cfg-if"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -264,6 +273,12 @@ name = "hashbrown"
 version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
+
+[[package]]
+name = "heck"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 
 [[package]]
 name = "icu_collections"
@@ -803,9 +818,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "rydantic-capnp-fixture"
+version = "0.2.0"
+dependencies = [
+ "capnp",
+ "capnpc",
+ "rydantic",
+ "tokio",
+]
+
+[[package]]
 name = "rydantic-derive"
 version = "0.2.0"
 dependencies = [
+ "heck",
  "proc-macro-crate",
  "proc-macro2",
  "quote",

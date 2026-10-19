@@ -21,11 +21,17 @@ extern crate self as rydantic;
 
 mod asynchronous;
 mod borrowed;
+#[cfg(feature = "capnp")]
+pub mod capnp_support;
 #[cfg(feature = "chrono")]
 mod dates;
 #[cfg(feature = "decimal")]
 mod decimal;
 mod direct;
+#[cfg(feature = "capnp")]
+pub use capnp;
+#[cfg(feature = "capnp")]
+pub use capnp_support::{CapnpEnum, CapnpModel};
 #[cfg(feature = "dynamic")]
 mod dynamic;
 mod error;

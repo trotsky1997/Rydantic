@@ -1,0 +1,15 @@
+[package]
+name = "rydantic-capnp-fixture"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[dependencies]
+rydantic = { path = "../../crates/rydantic", features = ["capnp", "chrono", "decimal"] }
+capnp = { version = "0.27", features = ["unaligned"] }
+
+[build-dependencies]
+capnpc = "0.27"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }

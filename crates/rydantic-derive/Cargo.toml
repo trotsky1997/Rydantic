@@ -14,6 +14,7 @@ proc-macro2 = "1"
 quote = "1"
 syn = { version = "2", features = ["full", "extra-traits"] }
 proc-macro-crate = "3"
+heck = "0.5"
 regex.workspace = true
 serde_json.workspace = true
 

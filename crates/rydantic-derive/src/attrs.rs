@@ -10,6 +10,8 @@ pub struct Container {
     pub title: Option<String>,
     pub validate: Option<Path>,
     pub tag: Option<String>,
+    pub capnp: Option<Path>,
+    pub capnp_enum: Option<Path>,
 }
 
 #[derive(Default)]
@@ -40,6 +42,11 @@ pub struct Field {
     pub async_validate: Option<Path>,
     pub flatten: bool,
     pub extra: bool,
+    pub capnp_name: Option<String>,
+    pub capnp_data: bool,
+    pub capnp_text: bool,
+    pub capnp_enum: bool,
+    pub capnp_skip: bool,
 }
 
 fn key(meta: &syn::meta::ParseNestedMeta<'_>, seen: &mut HashSet<String>) -> syn::Result<String> {
@@ -80,6 +87,8 @@ pub fn container(attrs: &[Attribute]) -> syn::Result<Container> {
                 "title" => result.title = Some(meta.value()?.parse::<LitStr>()?.value()),
                 "validate" => result.validate = Some(meta.value()?.parse()?),
                 "tag" => result.tag = Some(meta.value()?.parse::<LitStr>()?.value()),
+                "capnp" => result.capnp = Some(meta.value()?.parse::<LitStr>()?.parse()?),
+                "capnp_enum" => result.capnp_enum = Some(meta.value()?.parse::<LitStr>()?.parse()?),
                 "untagged" => result.untagged = true,
                 "async_validate" => result.async_validate = Some(meta.value()?.parse()?),
                 _ => {
@@ -184,6 +193,11 @@ pub fn field(attrs: &[Attribute]) -> syn::Result<Field> {
                 "validate" => result.validate = Some(meta.value()?.parse()?),
                 "before" => result.before = Some(meta.value()?.parse()?),
                 "async_validate" => result.async_validate = Some(meta.value()?.parse()?),
+                "capnp_name" => result.capnp_name = Some(meta.value()?.parse::<LitStr>()?.value()),
+                "capnp_data" => result.capnp_data = true,
+                "capnp_text" => result.capnp_text = true,
+                "capnp_enum" => result.capnp_enum = true,
+                "capnp_skip" => result.capnp_skip = true,
                 "flatten" => result.flatten = true,
                 "extra" => result.extra = true,
                 _ => return Err(meta.error("unsupported Rydantic field attribute")),
