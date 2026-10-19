@@ -281,12 +281,19 @@ fn read_fields(
     dynamic: bool,
 ) -> syn::Result<Tokens> {
     let mut parses = vec![];
+    let mut native_names = std::collections::HashSet::new();
     let locals = (0..fields.len())
         .map(|i| format_ident!("__rydantic_field_{i}"))
         .collect::<Vec<_>>();
     for (i, field) in fields.iter().enumerate() {
         let local = &locals[i];
         let name = wire_name(field, i, shape, fields.len());
+        if !field.attr.capnp_skip && !native_names.insert(name.to_snake_case()) {
+            return Err(syn::Error::new(
+                field.ident.span(),
+                "duplicate native Cap'n Proto field mapping",
+            ));
+        }
         let location = &field.input;
         let ty = &field.ty;
         let value = if field.attr.capnp_skip {
@@ -311,6 +318,7 @@ fn read_fields(
     let constructed = constructor(fields, shape, path);
     Ok(quote!(#(#parses)* #(let #locals=#locals?;)* Some(#constructed)))
 }
+
 fn write_fields(
     fields: &[super::Field],
     shape: Shape,
@@ -466,4 +474,25 @@ pub(super) fn expand(
         quote! {impl #rd::CapnpModel for #name{type Wire=#wire::Owned;fn read_capnp(__wire_reader:<Self::Wire as #rd::capnp::traits::Owned>::Reader<'_>,__rydantic_ctx:&mut #rd::Context)->Option<Self>{#read_body}fn write_capnp(&self,mut __wire_builder:<Self::Wire as #rd::capnp::traits::Owned>::Builder<'_>,__rydantic_ctx:&mut #rd::Context){#write_body}}
         impl #rd::capnp_support::CapnpRead for #name{fn read_value(value:#rd::capnp::dynamic_value::Reader<'_>,ctx:&mut #rd::Context)->Option<Self>{let reader=#rd::capnp_support::struct_value::<#wire::Owned>(value,ctx)?;<Self as #rd::CapnpModel>::read_capnp(reader,ctx)}}},
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn duplicate_native_names_are_rejected_before_codegen() {
+        let input: DeriveInput = syn::parse_quote! {
+            #[model(capnp="wire::record")]
+            struct Duplicate {
+                #[model(capnp_name="fullName")]
+                first:String,
+                full_name:String,
+            }
+        };
+        let container = attrs::container(&input.attrs).unwrap();
+        let error = expand(&input, &container, &quote!(::rydantic)).unwrap_err();
+        assert!(error
+            .to_string()
+            .contains("duplicate native Cap'n Proto field mapping"));
+    }
 }

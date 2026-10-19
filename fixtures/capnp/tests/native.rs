@@ -4,6 +4,18 @@ use rydantic_capnp_fixture::{
 };
 
 #[test]
+fn list_lengths_respect_the_native_29_bit_element_limit() {
+    let mut ctx = rydantic::Context::new();
+    assert_eq!(
+        rydantic::capnp_support::list_len((1 << 29) - 1, &mut ctx),
+        Some((1 << 29) - 1)
+    );
+    assert_eq!(rydantic::capnp_support::list_len(1 << 29, &mut ctx), None);
+    let error = ctx.result().unwrap_err();
+    assert_eq!(error.errors()[0].code, "capnp_length");
+}
+
+#[test]
 fn native_and_packed_roundtrip_cover_nested_lists_maps_options_and_scalars() {
     let person = example_person();
     assert_eq!(

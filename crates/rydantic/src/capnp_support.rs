@@ -236,6 +236,16 @@ pub fn write_result(value: impl SetResult, ctx: &mut Context) -> Option<()> {
 }
 #[doc(hidden)]
 pub fn list_len(length: usize, ctx: &mut Context) -> Option<u32> {
+    if length >= (1 << 29) {
+        ctx.push(
+            ValidationError::new(
+                "capnp_length",
+                "lists are limited to fewer than 2^29 elements",
+            )
+            .with_stage(Stage::Serialize),
+        );
+        return None;
+    }
     u32::try_from(length)
         .map_err(|_| {
             ctx.push(
