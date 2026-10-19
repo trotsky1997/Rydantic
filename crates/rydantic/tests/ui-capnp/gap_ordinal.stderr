@@ -1,0 +1,8 @@
+error: capnp_ordinal values must be unique and contiguous from zero
+ --> tests/ui-capnp/gap_ordinal.rs:3:20
+  |
+3 |       pub struct Gap {
+  |  ____________________^
+4 | |         #[model(capnp_ordinal = 1)] pub value: u32,
+5 | |     }
+  | |_____^

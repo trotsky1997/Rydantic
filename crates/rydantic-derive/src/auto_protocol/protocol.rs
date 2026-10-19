@@ -67,10 +67,7 @@ impl Generator<'_> {
                     format!("struct {name} {{ union {{ none @0 :Void; some @1 :{value}; }} }}\n")
                 })?
             }
-            Spec::List(inner) if spec.bytes() => {
-                let _ = inner;
-                "Data".into()
-            }
+            Spec::List(_) if spec.bytes() => "Data".into(),
             Spec::List(inner) | Spec::Array(inner, _) => {
                 format!("List({})", self.wire(inner, text)?)
             }

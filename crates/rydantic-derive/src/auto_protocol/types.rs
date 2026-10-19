@@ -23,7 +23,7 @@ fn key(scope: &[String], name: &str) -> String {
     scope
         .iter()
         .cloned()
-        .chain([name.to_owned()])
+        .chain([name.trim_start_matches("r#").to_owned()])
         .collect::<Vec<_>>()
         .join("::")
 }
@@ -36,17 +36,17 @@ fn imports(
     match tree {
         syn::UseTree::Path(path) => {
             let mut prefix = prefix.to_vec();
-            prefix.push(path.ident.to_string());
+            prefix.push(path.ident.to_string().trim_start_matches("r#").to_owned());
             imports(&path.tree, &prefix, scope, map);
         }
         syn::UseTree::Name(name) => {
             let mut target = prefix.to_vec();
-            target.push(name.ident.to_string());
+            target.push(name.ident.to_string().trim_start_matches("r#").to_owned());
             map.insert(key(scope, &name.ident.to_string()), target);
         }
         syn::UseTree::Rename(name) => {
             let mut target = prefix.to_vec();
-            target.push(name.ident.to_string());
+            target.push(name.ident.to_string().trim_start_matches("r#").to_owned());
             map.insert(key(scope, &name.rename.to_string()), target);
         }
         syn::UseTree::Group(group) => {
@@ -114,7 +114,8 @@ impl Registry {
                     Item::Mod(module) => {
                         if let Some((_, children)) = &module.content {
                             let mut scope = scope.to_vec();
-                            scope.push(module.ident.to_string());
+                            scope
+                                .push(module.ident.to_string().trim_start_matches("r#").to_owned());
                             self.walk(children, &scope)?;
                         } else {
                             return Err(syn::Error::new(module.span(),"use inline submodules so capnp_models can inspect their model definitions"));

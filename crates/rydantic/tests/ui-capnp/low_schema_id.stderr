@@ -1,0 +1,7 @@
+error: Cap'n Proto file IDs must have the high bit set
+ --> tests/ui-capnp/low_schema_id.rs:1:1
+  |
+1 | #[rydantic::capnp_models(id = 42)]
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: this error originates in the attribute macro `rydantic::capnp_models` (in Nightly builds, run with -Z macro-backtrace for more info)

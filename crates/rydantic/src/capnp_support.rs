@@ -1,4 +1,18 @@
-//! Native schema-first Cap'n Proto integration. Model data is mapped directly to generated readers/builders.
+//! Native Cap'n Proto integration with automatic protocols and existing schemas.
+//! Model data maps directly to official readers and builders.
+//!
+//! ```
+//! use rydantic::{CapnpModel, CapnpSchema};
+//! #[rydantic::capnp_models(namespace = "docs.users")]
+//! mod models {
+//!     #[derive(Debug, PartialEq)]
+//!     pub struct User { pub name: String, pub age: u8 }
+//! }
+//! let user = models::User { name: "Alice".into(), age: 25 };
+//! assert_eq!(models::User::parse_capnp(&user.dump_capnp()?)?, user);
+//! assert!(models::User::capnp_schema().contains("struct User"));
+//! # Ok::<(), rydantic::ValidationErrors>(())
+//! ```
 use crate::{AsyncCheck, Context, Model, Stage, ValidationError, ValidationErrors};
 use capnp::{
     message::{Builder, HeapAllocator, ReaderOptions},
@@ -23,7 +37,9 @@ pub trait CapnpEnum: Sized {
     fn read_enum(value: Self::Wire, ctx: &mut Context) -> Option<Self>;
     fn write_enum(&self) -> Self::Wire;
 }
-/// A model bound to an official capnpc-generated schema (`#[model(capnp = "wire::module")]`).
+/// A model bound to official Cap'n Proto readers/builders.
+/// Use `#[rydantic::capnp_models]` to infer the protocol automatically, or
+/// `#[model(capnp = "wire::module")]` to bind an existing schema.
 pub trait CapnpModel: Model {
     type Wire: Owned;
     fn read_capnp(reader: <Self::Wire as Owned>::Reader<'_>, ctx: &mut Context) -> Option<Self>;

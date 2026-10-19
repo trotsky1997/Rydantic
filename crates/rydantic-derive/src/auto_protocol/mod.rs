@@ -15,8 +15,8 @@ use types::Registry;
 
 #[derive(Default)]
 struct Options {
-    id: Option<u64>,
-    namespace: Option<String>,
+    id: ::core::option::Option<u64>,
+    namespace: ::core::option::Option<String>,
 }
 fn options(tokens: Tokens) -> syn::Result<Options> {
     let mut result = Options::default();
@@ -96,7 +96,90 @@ fn protocol_name(text: &str, upper: bool) -> String {
     } else {
         text.to_lower_camel_case()
     };
+    // Keep native declarations clear of built-in types and generated Rust module keywords.
+    let builtin = upper
+        && (matches!(
+            name.as_str(),
+            "Void"
+                | "Bool"
+                | "Int8"
+                | "Int16"
+                | "Int32"
+                | "Int64"
+                | "UInt8"
+                | "UInt16"
+                | "UInt32"
+                | "UInt64"
+                | "Float32"
+                | "Float64"
+                | "Text"
+                | "Data"
+                | "List"
+                | "AnyPointer"
+                | "Capability"
+        ) || matches!(
+            name.to_snake_case().as_str(),
+            "abstract"
+                | "alignof"
+                | "as"
+                | "async"
+                | "await"
+                | "be"
+                | "become"
+                | "box"
+                | "break"
+                | "const"
+                | "continue"
+                | "crate"
+                | "do"
+                | "dyn"
+                | "else"
+                | "enum"
+                | "extern"
+                | "false"
+                | "final"
+                | "fn"
+                | "for"
+                | "gen"
+                | "if"
+                | "impl"
+                | "in"
+                | "let"
+                | "loop"
+                | "macro"
+                | "match"
+                | "mod"
+                | "move"
+                | "mut"
+                | "offsetof"
+                | "once"
+                | "override"
+                | "priv"
+                | "proc"
+                | "pub"
+                | "pure"
+                | "ref"
+                | "return"
+                | "self"
+                | "sizeof"
+                | "static"
+                | "struct"
+                | "super"
+                | "trait"
+                | "true"
+                | "try"
+                | "type"
+                | "typeof"
+                | "unsafe"
+                | "unsized"
+                | "use"
+                | "virtual"
+                | "where"
+                | "while"
+                | "yield"
+        ));
     if valid_name(&name, upper)
+        && !builtin
         && !matches!(
             name.as_str(),
             "union"
@@ -136,7 +219,7 @@ fn wire_name(field: &syn::Field, index: usize, count: usize) -> syn::Result<Stri
     });
     Ok(protocol_name(&original, false))
 }
-fn ordinal(attributes: &[syn::Attribute]) -> syn::Result<Option<u16>> {
+fn ordinal(attributes: &[syn::Attribute]) -> syn::Result<::core::option::Option<u16>> {
     let mut result = None;
     for attr in attributes.iter().filter(|a| a.path().is_ident("model")) {
         let metas = attr.parse_args_with(
@@ -164,7 +247,7 @@ fn ordinal(attributes: &[syn::Attribute]) -> syn::Result<Option<u16>> {
     }
     Ok(result)
 }
-fn ordinals(values: &[Option<u16>], span: Span) -> syn::Result<Vec<u16>> {
+fn ordinals(values: &[::core::option::Option<u16>], span: Span) -> syn::Result<Vec<u16>> {
     if values.len() > u16::MAX as usize {
         return Err(syn::Error::new(span, "too many native protocol fields"));
     }
@@ -190,7 +273,7 @@ fn ordinals(values: &[Option<u16>], span: Span) -> syn::Result<Vec<u16>> {
     Ok(result)
 }
 
-fn model_input(item: &Item) -> Option<DeriveInput> {
+fn model_input(item: &Item) -> ::core::option::Option<DeriveInput> {
     match item {
         Item::Struct(_) | Item::Enum(_) => syn::parse2(item.to_token_stream()).ok(),
         _ => None,
@@ -210,7 +293,10 @@ fn ensure_derive(input: &mut DeriveInput, rd: &Tokens) {
                 })
         });
     if !exists {
-        input.attrs.insert(0, parse_quote!(#[derive(#rd::Model)]));
+        input.attrs.insert(
+            0,
+            syn::parse_quote_spanned!(input.ident.span()=>#[derive(#rd::Model)]),
+        );
     }
 }
 fn set_native_name(attributes: &mut Vec<syn::Attribute>, name: &str) -> syn::Result<()> {
@@ -304,7 +390,7 @@ fn configure(
     key.push(input.ident.to_string().trim_start_matches("r#").to_owned());
     let model = &registry.models[&key.join("::")];
     let root = relative_root(scope);
-    let module = syn::Ident::new(&model.name.to_snake_case(), Span::call_site());
+    let module = syn::Ident::new_raw(&model.name.to_snake_case(), Span::call_site());
     if model.unit_enum {
         let native = syn::Ident::new(&model.name, Span::call_site());
         let path = quote!(#root::wire::#native).to_string();
@@ -354,11 +440,12 @@ fn rewrite_models(
             configure(&mut input, scope, registry, rd)?;
             let name = &input.ident;
             let root = relative_root(scope);
-            let key = if scope.is_empty() {
-                name.to_string()
-            } else {
-                format!("{}::{name}", scope.join("::"))
-            };
+            let key = scope
+                .iter()
+                .cloned()
+                .chain([name.to_string().trim_start_matches("r#").to_owned()])
+                .collect::<Vec<_>>()
+                .join("::");
             let model = &registry.models[&key];
             let root_type = if model.unit_enum {
                 format!("Rydantic{}Root", model.name)
@@ -378,7 +465,7 @@ fn rewrite_models(
                 additions.push(syn::parse2(quote!{
                     #(#cfgs)* impl #rd::CapnpModel for #name {
                         type Wire=#root::wire::#wire::Owned;
-                        fn read_capnp(reader:<Self::Wire as #rd::capnp::traits::Owned>::Reader<'_>,ctx:&mut #rd::Context)->Option<Self>{
+                        fn read_capnp(reader:<Self::Wire as #rd::capnp::traits::Owned>::Reader<'_>,ctx:&mut #rd::Context)->::core::option::Option<Self>{
                             let value=#rd::capnp_support::read_result(reader.get_value(),ctx)?;<Self as #rd::CapnpEnum>::read_enum(value,ctx)
                         }
                         fn write_capnp(&self,mut builder:<Self::Wire as #rd::capnp::traits::Owned>::Builder<'_>,_:&mut #rd::Context){builder.set_value(<Self as #rd::CapnpEnum>::write_enum(self));}
@@ -389,7 +476,7 @@ fn rewrite_models(
         } else if let Item::Mod(module) = item {
             if let Some((_, children)) = &mut module.content {
                 let mut scope = scope.to_vec();
-                scope.push(module.ident.to_string());
+                scope.push(module.ident.to_string().trim_start_matches("r#").to_owned());
                 rewrite_models(children, &scope, registry, rd)?;
             }
         }
@@ -488,7 +575,7 @@ pub(super) fn expand(args: Tokens, input: Tokens) -> syn::Result<Tokens> {
             ));
         }
     }
-    let registry = Registry::collect(items, &ident.to_string())?;
+    let registry = Registry::collect(items, ident.to_string().trim_start_matches("r#"))?;
     if registry.models.is_empty() {
         return Err(syn::Error::new(
             span,
@@ -512,4 +599,79 @@ pub(super) fn expand(args: Tokens, input: Tokens) -> syn::Result<Tokens> {
         quote! {#[allow(dead_code,unused_imports)] pub mod wire{#(#bindings)*}},
     )?);
     Ok(quote!(#module))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn schema(input: Tokens) -> syn::Result<String> {
+        let module: ItemMod = syn::parse2(input)?;
+        let registry = Registry::collect(&module.content.unwrap().1, "models")?;
+        protocol::generate(&registry, stable_id("tests.models"))
+    }
+
+    #[test]
+    fn schema_is_deterministic_and_aliases_resolve_from_the_callers_scope() {
+        let input = quote! {
+            mod models {
+                type Items<T> = Vec<T>;
+                mod inner {
+                    use super::Items as Collection;
+                    struct Node { children: Collection<Node>, optional: Option<Box<Node>> }
+                }
+            }
+        };
+        let first = schema(input.clone()).unwrap();
+        assert_eq!(first, schema(input).unwrap());
+        assert!(first.contains("children @0 :List(InnerNode)"));
+        assert!(first.contains("some @1 :InnerNode"));
+        assert_eq!(stable_id("tests.models") >> 63, 1);
+    }
+
+    #[test]
+    fn schema_identity_options_reject_ambiguous_or_invalid_ids() {
+        for args in [
+            quote!(id = 42),
+            quote!(namespace = ""),
+            quote!(id = 0x8000000000000001, namespace = "also"),
+            quote!(namespace = "a", namespace = "b"),
+        ] {
+            assert!(options(args).is_err());
+        }
+        assert_eq!(
+            options(quote!(id = 0x8000000000000001)).unwrap().id,
+            Some(0x8000000000000001)
+        );
+    }
+
+    #[test]
+    fn pins_require_complete_unique_contiguous_ordinals() {
+        for pins in [vec![Some(0), None], vec![Some(1)], vec![Some(0), Some(0)]] {
+            assert!(ordinals(&pins, Span::call_site()).is_err());
+        }
+        assert_eq!(
+            ordinals(&[Some(1), Some(0)], Span::call_site()).unwrap(),
+            [1, 0]
+        );
+    }
+
+    #[test]
+    fn inferred_native_names_cannot_overlap() {
+        let error = schema(quote! {mod models { struct A_B; mod a { struct B; } }}).unwrap_err();
+        assert!(error.to_string().contains("native type name collision"));
+    }
+
+    #[test]
+    fn type_alias_cycles_and_non_string_map_keys_have_useful_diagnostics() {
+        let cyclic =
+            schema(quote! {mod models { type A = B; type B = A; struct Root { value: A } }})
+                .unwrap_err();
+        assert!(cyclic.to_string().contains("cyclic type alias"));
+        let key = schema(
+            quote! {mod models { struct Root { value: std::collections::HashMap<u64, String> } }},
+        )
+        .unwrap_err();
+        assert!(key.to_string().contains("String keys"));
+    }
 }

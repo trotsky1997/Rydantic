@@ -1,0 +1,5 @@
+error: automatic native maps require String keys
+ --> tests/ui-capnp/map_key.rs:3:34
+  |
+3 |     pub struct Map { pub values: std::collections::BTreeMap<u32, String> }
+  |                                  ^^^

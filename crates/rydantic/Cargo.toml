@@ -27,7 +27,7 @@ serde.workspace = true
 serde_json.workspace = true
 regex.workspace = true
 email_address = "0.2"
-rydantic-derive = { version = "0.2.0", path = "../rydantic-derive", optional = true }
+rydantic-derive = { version = "0.3.0", path = "../rydantic-derive", optional = true }
 jsonschema = { workspace = true, optional = true }
 
 chrono = { version = "0.4", default-features = false, features = ["std"], optional = true }
@@ -46,3 +46,7 @@ workspace = true
 [[example]]
 name = "dates_decimal"
 required-features = ["chrono", "decimal"]
+
+[[example]]
+name = "auto_capnp"
+required-features = ["derive", "capnp"]

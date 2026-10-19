@@ -2,7 +2,9 @@
 
 [![CI](https://github.com/trotsky1997/Rydantic/actions/workflows/ci.yml/badge.svg)](https://github.com/trotsky1997/Rydantic/actions/workflows/ci.yml)
 
-Rust 的统一数据模型库，当前版本 **0.2.0**，支持 JSON 与原生 Cap’n Proto。
+Rust 的统一数据模型库，当前版本 **0.3.0**，支持 JSON 与原生 Cap’n Proto。
+
+0.3 新增 `#[rydantic::capnp_models]`：从 Rust 模型自动推导 `.capnp` Schema、生成官方 Rust 绑定并关联模型。无需维护 Schema、绑定或 `build.rs`。
 
 一份 `#[derive(Model)]` 声明提供：JSON 解析、显式类型转换、字符串规范化、约束校验、结构化错误、Serde 序列化／反序列化，以及 JSON Schema Draft 2020-12。
 
@@ -14,7 +16,7 @@ Rust 的统一数据模型库，当前版本 **0.2.0**，支持 JSON 与原生 C
 
 ```toml
 [dependencies]
-rydantic = "0.2.0"
+rydantic = "0.3.0"
 ```
 
 ```rust
@@ -252,7 +254,7 @@ Optional flatten 在其所有键缺失时得到 `None`；出现部分键时检�
 ## 日期与 Decimal
 
 ```toml
-rydantic = { version = "0.2.0", features = ["chrono", "decimal"] }
+rydantic = { version = "0.3.0", features = ["chrono", "decimal"] }
 ```
 
 `chrono` feature 支持 `NaiveDate`、`NaiveTime`、`NaiveDateTime`、`DateTime<Utc>`、`DateTime<FixedOffset>`，并从 `rydantic::chrono` 重导出类型。格式分别为 `YYYY-MM-DD`、`HH:MM:SS[.fraction]`、无时区的 ISO 日期时间、RFC 3339 日期时间。校验实际日历、四位年份、最多 9 位小数秒与 RFC 3339 时区；UTC 类型会换算到 UTC。
@@ -357,7 +359,7 @@ Schema 的用途包括 API 文档与工具参数描述。实际执行入口仍�
 可选 `dynamic` feature 使用 `jsonschema` 提供运行时 Schema 编译与复用。默认依赖关闭网络／文件解析功能，本地 `$ref` 可正常使用。
 
 ```toml
-rydantic = { version = "0.2.0", features = ["dynamic"] }
+rydantic = { version = "0.3.0", features = ["dynamic"] }
 ```
 
 ```rust
@@ -386,9 +388,97 @@ Rust 中可直接构造或修改普通模型。调用 `validate()` 检查当前�
 
 启用 `capnp` feature 后，模型直接读取和构建[官方 Cap’n Proto](https://capnproto.org/) Schema 的字段。二进制布局与其他语言的官方实现互通，支持普通消息和 packed 消息。
 
+### 从 Rust 模型自动生成协议
+
+只需要一个依赖：
+
 ```toml
 [dependencies]
-rydantic = { version = "0.2.0", features = ["capnp"] }
+rydantic = { version = "0.3.0", features = ["capnp"] }
+```
+
+首次配置开发环境时安装官方 `capnp` 编译器：macOS 使用 `brew install capnp`，Debian／Ubuntu 使用 `sudo apt-get install capnproto`。编译时属性宏自动调用该编译器，并使用官方 `capnpc` 生成绑定；支持通过 `RYDANTIC_CAPNP_COMPILER` 指定编译器可执行文件。
+
+```rust
+use rydantic::{CapnpModel, CapnpSchema, Model};
+
+#[rydantic::capnp_models(namespace = "my_app.users")]
+pub mod models {
+    #[derive(Debug, PartialEq)]
+    pub struct User {
+        #[model(trim, min_length = 1)]
+        pub name: String,
+        #[model(ge = 18)]
+        pub age: u8,
+        pub role: Role,
+        pub nickname: Option<String>,
+        pub avatar: Vec<u8>,
+    }
+
+    #[derive(Debug, PartialEq)]
+    pub enum Role { Guest, Admin }
+}
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    use models::User;
+    let user = User::parse_json(
+        r#"{"name":" Alice ","age":25,"role":"Admin","avatar":[0,255]}"#,
+    )?;
+    let bytes = user.dump_capnp()?;
+    assert_eq!(User::parse_capnp(&bytes)?, user);
+    let packed = user.dump_capnp_packed()?;
+    assert_eq!(User::parse_capnp_packed(&packed)?, user);
+
+    // 导出完整协议，供其他语言的官方生成器使用。
+    User::write_capnp_schema("users.capnp")?;
+    Ok(())
+}
+```
+
+宏自动添加 `Model` 派生，可同时保留 `Debug`、`PartialEq` 等其他派生。模块包含：
+
+- `models::wire`：官方生成的公开 Rust Reader／Builder／Enum。
+- `models::CAPNP_SCHEMA`、`CAPNP_SCHEMA_ID`：完整协议文本和文件 ID。
+- 每个模型的 `CapnpSchema`：`capnp_schema()`、`write_capnp_schema(path)` 和根类型名 `CAPNP_TYPE`。普通枚举也支持作为根消息进行二进制往返，协议中自动添加根包装类型。
+
+默认映射自动覆盖嵌套及递归模型、`Box`、`Option`、`Vec`、固定数组、String 键的 `BTreeMap`／`HashMap`、普通枚举和带数据枚举。`Vec<u8>` 推导为 `Data`；完整范围 `i128`／`u128`、日期和 Decimal 推导为 `Text`，容器中的这些类型也适用。模块内的类型别名、带具体类型参数的容器别名、显式 `use` 别名和内联子模块可以一起使用。日期和 Decimal 分别需要启用 `chrono`／`decimal` feature。
+
+模型需要使用具体且拥有所有权的类型，并放在属性覆盖的内联模块内。带数据枚举继续声明 JSON 表示规则：命名字段可使用 `#[model(tag = "kind")]`，元组变体使用 `#[model(untagged)]`。`capnp_name` 单独控制协议名字；`capnp_skip` 配合默认值保留本地字段；JSON 别名、flatten、extra、exclude 继续控制 JSON 表示。外部未知类型可使用默认值与 `capnp_skip`，或继续采用下面的已有 Schema 接入方式。
+
+### 协议 ID 与兼容演进
+
+默认文件 ID 从 Cargo 包名与当前模型模块名稳定计算；生产协议建议显式设置固定的 `namespace = "my_app.users"` 或 `id = 0x...`。同一包中多个同名模型模块应分配不同的 namespace；发布后保持 namespace／id、模型名和子模块路径稳定。
+
+字段和枚举成员默认按声明顺序从 `@0` 编号。追加字段保留旧编号。需要调整声明顺序时，可在每个协议字段或枚举成员上固定 `#[model(capnp_ordinal = N)]`，编号须唯一、连续并从零开始。例如：
+
+```rust
+#[rydantic::capnp_models(namespace = "my_app.counters")]
+mod models {
+    pub struct Counter {
+        #[model(capnp_ordinal = 1)]
+        pub count: u64,
+        #[model(capnp_ordinal = 0)]
+        pub name: String,
+    }
+}
+```
+
+带数据枚举的命名／元组组字段共享协议编号空间；变体上的 `capnp_ordinal` 指定该变体的起始字段编号，字段本身也可固定编号。协议类型变更、删除字段、改名和修改 union 分组需要遵循[官方兼容规则](https://capnproto.org/language.html#evolving-your-protocol)。导出的 Schema 适合纳入代码审查；生成的 Rust 绑定会随模型自动更新。
+
+完整自动生成示例和互操作测试见 [fixtures/auto-capnp](https://github.com/trotsky1997/Rydantic/tree/main/fixtures/auto-capnp)：
+
+```sh
+cargo run -p rydantic-auto-capnp-fixture
+cargo test -p rydantic-auto-capnp-fixture
+```
+
+### 接入已有 Schema
+
+已有 `.capnp` 协议可继续使用显式绑定：
+
+```toml
+[dependencies]
+rydantic = { version = "0.3.0", features = ["capnp"] }
 capnp = { version = "0.27", features = ["unaligned"] }
 
 [build-dependencies]
@@ -484,7 +574,7 @@ cargo fmt --all
 
 显式 `Value` 字段、`parse_value` 输入、`before` 回调，以及仅实现 `decode(Value, …)` 的自定义类型按各自接口使用 Value。原生标量复用轻量标量适配器；自定义类型可以覆盖 `JsonType::decode_input`，直接接收 `Input::Borrowed`。无需展开的任意 JSON 可保存为 `Box<RawValue>`，保留原文与数值写法。
 
-0.1 的拥有所有权的模型入口继续可用。`StringType`／`NumericType`／`LengthType` 作为独立能力标记，泛型辅助函数需要显式声明 `JsonType` 或 `BorrowType` 约束。 自定义字段类型还需实现 `AsyncCheck` 并满足 `Sync`；原有纯同步类型可使用空的 `AsyncCheck` 实现。可通过 crates.io 的 `rydantic = "0.2.0"` 安装，也可使用 GitHub 的 v0.2.0 标签；工作区内部使用本地路径依赖。
+0.1 的拥有所有权的模型入口继续可用。`StringType`／`NumericType`／`LengthType` 作为独立能力标记，泛型辅助函数需要显式声明 `JsonType` 或 `BorrowType` 约束。 自定义字段类型还需实现 `AsyncCheck` 并满足 `Sync`；原有纯同步类型可使用空的 `AsyncCheck` 实现。可通过 crates.io 的 `rydantic = "0.3.0"` 安装，也可使用 GitHub 的 v0.3.0 标签；工作区内部使用本地路径依赖。
 
 ## 验证
 

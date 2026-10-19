@@ -31,7 +31,7 @@ impl Access {
             Self::Dynamic(_) => unreachable!(),
         }
     }
-    fn init(&self, length: Option<Tokens>) -> Tokens {
+    fn init(&self, length: ::core::option::Option<Tokens>) -> Tokens {
         match (self, length) {
             (Self::Field(parent, name), length) => {
                 let method = format_ident!("init_{}", name.to_snake_case());
@@ -409,8 +409,8 @@ pub(super) fn expand(
             writes.push(quote!(Self::#id=>#wire::#native));
         }
         return Ok(
-            quote! {impl #rd::CapnpEnum for #name{type Wire=#wire;#[allow(unreachable_patterns)]fn read_enum(value:Self::Wire,ctx:&mut #rd::Context)->Option<Self>{match value{#(#reads,)* _=>{ctx.push(#rd::ValidationError::new("capnp_enum","native enum variant has no model mapping"));None}}}fn write_enum(&self)->Self::Wire{match self{#(#writes,)*}}}
-            impl #rd::capnp_support::CapnpRead for #name {fn read_value(value:#rd::capnp::dynamic_value::Reader<'_>,ctx:&mut #rd::Context)->Option<Self>{let #rd::capnp::dynamic_value::Reader::Enum(value)=value else{#rd::capnp_support::mismatch(ctx);return None;};let value=#rd::capnp_support::read_result(<#wire as ::core::convert::TryFrom<u16>>::try_from(value.get_value()),ctx)?;<Self as #rd::CapnpEnum>::read_enum(value,ctx)}}},
+            quote! {impl #rd::CapnpEnum for #name{type Wire=#wire;#[allow(unreachable_patterns)]fn read_enum(value:Self::Wire,ctx:&mut #rd::Context)->::core::option::Option<Self>{match value{#(#reads,)* _=>{ctx.push(#rd::ValidationError::new("capnp_enum","native enum variant has no model mapping"));None}}}fn write_enum(&self)->Self::Wire{match self{#(#writes,)*}}}
+            impl #rd::capnp_support::CapnpRead for #name {fn read_value(value:#rd::capnp::dynamic_value::Reader<'_>,ctx:&mut #rd::Context)->::core::option::Option<Self>{let #rd::capnp::dynamic_value::Reader::Enum(value)=value else{#rd::capnp_support::mismatch(ctx);return None;};let value=#rd::capnp_support::read_result(<#wire as ::core::convert::TryFrom<u16>>::try_from(value.get_value()),ctx)?;<Self as #rd::CapnpEnum>::read_enum(value,ctx)}}},
         );
     }
     let wire = container.capnp.as_ref().unwrap();
@@ -486,8 +486,8 @@ pub(super) fn expand(
         Data::Union(_) => return Err(syn::Error::new(input.span(), "Rust unions are unsupported")),
     };
     Ok(
-        quote! {impl #rd::CapnpModel for #name{type Wire=#wire::Owned;fn read_capnp(__wire_reader:<Self::Wire as #rd::capnp::traits::Owned>::Reader<'_>,__rydantic_ctx:&mut #rd::Context)->Option<Self>{#read_body}fn write_capnp(&self,mut __wire_builder:<Self::Wire as #rd::capnp::traits::Owned>::Builder<'_>,__rydantic_ctx:&mut #rd::Context){#write_body}}
-        impl #rd::capnp_support::CapnpRead for #name{fn read_value(value:#rd::capnp::dynamic_value::Reader<'_>,ctx:&mut #rd::Context)->Option<Self>{let reader=#rd::capnp_support::struct_value::<#wire::Owned>(value,ctx)?;<Self as #rd::CapnpModel>::read_capnp(reader,ctx)}}},
+        quote! {impl #rd::CapnpModel for #name{type Wire=#wire::Owned;fn read_capnp(__wire_reader:<Self::Wire as #rd::capnp::traits::Owned>::Reader<'_>,__rydantic_ctx:&mut #rd::Context)->::core::option::Option<Self>{#read_body}fn write_capnp(&self,mut __wire_builder:<Self::Wire as #rd::capnp::traits::Owned>::Builder<'_>,__rydantic_ctx:&mut #rd::Context){#write_body}}
+        impl #rd::capnp_support::CapnpRead for #name{fn read_value(value:#rd::capnp::dynamic_value::Reader<'_>,ctx:&mut #rd::Context)->::core::option::Option<Self>{let reader=#rd::capnp_support::struct_value::<#wire::Owned>(value,ctx)?;<Self as #rd::CapnpModel>::read_capnp(reader,ctx)}}},
     )
 }
 

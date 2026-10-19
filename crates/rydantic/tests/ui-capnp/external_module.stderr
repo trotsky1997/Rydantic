@@ -1,0 +1,13 @@
+error[E0658]: file modules in proc macro input are unstable
+ --> tests/ui-capnp/external_module.rs:3:5
+  |
+3 |     mod external;
+  |     ^^^^^^^^^^^^^
+  |
+  = note: see issue #54727 <https://github.com/rust-lang/rust/issues/54727> for more information
+
+error: use inline submodules so capnp_models can inspect their model definitions
+ --> tests/ui-capnp/external_module.rs:3:5
+  |
+3 |     mod external;
+  |     ^^^
