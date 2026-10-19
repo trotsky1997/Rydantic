@@ -1,6 +1,6 @@
 [package]
 name = "rydantic"
-description = "Type-driven JSON parsing, normalization, validation and JSON Schema for Rust"
+description = "Type-driven models, validation, JSON Schema and native Cap'n Proto for Rust"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -10,18 +10,31 @@ repository.workspace = true
 default = ["derive"]
 derive = ["dep:rydantic-derive"]
 dynamic = ["dep:jsonschema"]
+chrono = ["dep:chrono"]
+decimal = ["dep:rust_decimal"]
+capnp = ["dep:capnp"]
 
 [dependencies]
 serde.workspace = true
 serde_json.workspace = true
 regex.workspace = true
 email_address = "0.2"
-rydantic-derive = { version = "0.1.0", path = "../rydantic-derive", optional = true }
+rydantic-derive = { version = "0.2.0", path = "../rydantic-derive", optional = true }
 jsonschema = { workspace = true, optional = true }
+
+chrono = { version = "0.4", default-features = false, features = ["std"], optional = true }
+rust_decimal = { version = "1", default-features = false, features = ["std"], optional = true }
+
+capnp = { version = "0.27", features = ["unaligned"], optional = true }
 
 [dev-dependencies]
 jsonschema.workspace = true
 trybuild = "1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "time"] }
 
 [lints]
 workspace = true
+
+[[example]]
+name = "dates_decimal"
+required-features = ["chrono", "decimal"]

@@ -1,0 +1,7 @@
+error: untagged and tag cannot be combined
+ --> tests/ui/tag_untagged.rs:2:10
+  |
+2 | #[derive(Model)]
+  |          ^^^^^
+  |
+  = note: this error originates in the derive macro `Model` (in Nightly builds, run with -Z macro-backtrace for more info)

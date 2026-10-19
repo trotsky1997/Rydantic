@@ -1,0 +1,33 @@
+error[E0277]: the trait bound `std::string::String: ExtraFields` is not satisfied
+ --> tests/ui/extra_type.rs:4:41
+  |
+4 | struct Broken { #[model(extra)] values: String }
+  |                                         ^^^^^^ the trait `ExtraFields` is not implemented for `std::string::String`
+  |
+help: the following other types implement trait `ExtraFields`
+ --> src/object.rs
+  |
+  | impl<T> ExtraFields for BTreeMap<String, T> {}
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `BTreeMap<std::string::String, T>`
+...
+  | impl<T, S: BuildHasher> ExtraFields for HashMap<String, T, S> {}
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `HashMap<std::string::String, T, S>`
+note: required by a bound in `__rydantic_assert_extra`
+ --> tests/ui/extra_type.rs:2:10
+  |
+2 | #[derive(Model)]
+  |          ^^^^^ required by this bound in `__rydantic_assert_extra`
+  = note: this error originates in the derive macro `Model` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0277]: the trait bound `std::string::String: ObjectType` is not satisfied
+ --> tests/ui/extra_type.rs:4:41
+  |
+4 | struct Broken { #[model(extra)] values: String }
+  |                                         ^^^^^^ the trait `ObjectType` is not implemented for `std::string::String`
+  |
+  = help: the following other types implement trait `ObjectType`:
+            BTreeMap<std::string::String, T>
+            Box<T>
+            Broken
+            HashMap<std::string::String, T, S>
+            Option<T>

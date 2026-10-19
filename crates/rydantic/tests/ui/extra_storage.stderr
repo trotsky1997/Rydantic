@@ -1,0 +1,5 @@
+error: extra = "allow" requires one #[model(extra)] map field
+ --> tests/ui/extra_storage.rs:4:15
+  |
+4 | struct Broken { value: String }
+  |               ^^^^^^^^^^^^^^^^^

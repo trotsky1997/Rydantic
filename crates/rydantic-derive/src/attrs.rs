@@ -4,9 +4,14 @@ use syn::{spanned::Spanned, Attribute, Expr, Lit, LitInt, LitStr, Path};
 #[derive(Default)]
 pub struct Container {
     pub ignore_extra: bool,
+    pub allow_extra: bool,
+    pub untagged: bool,
+    pub async_validate: Option<Path>,
     pub title: Option<String>,
     pub validate: Option<Path>,
     pub tag: Option<String>,
+    pub capnp: Option<Path>,
+    pub capnp_enum: Option<Path>,
 }
 
 #[derive(Default)]
@@ -34,6 +39,14 @@ pub struct Field {
     pub default_factory: Option<Path>,
     pub validate: Option<Path>,
     pub before: Option<Path>,
+    pub async_validate: Option<Path>,
+    pub flatten: bool,
+    pub extra: bool,
+    pub capnp_name: Option<String>,
+    pub capnp_data: bool,
+    pub capnp_text: bool,
+    pub capnp_enum: bool,
+    pub capnp_skip: bool,
 }
 
 fn key(meta: &syn::meta::ParseNestedMeta<'_>, seen: &mut HashSet<String>) -> syn::Result<String> {
@@ -59,10 +72,14 @@ pub fn container(attrs: &[Attribute]) -> syn::Result<Container> {
                     result.ignore_extra = match value.value().as_str() {
                         "ignore" => true,
                         "forbid" => false,
+                        "allow" => {
+                            result.allow_extra = true;
+                            false
+                        }
                         _ => {
                             return Err(syn::Error::new(
                                 value.span(),
-                                "extra must be \"forbid\" or \"ignore\"",
+                                "extra must be \"forbid\", \"ignore\", or \"allow\"",
                             ))
                         }
                     };
@@ -70,6 +87,10 @@ pub fn container(attrs: &[Attribute]) -> syn::Result<Container> {
                 "title" => result.title = Some(meta.value()?.parse::<LitStr>()?.value()),
                 "validate" => result.validate = Some(meta.value()?.parse()?),
                 "tag" => result.tag = Some(meta.value()?.parse::<LitStr>()?.value()),
+                "capnp" => result.capnp = Some(meta.value()?.parse::<LitStr>()?.parse()?),
+                "capnp_enum" => result.capnp_enum = Some(meta.value()?.parse::<LitStr>()?.parse()?),
+                "untagged" => result.untagged = true,
+                "async_validate" => result.async_validate = Some(meta.value()?.parse()?),
                 _ => {
                     return Err(meta.error(
                         "unsupported model attribute; expected extra, title, validate, or tag",
@@ -78,6 +99,12 @@ pub fn container(attrs: &[Attribute]) -> syn::Result<Container> {
             }
             Ok(())
         })?;
+    }
+    if result.untagged && result.tag.is_some() {
+        return Err(syn::Error::new(
+            proc_macro2::Span::call_site(),
+            "untagged and tag cannot be combined",
+        ));
     }
     Ok(result)
 }
@@ -88,6 +115,7 @@ fn number(expr: Expr) -> syn::Result<String> {
             Expr::Lit(value) => match &value.lit {
                 Lit::Int(value) => Some(value.base10_digits().to_owned()),
                 Lit::Float(value) => Some(value.base10_digits().to_owned()),
+                Lit::Str(value) => Some(value.value()),
                 _ => None,
             },
             Expr::Unary(value) if matches!(value.op, syn::UnOp::Neg(_)) => {
@@ -164,10 +192,24 @@ pub fn field(attrs: &[Attribute]) -> syn::Result<Field> {
                 "default_factory" => result.default_factory = Some(meta.value()?.parse()?),
                 "validate" => result.validate = Some(meta.value()?.parse()?),
                 "before" => result.before = Some(meta.value()?.parse()?),
+                "async_validate" => result.async_validate = Some(meta.value()?.parse()?),
+                "capnp_name" => result.capnp_name = Some(meta.value()?.parse::<LitStr>()?.value()),
+                "capnp_data" => result.capnp_data = true,
+                "capnp_text" => result.capnp_text = true,
+                "capnp_enum" => result.capnp_enum = true,
+                "capnp_skip" => result.capnp_skip = true,
+                "flatten" => result.flatten = true,
+                "extra" => result.extra = true,
                 _ => return Err(meta.error("unsupported Rydantic field attribute")),
             }
             Ok(())
         })?;
+    }
+    if result.flatten && result.extra {
+        return Err(syn::Error::new(
+            proc_macro2::Span::call_site(),
+            "flatten and extra cannot be combined",
+        ));
     }
     if result.lowercase && result.uppercase {
         return Err(syn::Error::new(

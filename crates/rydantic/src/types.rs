@@ -1,6 +1,6 @@
 use crate::{
-    Context, JsonType, LengthType, NumericType, SchemaContext, SchemaMode, Stage, StringType,
-    TypeKind, ValidationError, Value,
+    Context, Input, JsonType, LengthType, NumericType, SchemaContext, SchemaMode, Stage,
+    StringType, TypeKind, ValidationError, Value,
 };
 use serde_json::{json, Number};
 use std::{
@@ -31,6 +31,8 @@ fn mismatch(ctx: &mut Context, expected: &str, value: &Value) {
 macro_rules! integer {
     ($($ty:ty),* $(,)?) => {$(
         impl JsonType for $ty {
+            fn prepare_default(self,ctx:&mut Context)->Option<Self>{self.validate_into(ctx);Some(self)}
+            fn decode_input(input:Input<'_>,ctx:&mut Context,coerce:bool)->Option<Self>{Self::decode(crate::direct::scalar(input,ctx,"integer")?,ctx,coerce)}
             fn decode(value: Value, ctx: &mut Context, coerce: bool) -> Option<Self> {
                 if coerce {
                     if let Value::String(text) = &value {
@@ -41,17 +43,7 @@ macro_rules! integer {
                     }
                 }
                 let Value::Number(number) = &value else { mismatch(ctx, "integer", &value); return None; };
-                let parsed = if let Some(number) = number.as_i64() { Self::try_from(number).ok() }
-                    else if let Some(number) = number.as_u64() { Self::try_from(number).ok() }
-                    else if let Some(float) = number.as_f64() {
-                        let min = serde_json::to_value(<$ty>::MIN).expect("integer bound");
-                        let max = serde_json::to_value(<$ty>::MAX).expect("integer bound");
-                        if float.fract() == 0.0
-                            && crate::rules::compare_numbers(number, min.as_number().expect("number")) != std::cmp::Ordering::Less
-                            && crate::rules::compare_numbers(number, max.as_number().expect("number")) != std::cmp::Ordering::Greater {
-                            Some(float as Self)
-                        } else { None }
-                    } else { None };
+                let parsed = crate::rules::integer_text(number).and_then(|text| text.parse::<Self>().ok());
                 if parsed.is_none() {
                     ctx.push(ValidationError::new(if number.is_f64() { "int_type" } else { "int_out_of_range" }, concat!("value must be an integer representable as ", stringify!($ty))).with_stage(Stage::Parse));
                 }
@@ -67,11 +59,13 @@ macro_rules! integer {
         impl NumericType for $ty {}
     )*};
 }
-integer!(i8, i16, i32, i64, isize, u8, u16, u32, u64, usize);
+integer!(i8, i16, i32, i64, i128, isize, u8, u16, u32, u64, u128, usize);
 
 macro_rules! float {
     ($($ty:ty),*) => {$(
         impl JsonType for $ty {
+            fn prepare_default(self,ctx:&mut Context)->Option<Self>{self.validate_into(ctx);Some(self)}
+            fn decode_input(input:Input<'_>,ctx:&mut Context,coerce:bool)->Option<Self>{Self::decode(crate::direct::scalar(input,ctx,"number")?,ctx,coerce)}
             fn decode(value: Value, ctx: &mut Context, coerce: bool) -> Option<Self> {
                 let parsed = match &value {
                     Value::Number(number) => number.as_f64().and_then(|number| {
@@ -106,6 +100,13 @@ macro_rules! float {
 float!(f32, f64);
 
 impl JsonType for String {
+    fn prepare_default(self, ctx: &mut Context) -> Option<Self> {
+        self.validate_into(ctx);
+        Some(self)
+    }
+    fn decode_input(input: Input<'_>, ctx: &mut Context, coerce: bool) -> Option<Self> {
+        Self::decode(crate::direct::scalar(input, ctx, "string")?, ctx, coerce)
+    }
     fn decode(value: Value, ctx: &mut Context, coerce: bool) -> Option<Self> {
         match value {
             Value::String(text) => Some(text),
@@ -135,6 +136,13 @@ impl StringType for String {}
 impl LengthType for String {}
 
 impl JsonType for bool {
+    fn prepare_default(self, ctx: &mut Context) -> Option<Self> {
+        self.validate_into(ctx);
+        Some(self)
+    }
+    fn decode_input(input: Input<'_>, ctx: &mut Context, coerce: bool) -> Option<Self> {
+        Self::decode(crate::direct::scalar(input, ctx, "boolean")?, ctx, coerce)
+    }
     fn decode(value: Value, ctx: &mut Context, coerce: bool) -> Option<Self> {
         match value {
             Value::Bool(boolean) => Some(boolean),
@@ -163,6 +171,34 @@ impl JsonType for bool {
 }
 
 impl<T: JsonType> JsonType for Option<T> {
+    fn prepare_default(self, ctx: &mut Context) -> Option<Self> {
+        match self {
+            Some(v) => v.prepare_default(ctx).map(Some),
+            None => Some(None),
+        }
+    }
+    fn decode_input(input: Input<'_>, ctx: &mut Context, coerce: bool) -> Option<Self> {
+        if input.is_null() {
+            Some(None)
+        } else {
+            T::decode_input(input, ctx, coerce).map(Some)
+        }
+    }
+    fn normalize(self, rules: &crate::rules::Rules, ctx: &mut Context) -> Option<Self> {
+        match self {
+            Some(value) => value.normalize(rules, ctx).map(Some),
+            None => Some(None),
+        }
+    }
+    fn validate_rules(&self, rules: &crate::rules::Rules, ctx: &mut Context) {
+        if let Some(value) = self {
+            value.validate_rules(rules, ctx)
+        }
+    }
+
+    fn async_required(seen: &mut std::collections::HashSet<&'static str>) -> bool {
+        T::async_required(seen)
+    }
     fn decode(value: Value, ctx: &mut Context, coerce: bool) -> Option<Self> {
         if value.is_null() {
             Some(None)
@@ -200,6 +236,22 @@ impl<T: NumericType> NumericType for Option<T> {}
 impl<T: LengthType> LengthType for Option<T> {}
 
 impl<T: JsonType> JsonType for Box<T> {
+    fn prepare_default(self, ctx: &mut Context) -> Option<Self> {
+        (*self).prepare_default(ctx).map(Box::new)
+    }
+    fn decode_input(input: Input<'_>, ctx: &mut Context, coerce: bool) -> Option<Self> {
+        T::decode_input(input, ctx, coerce).map(Box::new)
+    }
+    fn normalize(self, rules: &crate::rules::Rules, ctx: &mut Context) -> Option<Self> {
+        (*self).normalize(rules, ctx).map(Box::new)
+    }
+    fn validate_rules(&self, rules: &crate::rules::Rules, ctx: &mut Context) {
+        (**self).validate_rules(rules, ctx)
+    }
+
+    fn async_required(seen: &mut std::collections::HashSet<&'static str>) -> bool {
+        T::async_required(seen)
+    }
     fn decode(value: Value, ctx: &mut Context, coerce: bool) -> Option<Self> {
         T::decode(value, ctx, coerce).map(Box::new)
     }
@@ -230,6 +282,35 @@ impl<T: NumericType> NumericType for Box<T> {}
 impl<T: LengthType> LengthType for Box<T> {}
 
 impl<T: JsonType> JsonType for Vec<T> {
+    fn validate_rules(&self, rules: &crate::rules::Rules, ctx: &mut Context) {
+        rules.validate_length(self.len(), ctx)
+    }
+    fn prepare_default(self, ctx: &mut Context) -> Option<Self> {
+        let mut result = Vec::with_capacity(self.len());
+        let mut complete = true;
+        for (i, value) in self.into_iter().enumerate() {
+            match ctx.at(i, |ctx| value.prepare_default(ctx)) {
+                Some(v) => result.push(v),
+                None => complete = false,
+            }
+        }
+        complete.then_some(result)
+    }
+    fn decode_input(input: Input<'_>, ctx: &mut Context, coerce: bool) -> Option<Self> {
+        let items = input.array(ctx)?;
+        let mut values = Vec::with_capacity(items.len());
+        let mut complete = true;
+        for (index, item) in items.into_iter().enumerate() {
+            match ctx.at(index, |ctx| T::decode_input(item, ctx, coerce)) {
+                Some(value) => values.push(value),
+                None => complete = false,
+            }
+        }
+        complete.then_some(values)
+    }
+    fn async_required(seen: &mut std::collections::HashSet<&'static str>) -> bool {
+        T::async_required(seen)
+    }
     fn decode(value: Value, ctx: &mut Context, coerce: bool) -> Option<Self> {
         let Value::Array(items) = value else {
             mismatch(ctx, "array", &value);
@@ -273,9 +354,37 @@ impl<T: JsonType> JsonType for Vec<T> {
         TypeKind::Array
     }
 }
-impl<T: JsonType> LengthType for Vec<T> {}
+impl<T> LengthType for Vec<T> {}
 
 impl<T: JsonType, const N: usize> JsonType for [T; N] {
+    fn validate_rules(&self, rules: &crate::rules::Rules, ctx: &mut Context) {
+        rules.validate_length(self.len(), ctx)
+    }
+    fn prepare_default(self, ctx: &mut Context) -> Option<Self> {
+        Vec::<T>::prepare_default(Vec::from(self), ctx)?
+            .try_into()
+            .ok()
+    }
+    fn decode_input(input: Input<'_>, ctx: &mut Context, coerce: bool) -> Option<Self> {
+        let values = Vec::<T>::decode_input(input, ctx, coerce)?;
+        let len = values.len();
+        values
+            .try_into()
+            .map_err(|_| {
+                ctx.push(
+                    ValidationError::new(
+                        "array_length",
+                        format!("array must contain exactly {N} items"),
+                    )
+                    .with_param("expected", N)
+                    .with_param("actual", len),
+                )
+            })
+            .ok()
+    }
+    fn async_required(seen: &mut std::collections::HashSet<&'static str>) -> bool {
+        T::async_required(seen)
+    }
     fn decode(value: Value, ctx: &mut Context, coerce: bool) -> Option<Self> {
         let values = Vec::<T>::decode(value, ctx, coerce)?;
         let length = values.len();
@@ -322,9 +431,41 @@ impl<T: JsonType, const N: usize> JsonType for [T; N] {
         TypeKind::Array
     }
 }
-impl<T: JsonType, const N: usize> LengthType for [T; N] {}
+impl<T, const N: usize> LengthType for [T; N] {}
 
 impl<T: JsonType> JsonType for BTreeMap<String, T> {
+    fn validate_rules(&self, rules: &crate::rules::Rules, ctx: &mut Context) {
+        rules.validate_length(self.len(), ctx)
+    }
+    fn prepare_default(self, ctx: &mut Context) -> Option<Self> {
+        let mut result = Self::new();
+        let mut complete = true;
+        for (k, v) in self {
+            match ctx.at(k.clone(), |ctx| v.prepare_default(ctx)) {
+                Some(v) => {
+                    result.insert(k, v);
+                }
+                None => complete = false,
+            }
+        }
+        complete.then_some(result)
+    }
+    fn decode_input(input: Input<'_>, ctx: &mut Context, coerce: bool) -> Option<Self> {
+        let mut result = Self::new();
+        let mut complete = true;
+        for (key, item) in input.object(ctx)? {
+            match ctx.at(key.clone(), |ctx| T::decode_input(item, ctx, coerce)) {
+                Some(value) => {
+                    result.insert(key, value);
+                }
+                None => complete = false,
+            }
+        }
+        complete.then_some(result)
+    }
+    fn async_required(seen: &mut std::collections::HashSet<&'static str>) -> bool {
+        T::async_required(seen)
+    }
     fn decode(value: Value, ctx: &mut Context, coerce: bool) -> Option<Self> {
         let Value::Object(items) = value else {
             mismatch(ctx, "object", &value);
@@ -373,9 +514,23 @@ impl<T: JsonType> JsonType for BTreeMap<String, T> {
         TypeKind::Object
     }
 }
-impl<T: JsonType> LengthType for BTreeMap<String, T> {}
+impl<T> LengthType for BTreeMap<String, T> {}
 
 impl<T: JsonType, S: BuildHasher + Default> JsonType for HashMap<String, T, S> {
+    fn validate_rules(&self, rules: &crate::rules::Rules, ctx: &mut Context) {
+        rules.validate_length(self.len(), ctx)
+    }
+    fn prepare_default(self, ctx: &mut Context) -> Option<Self> {
+        BTreeMap::<String, T>::prepare_default(self.into_iter().collect(), ctx)
+            .map(|values| values.into_iter().collect())
+    }
+    fn decode_input(input: Input<'_>, ctx: &mut Context, coerce: bool) -> Option<Self> {
+        BTreeMap::<String, T>::decode_input(input, ctx, coerce)
+            .map(|values| values.into_iter().collect())
+    }
+    fn async_required(seen: &mut std::collections::HashSet<&'static str>) -> bool {
+        T::async_required(seen)
+    }
     fn decode(value: Value, ctx: &mut Context, coerce: bool) -> Option<Self> {
         BTreeMap::<String, T>::decode(value, ctx, coerce).map(|values| values.into_iter().collect())
     }
@@ -410,7 +565,7 @@ impl<T: JsonType, S: BuildHasher + Default> JsonType for HashMap<String, T, S> {
         TypeKind::Object
     }
 }
-impl<T: JsonType, S: BuildHasher + Default> LengthType for HashMap<String, T, S> {}
+impl<T, S: BuildHasher> LengthType for HashMap<String, T, S> {}
 
 impl JsonType for Value {
     fn decode(value: Value, _: &mut Context, _: bool) -> Option<Self> {
@@ -418,6 +573,53 @@ impl JsonType for Value {
     }
     fn encode(&self, _: &mut Context) -> Value {
         self.clone()
+    }
+    fn schema(_: &mut SchemaContext, _: bool) -> Value {
+        json!({})
+    }
+}
+
+impl JsonType for () {
+    fn prepare_default(self, ctx: &mut Context) -> Option<Self> {
+        self.validate_into(ctx);
+        Some(self)
+    }
+    fn decode_input(input: Input<'_>, ctx: &mut Context, coerce: bool) -> Option<Self> {
+        Self::decode(crate::direct::scalar(input, ctx, "null")?, ctx, coerce)
+    }
+    fn decode(value: Value, ctx: &mut Context, _: bool) -> Option<Self> {
+        if value.is_null() {
+            Some(())
+        } else {
+            mismatch(ctx, "null", &value);
+            None
+        }
+    }
+    fn encode(&self, _: &mut Context) -> Value {
+        Value::Null
+    }
+    fn schema(_: &mut SchemaContext, _: bool) -> Value {
+        json!({"type":"null"})
+    }
+}
+
+impl JsonType for Box<crate::RawValue> {
+    fn decode(value: Value, ctx: &mut Context, _: bool) -> Option<Self> {
+        serde_json::value::to_raw_value(&value)
+            .map_err(|error| ctx.push(ValidationError::new("raw_json", error.to_string())))
+            .ok()
+    }
+    fn decode_input(input: Input<'_>, ctx: &mut Context, _: bool) -> Option<Self> {
+        match input {
+            Input::Borrowed(raw) => Some(raw.to_owned()),
+            value => Self::decode(value.into_value(ctx)?, ctx, false),
+        }
+    }
+    fn encode(&self, ctx: &mut Context) -> Value {
+        serde_json::from_str(self.get()).unwrap_or_else(|error| {
+            ctx.push(ValidationError::new("raw_json", error.to_string()));
+            Value::Null
+        })
     }
     fn schema(_: &mut SchemaContext, _: bool) -> Value {
         json!({})

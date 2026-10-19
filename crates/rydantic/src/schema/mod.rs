@@ -116,7 +116,25 @@ impl SchemaContext {
             let definition = build(self);
             self.definitions.insert(key.to_owned(), definition);
         }
-        json!({"$ref": format!("#/$defs/{}", key.replace('~', "~0").replace('/', "~1"))})
+        json!({"$ref": format!("#/$defs/{}", encode_fragment(&key.replace('~', "~0").replace('/', "~1")))})
+    }
+    /// Resolve a reference within this export registry.
+    pub fn resolve(&self, schema: &Value) -> Value {
+        if let Some(reference) = schema
+            .get("$ref")
+            .and_then(Value::as_str)
+            .and_then(|s| s.strip_prefix("#/$defs/"))
+        {
+            let key = decode_fragment(reference)
+                .replace("~1", "/")
+                .replace("~0", "~");
+            self.definitions
+                .get(&key)
+                .cloned()
+                .unwrap_or_else(|| schema.clone())
+        } else {
+            schema.clone()
+        }
     }
     pub fn finish(self, root: Value) -> Value {
         let mut object = match root {
@@ -151,4 +169,34 @@ pub fn annotate_local(schema: &mut Value, rule: &str) {
     if !entries.iter().any(|entry| entry == rule) {
         entries.push(json!(rule));
     }
+}
+
+fn encode_fragment(text: &str) -> String {
+    let mut result = String::new();
+    for byte in text.bytes() {
+        if byte.is_ascii_alphanumeric() || b"-._~".contains(&byte) {
+            result.push(byte as char);
+        } else {
+            use std::fmt::Write;
+            write!(&mut result, "%{byte:02X}").expect("String write");
+        }
+    }
+    result
+}
+fn decode_fragment(text: &str) -> String {
+    let mut bytes = Vec::new();
+    let mut input = text.as_bytes().iter().copied();
+    while let Some(byte) = input.next() {
+        if byte == b'%' {
+            let hex = input.by_ref().take(2).collect::<Vec<_>>();
+            if let Ok(hex) = std::str::from_utf8(&hex) {
+                if let Ok(value) = u8::from_str_radix(hex, 16) {
+                    bytes.push(value);
+                    continue;
+                }
+            }
+        }
+        bytes.push(byte);
+    }
+    String::from_utf8(bytes).unwrap_or_else(|_| text.to_owned())
 }
