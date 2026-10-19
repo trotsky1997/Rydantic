@@ -1,40 +1,42 @@
-# Rydantic 0.2.0 验证记录
+# Rydantic 0.2.0 validation record
 
-日期：2026-10-19（Asia/Shanghai）。本机环境：macOS，rustc 1.98.1，Cargo 1.98.1。
+Date: 2026-10-19 (Asia/Shanghai). Local environment: macOS, rustc 1.98.1, Cargo 1.98.1.
 
-## 自动化验证
+This record documents the 0.2.0 release. Later releases add coverage described in the README and their release notes.
 
-- `cargo test --workspace --all-features --locked`：通过。92 项功能测试：27 项原有模型行为、11 项原有 Schema、5 项动态 Schema、19 项新增模型组合、11 项异步／流式、3 项日期／Decimal、2 项 Schema 路径、3 项原始 JSON 路径、10 项原生 Cap’n Proto、1 项过程宏字段映射检查。另有 1 项需要系统编译器的官方命令行互操作测试，本机已显式执行并通过。
-- 另有 1 项文档测试与 1 项编译期测试入口。编译期入口在常规模式下核对 11 个失败用例：生命周期逃逸、矛盾长度、重复别名、缺失 extra 存储、extra 存储类型、无效正则、只读包装修改、tag／untagged 冲突、tuple 字段 exclude、未知属性、规则与字段类型不匹配。
-- 原有 Schema 边界矩阵继续对照 1,400 组输入；独立 `jsonschema` 验证器检查 103 个原有成功输出。新增用例还检查 tuple／untagged、借用递归与泛型引用、optional flatten、flatten 默认值、键冲突、日期／Decimal 的输入与输出 Schema。路径回归用例确认带空格、中文、百分号和 JSON Pointer 转义字符的规则位置能够在 Schema 中直接解析，生成的 `$ref` 继续使用 URI 片段编码。
-- `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings`：通过。
-- `cargo check -p rydantic --no-default-features --lib --locked`：通过。
-- `cargo check -p rydantic --no-default-features --features chrono,decimal,capnp --lib --locked`：通过。
-- `RUSTDOCFLAGS='-D warnings' cargo doc --workspace --all-features --no-deps --locked`：通过。
-- `cargo fmt --all -- --check`：通过。
+## Automated checks
 
-## 行为证据
+- `cargo test --workspace --all-features --locked`: passed. The 92 functional tests cover 27 original model behaviors, 11 original schema tests, 5 dynamic schema tests, 19 additional model combinations, 11 asynchronous/streaming tests, 3 date/Decimal tests, 2 schema-path tests, 3 raw JSON input tests, 10 native Cap'n Proto tests, and 1 procedural-macro field-mapping check. One additional official CLI interoperability test requires the system compiler; it was explicitly run locally and passed.
+- There is also 1 documentation test and 1 compile-test harness. The harness checks 11 failure cases: escaping lifetimes, contradictory lengths, duplicate aliases, missing extra-field storage, invalid extra-field storage types, invalid regexes, mutation of read-only wrappers, conflicting tag/untagged attributes, excluded tuple fields, unknown attributes, and incompatible field types and rules.
+- The original schema boundary matrix checks 1,400 inputs; the independent `jsonschema` validator checks 103 original successful outputs. Additional cases cover tuples/untagged enums, borrowed recursive and generic references, optional flattening, flattened defaults, key collisions, and date/Decimal input and output schemas. Path regressions verify that rule locations containing spaces, Chinese characters, percent signs, and JSON Pointer escapes can be resolved within schemas. Generated `$ref` values continue to use URI-fragment encoding.
+- `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings`: passed.
+- `cargo check -p rydantic --no-default-features --lib --locked`: passed.
+- `cargo check -p rydantic --no-default-features --features chrono,decimal,capnp --lib --locked`: passed.
+- `RUSTDOCFLAGS='-D warnings' cargo doc --workspace --all-features --no-deps --locked`: passed.
+- `cargo fmt --all -- --check`: passed.
 
-- 借用测试直接检查 `&str` 地址位于输入缓冲区，验证 trim 保留引用、普通 Cow 保持借用、转义和大小写转换产生 Owned 值；同时覆盖多生命周期、递归、泛型、flatten、extra、默认值与 Serde 包装。
-- 128 位整数测试覆盖 `i128::MIN`／`u128::MAX`、数学整数、越界和超长指数；Decimal 测试覆盖精确阈值、96 位系数、28 位 scale、科学记数法和精度损失拒绝。
-- 日期测试覆盖闰日、无效日期／时间、时区转换、超过纳秒精度的输入，以及 Rust 直接构造的越界年份／秒级时区偏移。非法 typed default 返回结构化错误。
-- 异步测试在 Tokio 运行时等待实际挂起的 future，并使用 `tokio::spawn` 验证 Send；检查父模型同步入口拒绝、独立字段错误收集、跨字段回调、同步失败跳过异步，以及取消 future 后 Context 路径恢复。
-- 流式测试使用一次读取一个字节的 reader，确认首条记录／首个数组回调发生在 EOF 前；检查回调提前终止读取、JSON 序列语法错误终止、NDJSON 下一行恢复、数组错误索引与借用数组值保留。
-- 原始输入测试定义专用自定义字段，在 `decode(Value)` 或 `encode` 被调用时直接 panic。JSON／slice／Reader／Serde／流式／异步解析经过嵌套模型、Vec、映射、数组、Option、集合约束与类型默认值后仍通过；Box<RawValue> 另行确认嵌套原文、空格和 `1e+100` 写法保持完整。
-- Cap’n Proto 使用官方 `capnp 0.27.2` 运行时、`capnpc 0.27.0` 生成器和系统 `capnp 1.5.0` 编译器验证。测试覆盖普通／packed 消息、官方 Reader/Builder、嵌套 Struct、List/Text/Data、固定数组、可选 union、原生 Enum、数据 union/group、映射、日期／Decimal 文本、精确 u128 文本、整数宽度转换、异步校验、错误路径、非法／截断／尾随消息、遍历限制与非对齐切片。
-- 官方 CLI 直接解码 Rydantic 的 Person 消息，并确认 Text／Enum 字段；Rydantic 读取 CLI 编码的 `u64::MAX` 普通及 packed 消息。对应命令为 `cargo test -p rydantic-capnp-fixture --test native -- --include-ignored`，本机 11 项全部通过。另行检查 29 位 List 长度上限，以及过程宏对重复原生字段映射的拒绝。
+## Behavioral evidence
 
-## 实际运行
+- Borrowing tests directly check that `&str` addresses fall inside the input buffer. They verify that trim preserves references, ordinary Cow strings remain borrowed, and escape decoding or case conversion produces owned values. Coverage also includes multiple lifetimes, recursion, generics, flattening, extra fields, defaults, and Serde wrappers.
+- Integer tests cover `i128::MIN`/`u128::MAX`, mathematical integers, overflow, and extremely long exponents. Decimal tests cover exact thresholds, 96-bit coefficients, 28-digit scale, scientific notation, and rejection of precision loss.
+- Date tests cover leap days, invalid dates/times, time-zone conversion, inputs exceeding nanosecond precision, and directly constructed Rust values with out-of-range years or second-level time-zone offsets. Invalid typed defaults return structured errors.
+- Asynchronous tests await futures that actually suspend on the Tokio runtime and verify Send with `tokio::spawn`. They check rejection by parent models' synchronous entry points, independent field-error collection, cross-field callbacks, skipping asynchronous checks after synchronous failures, and Context path restoration when a future is cancelled.
+- Streaming tests use a reader that returns one byte per read, verifying that the first record or array callback occurs before EOF. They cover early termination by callbacks, termination after JSON-sequence syntax errors, recovery on the next NDJSON line, array error indices, and retention of borrowed array values.
+- Raw-input tests define a custom field type that panics if `decode(Value)` or `encode` is called. JSON, slice, Reader, Serde, streaming, and asynchronous parsing pass through nested models, Vec, maps, arrays, Option, collection constraints, and typed defaults. Separate Box<RawValue> cases verify preservation of nested source text, whitespace, and `1e+100` notation.
+- Cap'n Proto was verified with the official `capnp 0.27.2` runtime, `capnpc 0.27.0` generator, and system `capnp 1.5.0` compiler. Tests cover standard/packed messages, official Readers/Builders, nested structs, List/Text/Data, fixed arrays, optional unions, native enums, data unions/groups, maps, date/Decimal text, exact u128 text, integer-width conversions, asynchronous validation, error paths, malformed/truncated/trailing messages, traversal limits, and unaligned slices.
+- The official CLI decodes Rydantic's Person message and checks Text/Enum fields. Rydantic reads CLI-encoded standard and packed `u64::MAX` messages. Running `cargo test -p rydantic-capnp-fixture --test native -- --include-ignored` passed all 11 tests locally. Additional checks cover the 29-bit List length limit and rejection of duplicate native field mappings by the procedural macro.
 
-- `borrowed`：运行借用姓名、展开地址和额外 Cow 字段；确认普通字符串 Borrowed、转义字符串 Owned，输出完整 JSON。
-- `streaming`：逐元素处理有效／无效／有效三条数组记录；NDJSON 在格式错误行之后继续交付有效记录。
-- `asynchronous`：等待异步校验，序列化 `AsyncValidated`；验证 taken 分支返回结构化错误。
-- `dates_decimal --features chrono,decimal`：保留 `12345678901234567890.123456789`，并将 `+08:00` 时间转为 UTC。
-- `rydantic-renamed-fixture`：依赖名称为 `rd`，过程宏通过重导出的依赖运行，输出 `{"text":"hello"}`。
-- `rydantic-capnp-fixture`：将完整示例模型编码为 432 字节的官方原生消息，解析后与原模型逐字段相等；直接输出 `Native Cap'n Proto: 432 bytes, Alice`。
+## Executed examples
 
-## CI 与范围
+- `borrowed`: parses a borrowed name, a flattened address, and extra Cow fields. It checks borrowed ordinary strings and owned escaped strings, then emits complete JSON.
+- `streaming`: processes valid, invalid, and valid array records in sequence. NDJSON continues delivering valid records after a malformed line.
+- `asynchronous`: awaits validation and serializes `AsyncValidated`, checking that the taken branch returns a structured error.
+- `dates_decimal --features chrono,decimal`: preserves `12345678901234567890.123456789` and converts a `+08:00` time to UTC.
+- `rydantic-renamed-fixture`: uses `rd` as its dependency name; the procedural macro works through re-exported dependencies and emits `{"text":"hello"}`.
+- `rydantic-capnp-fixture`: encodes the complete example model as a 432-byte official native message and compares every field after parsing. Its output is `Native Cap'n Proto: 432 bytes, Alice`.
 
-[CI 工作流](https://github.com/trotsky1997/Rydantic/actions/workflows/ci.yml) 在 Ubuntu 与 macOS 使用同一工具链执行完整测试、Clippy、格式、feature 检查、文档构建、工具参数示例与新增示例。Cap’n Proto 示例提交官方生成的绑定，常规构建可直接复用。Ubuntu 额外安装官方 CLI 执行互操作测试。上文记录本机验证结果；各次远程运行状态可从该链接查看。
+## CI and scope
 
-0.2 覆盖 README 原列出的八类后续功能。借用字段基于原始输入缓冲区，读取器使用同步 I/O，序列／数组流式入口保留当前记录。日期、Decimal、自定义函数等本地规则通过 Schema 元数据公开。更详细的入口与组合语义见 README。
+The [CI workflow](https://github.com/trotsky1997/Rydantic/actions/workflows/ci.yml) uses the same toolchain on Ubuntu and macOS for full tests, Clippy, formatting, feature checks, documentation builds, tool-argument examples, and additional examples. For 0.2.0, the Cap'n Proto fixture includes committed official bindings that ordinary builds can reuse; Ubuntu also installs the official CLI for interoperability tests. The results above describe local validation. Remote run statuses are available at the workflow link.
+
+Version 0.2 covers the eight follow-up areas originally listed in the README. Borrowed fields reference the raw input buffer, readers use synchronous I/O, and sequence/array streaming entry points retain the current record. Schema metadata exposes local rules for dates, Decimal, and custom functions. See the README for entry points and composition semantics.
