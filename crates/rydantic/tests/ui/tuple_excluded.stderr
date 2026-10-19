@@ -1,0 +1,5 @@
+error: tuple fields support validation and transformations; names, flatten, extra, exclude and defaults require named fields
+ --> tests/ui/tuple_excluded.rs:3:15
+  |
+3 | struct Broken(#[model(exclude)] String);
+  |               ^

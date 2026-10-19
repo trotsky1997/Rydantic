@@ -1,0 +1,8 @@
+error[E0515]: cannot return value referencing local variable `input`
+ --> tests/ui/borrow_escapes.rs:6:5
+  |
+6 |     View::parse_json(&input).unwrap()
+  |     ^^^^^^^^^^^^^^^^^------^^^^^^^^^^
+  |     |                |
+  |     |                `input` is borrowed here
+  |     returns a value referencing data owned by the current function

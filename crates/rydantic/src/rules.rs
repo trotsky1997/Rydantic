@@ -26,7 +26,14 @@ pub fn compare_numbers(left: &Number, right: &Number) -> Ordering {
         let negative = text.starts_with('-');
         let text = text.trim_start_matches('-');
         let (mantissa, exponent) = text.split_once(['e', 'E']).map_or((text, 0), |(m, e)| {
-            (m, e.parse::<i64>().expect("JSON exponent"))
+            (
+                m,
+                e.parse::<i64>().unwrap_or(if e.starts_with('-') {
+                    i64::MIN / 2
+                } else {
+                    i64::MAX / 2
+                }),
+            )
         });
         let decimals = mantissa
             .split_once('.')
@@ -36,7 +43,9 @@ pub fn compare_numbers(left: &Number, right: &Number) -> Ordering {
             .filter(u8::is_ascii_digit)
             .skip_while(|digit| *digit == b'0')
             .collect();
-        let magnitude = digits.len() as i64 + exponent - decimals;
+        let magnitude = (digits.len() as i64)
+            .saturating_add(exponent)
+            .saturating_sub(decimals);
         (negative && !digits.is_empty(), digits, magnitude)
     }
     let (ln, ld, lm) = parts(left);
@@ -73,6 +82,48 @@ pub fn compare_numbers(left: &Number, right: &Number) -> Ordering {
     } else {
         order
     }
+}
+
+/// Normalize a mathematical integer without floating point or exponent-sized allocation.
+pub fn integer_text(number: &Number) -> Option<String> {
+    let text = number.to_string();
+    let negative = text.starts_with('-');
+    let text = text.trim_start_matches('-');
+    let (mantissa, exponent) = text
+        .split_once(['e', 'E'])
+        .map_or(Some((text, 0i64)), |(m, e)| {
+            e.parse::<i64>().ok().map(|e| (m, e))
+        })?;
+    let decimals = mantissa.split_once('.').map_or(0, |(_, f)| f.len() as i64);
+    let mut digits: String = mantissa
+        .chars()
+        .filter(|c| c.is_ascii_digit())
+        .skip_while(|c| *c == '0')
+        .collect();
+    if digits.is_empty() {
+        return Some("0".into());
+    }
+    let scale = exponent.checked_sub(decimals)?;
+    if scale < 0 {
+        let remove = usize::try_from(scale.checked_neg()?).ok()?;
+        if remove > digits.len() || !digits[digits.len() - remove..].bytes().all(|b| b == b'0') {
+            return None;
+        }
+        digits.truncate(digits.len() - remove);
+    } else {
+        let append = usize::try_from(scale).ok()?;
+        if digits.len().checked_add(append)? > 39 {
+            return None;
+        }
+        digits.extend(std::iter::repeat_n('0', append));
+    }
+    if digits.len() > 39 {
+        return None;
+    }
+    if negative {
+        digits.insert(0, '-');
+    }
+    Some(digits)
 }
 
 impl Rules {
@@ -229,6 +280,12 @@ impl Rules {
             {
                 object.insert(max_key.into(), json!(max));
             }
+        }
+        if kind == crate::TypeKind::Decimal {
+            if self.ge.is_some() || self.gt.is_some() || self.le.is_some() || self.lt.is_some() {
+                annotate_local(schema, "decimal_bounds");
+            }
+            return;
         }
         for (key, bound) in [
             ("minimum", &self.ge),

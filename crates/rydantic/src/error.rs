@@ -161,6 +161,35 @@ impl Context {
         self.path.pop();
         result
     }
+    pub fn child(&self, segment: Option<PathSegment>) -> Self {
+        let mut path = self.path.clone();
+        if let Some(segment) = segment {
+            path.push(segment);
+        }
+        Self {
+            path,
+            errors: vec![],
+        }
+    }
+    pub fn absorb(&mut self, child: Self) {
+        self.errors.extend(child.errors);
+    }
+    pub fn prepend_errors(
+        errors: ValidationErrors,
+        segment: impl Into<PathSegment>,
+    ) -> ValidationErrors {
+        let segment = segment.into();
+        ValidationErrors(
+            errors
+                .0
+                .into_iter()
+                .map(|mut error| {
+                    error.loc.insert(0, segment.clone());
+                    error
+                })
+                .collect(),
+        )
+    }
     pub fn finish<T>(self, value: Option<T>) -> Result<T, ValidationErrors> {
         if !self.errors.is_empty() {
             return Err(ValidationErrors(self.errors));
