@@ -1,0 +1,5 @@
+error: SQL length must be greater than zero
+ --> tests/ui-sql/zero_length.rs:5:11
+  |
+5 |     #[sql(length = 0)] value: String,
+  |           ^^^^^^^^^^

@@ -1,0 +1,5 @@
+error[E0080]: evaluation panicked: SQL length requires a text or binary column
+ --> tests/ui-sql/length_numeric.rs:5:32
+  |
+5 |     #[sql(length = 32)] value: i64,
+  |                                ^^^ evaluation of `_` failed here

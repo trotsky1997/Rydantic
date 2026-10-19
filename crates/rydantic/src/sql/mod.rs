@@ -1,4 +1,4 @@
-//! SQLModel-style SQLite persistence backed by SQLx and Tokio.
+//! SQLModel-style SQLite, PostgreSQL and MySQL persistence backed by SQLx and Tokio.
 //!
 //! ```
 //! use rydantic::{Model, SqlModel, sqlx::sqlite::SqlitePoolOptions};
@@ -20,13 +20,17 @@
 //! # tokio::runtime::Runtime::new()?.block_on(run())?;
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
-mod value;
-use crate::{AsyncCheck, Context, Model, ValidationError, ValidationErrors};
-use sqlx::{
-    pool::PoolConnection, sqlite::SqliteRow, Acquire, QueryBuilder, Sqlite, SqliteConnection,
-};
-use std::{future::Future, marker::PhantomData};
-pub use value::{AutoKey, Key, SqlType, SqlValue};
+mod backend;
+mod ddl;
+mod parameter;
+mod query;
+mod table;
+use crate::{Context, ValidationError, ValidationErrors};
+pub use backend::{Dialect, SqlBackend};
+pub use parameter::{AutoKey, Key, SqlParameter, SqlType, SqlValue};
+pub use query::Select;
+use sqlx::{pool::PoolConnection, Database, SqliteConnection};
+pub use table::{SqlModel, SqlRow};
 
 // SQLite extended result codes store their primary result in the low byte.
 #[cfg(feature = "axum")]
@@ -39,10 +43,18 @@ const SQLITE_CONSTRAINT: u32 = 19;
 pub trait ValidationConnection {
     const RELEASES_POOL_SLOT: bool;
 }
-impl ValidationConnection for PoolConnection<Sqlite> {
+impl<DB: Database> ValidationConnection for PoolConnection<DB> {
     const RELEASES_POOL_SLOT: bool = true;
 }
 impl ValidationConnection for &mut SqliteConnection {
+    const RELEASES_POOL_SLOT: bool = false;
+}
+#[cfg(feature = "postgres")]
+impl ValidationConnection for &mut sqlx::PgConnection {
+    const RELEASES_POOL_SLOT: bool = false;
+}
+#[cfg(feature = "mysql")]
+impl ValidationConnection for &mut sqlx::MySqlConnection {
     const RELEASES_POOL_SLOT: bool = false;
 }
 fn check_validation_connection<T: SqlModel, C: ValidationConnection>() -> Result<(), SqlError> {
@@ -104,10 +116,6 @@ impl SqlError {
 pub(crate) fn field_error(code: &str, message: &str) -> SqlError {
     SqlError::Validation(ValidationError::new(code, message).into())
 }
-fn quoted(identifier: &str) -> String {
-    format!("\"{}\"", identifier.replace('"', "\"\""))
-}
-
 #[derive(Debug, Clone, Copy)]
 pub struct Reference {
     pub table: &'static str,
@@ -144,283 +152,51 @@ pub struct Column {
     pub unique: bool,
     pub index: bool,
     pub references: Option<Reference>,
+    /// Optional bounded text/binary length used by MySQL schema generation.
+    pub length: Option<usize>,
 }
-
-/// SQLite table and CRUD operations generated from one Rydantic model.
-///
-/// Operations accept a pool, connection, or mutable SQLx transaction through
-/// `Acquire`. Writes await validation before acquiring a connection and check
-/// returned rows synchronously inside a transaction/savepoint. Pooled reads
-/// release their connection before awaiting model validators. Models with async
-/// rules require a pool; borrowed connections and transactions return a
-/// `sql_async_connection` error before awaiting a check. Normalization remains
-/// part of model parsing.
-pub trait SqlModel: Model + AsyncCheck + Send + 'static {
-    type Key: SqlValue;
-    const TABLE: &'static str;
-    const COLUMNS: &'static [Column];
-    #[doc(hidden)]
-    fn decode_row(row: &SqliteRow) -> Result<Self, sqlx::Error>;
-    #[doc(hidden)]
-    fn bind_column(&self, index: usize, query: &mut QueryBuilder<Sqlite>) -> Result<(), SqlError>;
-    #[doc(hidden)]
-    fn include_insert_column(&self, index: usize) -> bool;
-    fn key(&self) -> Option<&Self::Key>;
-
-    fn primary_key() -> &'static Column {
-        Self::COLUMNS
-            .iter()
-            .find(|c| c.primary_key)
-            .expect("SqlModel requires a primary key")
-    }
-    fn create_table_sql() -> String {
-        let mut definitions = Vec::new();
-        for col in Self::COLUMNS {
-            let mut definition = format!("{} {}", quoted(col.name), col.sql_type.declaration());
-            if col.primary_key {
-                definition.push_str(" PRIMARY KEY");
-            }
-            if col.auto_increment {
-                definition.push_str(" AUTOINCREMENT");
-            } else if !col.nullable || col.primary_key {
-                definition.push_str(" NOT NULL");
-            }
-            if col.unique && !col.primary_key {
-                definition.push_str(" UNIQUE");
-            }
-            if let Some(reference) = col.references {
-                definition.push_str(&format!(
-                    " REFERENCES {} ({}) ON DELETE {}",
-                    quoted(reference.table),
-                    quoted(reference.column),
-                    reference.on_delete.sql()
-                ));
-            }
-            definitions.push(definition);
-        }
-        format!(
-            "CREATE TABLE IF NOT EXISTS {} ({})",
-            quoted(Self::TABLE),
-            definitions.join(", ")
-        )
-    }
-    fn create_index_sql() -> Vec<String> {
-        Self::COLUMNS
-            .iter()
-            .filter(|col| col.index && !col.unique && !col.primary_key)
-            .map(|col| {
-                format!(
-                    "CREATE INDEX IF NOT EXISTS {} ON {} ({})",
-                    quoted(&format!(
-                        "rydantic_{}_{}_{}",
-                        Self::TABLE.len(),
-                        Self::TABLE,
-                        col.name
-                    )),
-                    quoted(Self::TABLE),
-                    quoted(col.name)
-                )
-            })
-            .collect()
-    }
-    fn create_table<'c, A>(connection: A) -> impl Future<Output = Result<(), SqlError>> + Send
-    where
-        A: Acquire<'c, Database = Sqlite> + Send,
-    {
-        async move {
-            let mut transaction = connection.begin().await?;
-            sqlx::query(sqlx::AssertSqlSafe(Self::create_table_sql()))
-                .execute(&mut *transaction)
-                .await?;
-            for statement in Self::create_index_sql() {
-                sqlx::query(sqlx::AssertSqlSafe(statement))
-                    .execute(&mut *transaction)
-                    .await?;
-            }
-            transaction.commit().await?;
-            Ok(())
+impl Column {
+    /// MySQL requires bounded text/binary columns for keys and indexes.
+    pub fn mysql_length(&self) -> Option<usize> {
+        if matches!(self.sql_type, SqlType::Text | SqlType::Blob)
+            && (self.length.is_some()
+                || self.primary_key
+                || self.unique
+                || self.index
+                || self.references.is_some())
+        {
+            Some(self.length.unwrap_or(191))
+        } else {
+            None
         }
     }
-    fn insert<'c, A>(&self, connection: A) -> impl Future<Output = Result<Self, SqlError>> + Send
-    where
-        A: Acquire<'c, Database = Sqlite> + Send,
-        A::Connection: ValidationConnection,
-    {
-        async move {
-            check_validation_connection::<Self, A::Connection>()?;
-            self.validate_async().await?;
-            if self.key().is_none() && !Self::primary_key().auto_increment {
+}
+#[doc(hidden)]
+pub fn bind_value<DB: SqlBackend, V: SqlValue>(
+    value: &V,
+    column: &Column,
+    query: &mut sqlx::QueryBuilder<DB>,
+) -> Result<(), SqlError> {
+    if DB::DIALECT == Dialect::MySql {
+        let parameter = value.to_parameter()?;
+        if let Some(limit) = column.mysql_length() {
+            let length = match &parameter {
+                SqlParameter::Text(value) => value.chars().count(),
+                SqlParameter::Blob(value) => value.len(),
+                _ => 0,
+            };
+            if length > limit {
                 return Err(field_error(
-                    "sql_primary_key_missing",
-                    "insert requires a primary key",
-                )
-                .at(Self::primary_key().name));
-            }
-            let included = Self::COLUMNS
-                .iter()
-                .enumerate()
-                .filter(|(i, _)| self.include_insert_column(*i))
-                .collect::<Vec<_>>();
-            let mut query =
-                QueryBuilder::<Sqlite>::new(format!("INSERT INTO {}", quoted(Self::TABLE)));
-            if included.is_empty() {
-                query.push(" DEFAULT VALUES");
-            } else {
-                query.push(format!(
-                    " ({}) VALUES (",
-                    included
-                        .iter()
-                        .map(|(_, c)| quoted(c.name))
-                        .collect::<Vec<_>>()
-                        .join(", ")
-                ));
-                for (position, (index, _)) in included.iter().enumerate() {
-                    if position > 0 {
-                        query.push(", ");
-                    }
-                    self.bind_column(*index, &mut query)?;
-                }
-                query.push(")");
-            }
-            query.push(format!(" RETURNING {}", column_list::<Self>()));
-            let mut transaction = connection.begin().await?;
-            let row = query.build().fetch_one(&mut *transaction).await?;
-            let value = checked_write_row::<Self>(&row)?;
-            transaction.commit().await?;
-            Ok(value)
-        }
-    }
-    fn update<'c, A>(&self, connection: A) -> impl Future<Output = Result<Self, SqlError>> + Send
-    where
-        A: Acquire<'c, Database = Sqlite> + Send,
-        A::Connection: ValidationConnection,
-    {
-        async move {
-            check_validation_connection::<Self, A::Connection>()?;
-            self.validate_async().await?;
-            let key = self.key().ok_or_else(|| {
-                field_error("sql_primary_key_missing", "update requires a primary key")
-                    .at(Self::primary_key().name)
-            })?;
-            let mut query =
-                QueryBuilder::<Sqlite>::new(format!("UPDATE {} SET ", quoted(Self::TABLE)));
-            let mutable = Self::COLUMNS
-                .iter()
-                .enumerate()
-                .filter(|(_, c)| !c.primary_key)
-                .collect::<Vec<_>>();
-            if mutable.is_empty() {
-                query.push(format!(
-                    "{} = {}",
-                    quoted(Self::primary_key().name),
-                    quoted(Self::primary_key().name)
+                    "sql_length",
+                    "value exceeds the database column length",
                 ));
             }
-            for (position, (index, column)) in mutable.iter().enumerate() {
-                if position > 0 {
-                    query.push(", ");
-                }
-                query.push(format!("{} = ", quoted(column.name)));
-                self.bind_column(*index, &mut query)?;
-            }
-            query.push(format!(" WHERE {} = ", quoted(Self::primary_key().name)));
-            key.bind(&mut query)
-                .map_err(|e| e.at(Self::primary_key().name))?;
-            query.push(format!(" RETURNING {}", column_list::<Self>()));
-            let mut transaction = connection.begin().await?;
-            let row = query
-                .build()
-                .fetch_optional(&mut *transaction)
-                .await?
-                .ok_or(SqlError::NotFound)?;
-            let value = checked_write_row::<Self>(&row)?;
-            transaction.commit().await?;
-            Ok(value)
         }
+        DB::bind_parameter(parameter, query);
+        Ok(())
+    } else {
+        DB::bind(value, query)
     }
-    fn get<'c, A>(
-        connection: A,
-        key: &Self::Key,
-    ) -> impl Future<Output = Result<Option<Self>, SqlError>> + Send
-    where
-        A: Acquire<'c, Database = Sqlite> + Send,
-        A::Connection: ValidationConnection,
-    {
-        async move {
-            check_validation_connection::<Self, A::Connection>()?;
-            let mut query = select_query::<Self>();
-            query.push(format!(" WHERE {} = ", quoted(Self::primary_key().name)));
-            key.bind(&mut query)
-                .map_err(|e| e.at(Self::primary_key().name))?;
-            let mut connection = connection.acquire().await?;
-            let row = query.build().fetch_optional(&mut *connection).await?;
-            drop(connection);
-            match row {
-                Some(row) => checked_row::<Self>(&row).await.map(Some),
-                None => Ok(None),
-            }
-        }
-    }
-    fn delete<'c, A>(
-        connection: A,
-        key: &Self::Key,
-    ) -> impl Future<Output = Result<bool, SqlError>> + Send
-    where
-        A: Acquire<'c, Database = Sqlite> + Send,
-    {
-        async move {
-            let mut query = QueryBuilder::<Sqlite>::new(format!(
-                "DELETE FROM {} WHERE {} = ",
-                quoted(Self::TABLE),
-                quoted(Self::primary_key().name)
-            ));
-            key.bind(&mut query)
-                .map_err(|e| e.at(Self::primary_key().name))?;
-            let mut connection = connection.acquire().await?;
-            Ok(query
-                .build()
-                .execute(&mut *connection)
-                .await?
-                .rows_affected()
-                > 0)
-        }
-    }
-    fn select() -> Select<Self> {
-        Select {
-            query: select_query::<Self>(),
-            filters: 0,
-            order: Vec::new(),
-            limit: None,
-            offset: 0,
-            model: PhantomData,
-        }
-    }
-}
-fn column_list<T: SqlModel>() -> String {
-    T::COLUMNS
-        .iter()
-        .map(|c| quoted(c.name))
-        .collect::<Vec<_>>()
-        .join(", ")
-}
-fn select_query<T: SqlModel>() -> QueryBuilder<Sqlite> {
-    QueryBuilder::new(format!(
-        "SELECT {} FROM {}",
-        column_list::<T>(),
-        quoted(T::TABLE)
-    ))
-}
-async fn checked_row<T: SqlModel>(row: &SqliteRow) -> Result<T, SqlError> {
-    let value = T::decode_row(row)?;
-    value.validate_async().await?;
-    Ok(value)
-}
-fn checked_write_row<T: SqlModel>(row: &SqliteRow) -> Result<T, SqlError> {
-    let value = T::decode_row(row)?;
-    let mut ctx = Context::new();
-    value.validate_into(&mut ctx);
-    ctx.result()?;
-    Ok(value)
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -449,115 +225,6 @@ pub enum Order {
     Ascending,
     Descending,
 }
-/// Parameterized model queries with checked column names and explicit pagination.
-pub struct Select<T: SqlModel> {
-    query: QueryBuilder<Sqlite>,
-    filters: usize,
-    order: Vec<(&'static str, Order)>,
-    limit: Option<u32>,
-    offset: u64,
-    model: PhantomData<T>,
-}
-impl<T: SqlModel> Select<T> {
-    fn column(name: &str) -> Result<&'static Column, SqlError> {
-        T::COLUMNS
-            .iter()
-            .find(|c| c.name == name)
-            .ok_or_else(|| SqlError::InvalidColumn(name.to_owned()))
-    }
-    fn conjunction(&mut self) {
-        self.query.push(if self.filters == 0 {
-            " WHERE "
-        } else {
-            " AND "
-        });
-        self.filters += 1;
-    }
-    pub fn filter<V: SqlValue>(
-        mut self,
-        column: &str,
-        compare: Compare,
-        value: &V,
-    ) -> Result<Self, SqlError> {
-        let column = Self::column(column)?;
-        if column.sql_type != V::SQL_TYPE {
-            return Err(field_error(
-                "sql_type",
-                "filter value does not match the column's storage type",
-            )
-            .at(column.name));
-        }
-        self.conjunction();
-        if value.is_null() {
-            let suffix = match compare {
-                Compare::Equal => "IS NULL",
-                Compare::NotEqual => "IS NOT NULL",
-                _ => {
-                    return Err(field_error(
-                        "sql_null_comparison",
-                        "NULL supports equality or inequality filters",
-                    ))
-                }
-            };
-            self.query.push(format!("{} {suffix}", quoted(column.name)));
-        } else {
-            self.query
-                .push(format!("{} {} ", quoted(column.name), compare.sql()));
-            value.bind(&mut self.query).map_err(|e| e.at(column.name))?;
-        }
-        Ok(self)
-    }
-    pub fn where_eq<V: SqlValue>(self, column: &str, value: &V) -> Result<Self, SqlError> {
-        self.filter(column, Compare::Equal, value)
-    }
-    pub fn order_by(mut self, column: &str, order: Order) -> Result<Self, SqlError> {
-        let column = Self::column(column)?;
-        self.order.push((column.name, order));
-        Ok(self)
-    }
-    pub fn limit(mut self, limit: u32) -> Self {
-        self.limit = Some(limit);
-        self
-    }
-    pub fn offset(mut self, offset: u64) -> Self {
-        self.offset = offset;
-        self
-    }
-    pub async fn fetch_all<'c, A>(mut self, connection: A) -> Result<Vec<T>, SqlError>
-    where
-        A: Acquire<'c, Database = Sqlite> + Send,
-        A::Connection: ValidationConnection,
-    {
-        check_validation_connection::<T, A::Connection>()?;
-        for (index, (column, order)) in self.order.iter().enumerate() {
-            self.query
-                .push(if index == 0 { " ORDER BY " } else { ", " });
-            self.query.push(quoted(column));
-            self.query.push(match order {
-                Order::Ascending => " ASC",
-                Order::Descending => " DESC",
-            });
-        }
-        if let Some(limit) = self.limit {
-            self.query.push(" LIMIT ").push_bind(i64::from(limit));
-        } else if self.offset > 0 {
-            self.query.push(" LIMIT -1");
-        }
-        if self.offset > 0 {
-            self.query.push(" OFFSET ");
-            self.offset.bind(&mut self.query)?;
-        }
-        let mut connection = connection.acquire().await?;
-        let rows = self.query.build().fetch_all(&mut *connection).await?;
-        drop(connection);
-        let mut values = Vec::with_capacity(rows.len());
-        for row in rows {
-            values.push(checked_row::<T>(&row).await?);
-        }
-        Ok(values)
-    }
-}
-
 #[cfg(feature = "axum")]
 impl ::axum::response::IntoResponse for SqlError {
     fn into_response(self) -> ::axum::response::Response {
@@ -577,10 +244,18 @@ impl ::axum::response::IntoResponse for SqlError {
                 "unknown model column",
             ),
             Self::Database(sqlx::Error::Database(ref error))
-                if error
-                    .code()
-                    .and_then(|code| code.parse::<u32>().ok())
-                    .is_some_and(|code| code & 0xff == SQLITE_CONSTRAINT) =>
+                if matches!(
+                    error.kind(),
+                    sqlx::error::ErrorKind::UniqueViolation
+                        | sqlx::error::ErrorKind::ForeignKeyViolation
+                        | sqlx::error::ErrorKind::NotNullViolation
+                        | sqlx::error::ErrorKind::CheckViolation
+                        | sqlx::error::ErrorKind::ExclusionViolation
+                ) || error.code().is_some_and(|code| code.starts_with("23"))
+                    || error
+                        .code()
+                        .and_then(|code| code.parse::<u32>().ok())
+                        .is_some_and(|code| code & 0xff == SQLITE_CONSTRAINT) =>
             {
                 (
                     StatusCode::CONFLICT,
@@ -597,4 +272,27 @@ impl ::axum::response::IntoResponse for SqlError {
         let error = ValidationError::new(code, message);
         (status, ::axum::Json(crate::json!({"detail":[error]}))).into_response()
     }
+}
+
+// These macros select drivers using Rydantic's features, including when the
+// consuming crate renames its dependency or uses different feature names.
+#[doc(hidden)]
+#[macro_export]
+#[cfg(feature = "postgres")]
+macro_rules! __rydantic_postgres { ($($item:tt)*) => { $($item)* }; }
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "postgres"))]
+macro_rules! __rydantic_postgres {
+    ($($item:tt)*) => {};
+}
+#[doc(hidden)]
+#[macro_export]
+#[cfg(feature = "mysql")]
+macro_rules! __rydantic_mysql { ($($item:tt)*) => { $($item)* }; }
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "mysql"))]
+macro_rules! __rydantic_mysql {
+    ($($item:tt)*) => {};
 }

@@ -11,7 +11,7 @@ mod auto_protocol;
 mod native;
 mod sql_model;
 
-/// Derive SQLite schema metadata, SQLx row decoding and validated CRUD operations.
+/// Derive SQL schema metadata, SQLx row decoding and validated CRUD operations.
 #[proc_macro_derive(SqlModel, attributes(sql, model))]
 pub fn derive_sql_model(input: TokenStream) -> TokenStream {
     sql_model::expand(parse_macro_input!(input as DeriveInput))

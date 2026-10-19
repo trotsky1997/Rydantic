@@ -6,7 +6,7 @@ Use the `rydantic` crate, which enables and re-exports `#[derive(Model)]` by def
 
 ```toml
 [dependencies]
-rydantic = "0.4.0"
+rydantic = "0.5.0"
 ```
 
 ```rust
@@ -31,4 +31,4 @@ With `rydantic`'s `capnp` feature, `#[rydantic::capnp_models]` on an inline mode
 
 License: MIT.
 
-With the `sqlx` feature, `#[derive(Model, SqlModel)]` also generates SQLite table metadata, validated SQLx row decoding, and asynchronous CRUD with transactions. Combine it with the `axum` feature to use one model for HTTP JSON validation and database persistence. See the complete guide for `#[sql(...)]` attributes, queries, and the Tokio HTTP server example.
+Enable `sqlx`, `postgres` or `mysql` for `#[derive(Model, SqlModel)]`: the macro generates portable table metadata, validated SQLx row decoding for enabled drivers, and asynchronous CRUD with transactions. The pool type selects SQLite, PostgreSQL or MySQL while model definitions stay the same. Combine it with the `axum` feature to use one model for HTTP JSON validation and database persistence. See the complete guide for `#[sql(...)]` attributes, queries, and the Tokio HTTP server example.

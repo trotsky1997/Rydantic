@@ -18,6 +18,8 @@ fn main() {
     assert_eq!(message.text, "hello");
     assert!(Message::json_schema(SchemaMode::Output).is_object());
     assert!(Record::create_table_sql().contains("AUTOINCREMENT"));
+    assert!(Record::create_table_sql_for::<rd::sqlx::Postgres>().contains("IDENTITY"));
+    assert!(Record::create_table_sql_for::<rd::sqlx::MySql>().contains("AUTO_INCREMENT"));
     let _router: rd::axum::Router = rd::axum::Router::new();
     println!("{}", message.dump_json().unwrap());
 }

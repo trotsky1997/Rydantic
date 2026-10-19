@@ -23,13 +23,15 @@ decimal = ["dep:rust_decimal"]
 capnp = ["dep:capnp", "rydantic-derive?/capnp"]
 axum = ["dep:axum"]
 sqlx = ["dep:sqlx"]
+postgres = ["sqlx", "sqlx/postgres", "sqlx/tls-rustls-ring"]
+mysql = ["sqlx", "sqlx/mysql-rsa", "sqlx/tls-rustls-ring"]
 
 [dependencies]
 serde.workspace = true
 serde_json.workspace = true
 regex.workspace = true
 email_address = "0.2"
-rydantic-derive = { version = "0.4.0", path = "../rydantic-derive", optional = true }
+rydantic-derive = { version = "0.5.0", path = "../rydantic-derive", optional = true }
 jsonschema = { workspace = true, optional = true }
 
 chrono = { version = "0.4", default-features = false, features = ["std"], optional = true }
@@ -58,4 +60,8 @@ required-features = ["derive", "capnp"]
 
 [[example]]
 name = "sqlite_api"
+required-features = ["derive", "axum", "sqlx"]
+
+[[example]]
+name = "database_api"
 required-features = ["derive", "axum", "sqlx"]
