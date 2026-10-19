@@ -1,0 +1,5 @@
+error: duplicate input field name or collision with enum tag
+ --> tests/ui/duplicate_alias.rs:8:5
+  |
+8 |     second: String,
+  |     ^^^^^^

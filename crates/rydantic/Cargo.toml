@@ -1,0 +1,27 @@
+[package]
+name = "rydantic"
+description = "Type-driven JSON parsing, normalization, validation and JSON Schema for Rust"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[features]
+default = ["derive"]
+derive = ["dep:rydantic-derive"]
+dynamic = ["dep:jsonschema"]
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+regex.workspace = true
+email_address = "0.2"
+rydantic-derive = { version = "0.1.0", path = "../rydantic-derive", optional = true }
+jsonschema = { workspace = true, optional = true }
+
+[dev-dependencies]
+jsonschema.workspace = true
+trybuild = "1"
+
+[lints]
+workspace = true

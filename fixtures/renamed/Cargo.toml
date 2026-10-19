@@ -1,0 +1,8 @@
+[package]
+name = "rydantic-renamed-fixture"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[dependencies]
+rd = { package = "rydantic", path = "../../crates/rydantic" }

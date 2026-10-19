@@ -1,0 +1,8 @@
+error: invalid regular expression: regex parse error:
+           [
+           ^
+       error: unclosed character class
+ --> tests/ui/invalid_regex.rs:5:23
+  |
+5 |     #[model(pattern = "[")]
+  |                       ^^^

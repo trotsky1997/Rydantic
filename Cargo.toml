@@ -1,0 +1,21 @@
+[workspace]
+members = ["crates/rydantic", "crates/rydantic-derive", "fixtures/renamed"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/trotsky1997/Rydantic"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+regex = "1"
+jsonschema = { version = "0.33", default-features = false }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = "warn"

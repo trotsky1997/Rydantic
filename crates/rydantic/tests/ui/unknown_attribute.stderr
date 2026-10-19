@@ -1,0 +1,5 @@
+error: unsupported Rydantic field attribute
+ --> tests/ui/unknown_attribute.rs:5:13
+  |
+5 |     #[model(min_len = 3)]
+  |             ^^^^^^^
