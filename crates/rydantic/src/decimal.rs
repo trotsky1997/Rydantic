@@ -5,6 +5,9 @@ use crate::{
 use rust_decimal::Decimal;
 use serde_json::json;
 impl JsonType for Decimal {
+    fn decode_input(input: crate::Input<'_>, ctx: &mut Context, coerce: bool) -> Option<Self> {
+        Self::decode(crate::direct::scalar(input, ctx, "decimal")?, ctx, coerce)
+    }
     fn decode(value: Value, ctx: &mut Context, coerce: bool) -> Option<Self> {
         let text = match value {
             Value::String(text) => text,

@@ -134,7 +134,7 @@ impl Mode<'_> {
         if self.borrow {
             quote!(<#ty as #tr>::decode(#raw,__rydantic_ctx,#coerce))
         } else {
-            quote!(<#ty as #tr>::decode((#raw).into_value(__rydantic_ctx)?,__rydantic_ctx,#coerce))
+            quote!(<#ty as #tr>::decode_input(#raw,__rydantic_ctx,#coerce))
         }
     }
 }
@@ -850,16 +850,6 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
         de_generics.params.insert(0, parse_quote!('__rydantic_de));
     }
     let (de_impl_generics, _, de_where_clause) = de_generics.split_for_impl();
-    let raw_type = if borrowed {
-        quote!(#rd::Input<'__rydantic_de>)
-    } else {
-        quote!(#rd::Value)
-    };
-    let raw_wrap = if borrowed {
-        quote!()
-    } else {
-        quote!(let __rydantic_raw=#rd::Input::Owned(__rydantic_raw);)
-    };
     let custom_parse=container.validate.as_ref().map(|path|quote!{if __rydantic_ctx.error_count()==start{if let Some(value)=&value{if let Err(errors)=#path(value){__rydantic_ctx.extend(errors);}}}});
     let custom_validate=container.validate.as_ref().map(|path|quote!{if __rydantic_ctx.error_count()==start{if let Err(errors)=#path(self){__rydantic_ctx.extend(errors);}}});
     let schema_custom=container.validate.as_ref().map(|path|quote!(#rd::schema::annotate_local(&mut schema,concat!("validate:",stringify!(#path)));));
@@ -883,12 +873,12 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
     let deserialize = if borrowed {
         quote! {let raw=<&'__rydantic_de #rd::__private::serde_json::value::RawValue as #rd::__private::serde::Deserialize>::deserialize(deserializer)?;<Self as #rd::BorrowModel<'__rydantic_de>>::parse_raw(raw).map_err(#rd::__private::serde::de::Error::custom)}
     } else {
-        quote! {let raw=<#rd::Value as #rd::__private::serde::Deserialize>::deserialize(deserializer)?;<Self as #rd::Model>::parse_value(raw).map_err(#rd::__private::serde::de::Error::custom)}
+        quote! {let raw=<::std::boxed::Box<#rd::RawValue> as #rd::__private::serde::Deserialize>::deserialize(deserializer)?;<Self as #rd::Model>::parse_raw(&raw).map_err(#rd::__private::serde::de::Error::custom)}
     };
     let object_impl=object_impl.map(|body|quote!(impl #impl_generics #rd::ObjectType for #name #ty_generics #where_clause{#body}));
     let bridge=(!borrowed).then(||quote!{
         impl #de_impl_generics #rd::BorrowType<'__rydantic_de> for #name #ty_generics #de_where_clause{
-            fn decode(raw:#rd::Input<'__rydantic_de>,ctx:&mut #rd::Context,coerce:bool)->Option<Self>{<Self as #rd::JsonType>::decode(raw.into_value(ctx)?,ctx,coerce)}
+            fn decode(raw:#rd::Input<'__rydantic_de>,ctx:&mut #rd::Context,coerce:bool)->Option<Self>{<Self as #rd::JsonType>::decode_input(raw,ctx,coerce)}
             fn prepare_default(self,ctx:&mut #rd::Context)->Option<Self>{let value=<Self as #rd::JsonType>::encode_input(&self,ctx);<Self as #rd::JsonType>::decode(value,ctx,false)}
             fn encode(&self,ctx:&mut #rd::Context)->#rd::Value{<Self as #rd::JsonType>::encode(self,ctx)}
             fn encode_input(&self,ctx:&mut #rd::Context)->#rd::Value{<Self as #rd::JsonType>::encode_input(self,ctx)}
@@ -906,12 +896,21 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
     }
     let (async_impl_generics, _, async_where_clause) = async_generics.split_for_impl();
     let custom_async=container.async_validate.as_ref().map(|path|quote!{if start==__rydantic_ctx.error_count(){if let Err(errors)=#path(self).await{__rydantic_ctx.extend(errors);}}});
+    let body = quote! {
+        fn __rydantic_assert_string<T:#rd::StringType>(){}fn __rydantic_assert_length<T:#rd::LengthType>(){}fn __rydantic_assert_number<T:#rd::NumericType>(){}fn __rydantic_assert_extra<T:#rd::ExtraFields>(){}
+        #(#assertions)* let start=__rydantic_ctx.error_count();let value=(||{#decode})();#custom_parse value
+    };
+    let decode_methods = if borrowed {
+        quote! {fn decode(__rydantic_raw:#rd::Input<'__rydantic_de>,__rydantic_ctx:&mut #rd::Context,_coerce:bool)->Option<Self>{#body}}
+    } else {
+        quote! {
+            fn decode(raw:#rd::Value,ctx:&mut #rd::Context,coerce:bool)->Option<Self>{<Self as #rd::JsonType>::decode_input(#rd::Input::Owned(raw),ctx,coerce)}
+            fn decode_input(__rydantic_raw:#rd::Input<'_>,__rydantic_ctx:&mut #rd::Context,_coerce:bool)->Option<Self>{#body}
+        }
+    };
     Ok(quote! {
         impl #impl_generics #tr for #name #ty_generics #where_clause{
-            fn decode(__rydantic_raw:#raw_type,__rydantic_ctx:&mut #rd::Context,_coerce:bool)->Option<Self>{
-                fn __rydantic_assert_string<T:#rd::StringType>(){}fn __rydantic_assert_length<T:#rd::LengthType>(){}fn __rydantic_assert_number<T:#rd::NumericType>(){}fn __rydantic_assert_extra<T:#rd::ExtraFields>(){}
-                #(#assertions)* #raw_wrap let start=__rydantic_ctx.error_count();let value=(||{#decode})();#custom_parse value
-            }
+            #decode_methods
             #prepare_default
             fn encode(&self,__rydantic_ctx:&mut #rd::Context)->#rd::Value{#encode}
             fn encode_input(&self,__rydantic_ctx:&mut #rd::Context)->#rd::Value{#encode_input}

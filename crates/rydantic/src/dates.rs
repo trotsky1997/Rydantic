@@ -50,6 +50,13 @@ fn parse_naive_datetime(text: &str) -> Option<NaiveDateTime> {
 macro_rules! date_type {
     ($ty:ty,$parse:expr,$format:expr,$schema:expr) => {
         impl JsonType for $ty {
+            fn decode_input(
+                input: crate::Input<'_>,
+                ctx: &mut Context,
+                coerce: bool,
+            ) -> Option<Self> {
+                Self::decode(crate::direct::scalar(input, ctx, "date/time")?, ctx, coerce)
+            }
             fn decode(value: Value, ctx: &mut Context, _: bool) -> Option<Self> {
                 let Value::String(text) = value else {
                     invalid(ctx);
@@ -107,6 +114,7 @@ date_type!(
 macro_rules! zoned {
     ($ty:ty,$convert:expr) => {
         impl JsonType for $ty {
+            fn decode_input(input:crate::Input<'_>,ctx:&mut Context,coerce:bool)->Option<Self>{Self::decode(crate::direct::scalar(input,ctx,"date/time")?,ctx,coerce)}
             fn decode(value:Value,ctx:&mut Context,_:bool)->Option<Self>{
                 let Value::String(text)=value else{invalid(ctx);return None;};
                 if text.split_once('.').is_some_and(|(_,fraction)|fraction.bytes().take_while(u8::is_ascii_digit).count()>9){invalid(ctx);return None;}

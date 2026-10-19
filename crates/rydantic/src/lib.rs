@@ -25,6 +25,7 @@ mod borrowed;
 mod dates;
 #[cfg(feature = "decimal")]
 mod decimal;
+mod direct;
 #[cfg(feature = "dynamic")]
 mod dynamic;
 mod error;
@@ -47,6 +48,7 @@ pub use rust_decimal;
 #[cfg(feature = "derive")]
 pub use rydantic_derive::Model;
 pub use schema::{LocalRule, SchemaContext, SchemaMode, SchemaReport};
+pub use serde_json::value::RawValue;
 pub use serde_json::{json, Value};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -66,6 +68,10 @@ pub enum TypeKind {
 /// constructed value together with constraint errors; public entry points reject it.
 pub trait JsonType: Sized {
     fn decode(value: Value, ctx: &mut Context, coerce: bool) -> Option<Self>;
+    /// Decode a raw subtree. Custom types can override this to bypass Value entirely.
+    fn decode_input(input: Input<'_>, ctx: &mut Context, coerce: bool) -> Option<Self> {
+        Self::decode(input.into_value(ctx)?, ctx, coerce)
+    }
     fn encode(&self, ctx: &mut Context) -> Value;
     /// Representation using input aliases and including output-excluded fields.
     /// Used to validate typed defaults without losing required input information.
@@ -108,15 +114,18 @@ pub trait LengthType {}
 pub trait Model: JsonType {
     /// Strict by default. Explicit field-level `coerce` is applied by the derive.
     fn parse_json(input: &str) -> Result<Self, ValidationErrors> {
-        let value = serde_json::from_str(input).map_err(|error| {
-            ValidationErrors::from(
-                ValidationError::new("json_invalid", error.to_string())
-                    .with_stage(Stage::Parse)
-                    .with_param("line", error.line())
-                    .with_param("column", error.column()),
-            )
-        })?;
-        Self::parse_value(value)
+        let raw = serde_json::from_str::<&RawValue>(input).map_err(borrowed::json_error)?;
+        Self::parse_raw(raw)
+    }
+    fn parse_slice(input: &[u8]) -> Result<Self, ValidationErrors> {
+        let raw = serde_json::from_slice::<&RawValue>(input).map_err(borrowed::json_error)?;
+        Self::parse_raw(raw)
+    }
+    fn parse_raw(raw: &RawValue) -> Result<Self, ValidationErrors> {
+        asynchronous::sync_guard(Self::async_required(&mut std::collections::HashSet::new()))?;
+        let mut ctx = Context::new();
+        let model = Self::decode_input(Input::Borrowed(raw), &mut ctx, false);
+        ctx.finish(model)
     }
     fn parse_value(value: Value) -> Result<Self, ValidationErrors> {
         asynchronous::sync_guard(Self::async_required(&mut std::collections::HashSet::new()))?;
@@ -155,8 +164,9 @@ pub trait Model: JsonType {
         SchemaReport::new(Self::json_schema(mode))
     }
     fn parse_reader<R: std::io::Read>(reader: R) -> Result<Self, ValidationErrors> {
-        let value = serde_json::from_reader(reader).map_err(borrowed::json_error)?;
-        Self::parse_value(value)
+        let raw =
+            serde_json::from_reader::<_, Box<RawValue>>(reader).map_err(borrowed::json_error)?;
+        Self::parse_raw(&raw)
     }
     fn parse_json_async(
         input: &str,
@@ -165,8 +175,24 @@ pub trait Model: JsonType {
         Self: AsyncCheck + Send,
     {
         async move {
-            let value = serde_json::from_str(input).map_err(borrowed::json_error)?;
-            Self::parse_value_async(value).await
+            let raw = serde_json::from_str::<&RawValue>(input).map_err(borrowed::json_error)?;
+            Self::parse_raw_async(raw).await
+        }
+    }
+    fn parse_raw_async(
+        raw: &RawValue,
+    ) -> impl std::future::Future<Output = Result<Self, ValidationErrors>> + Send
+    where
+        Self: AsyncCheck + Send,
+    {
+        async move {
+            let mut ctx = Context::new();
+            let model = Self::decode_input(Input::Borrowed(raw), &mut ctx, false);
+            let model = ctx.finish(model)?;
+            let mut ctx = Context::new();
+            model.check_async(&mut ctx).await;
+            ctx.result()?;
+            Ok(model)
         }
     }
     fn parse_value_async(
@@ -269,8 +295,8 @@ impl<T: Model> serde::Serialize for Validated<T> {
 }
 impl<'de, T: Model> serde::Deserialize<'de> for Validated<T> {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = <Value as serde::Deserialize>::deserialize(deserializer)?;
-        T::parse_value(value)
+        let raw = <Box<RawValue> as serde::Deserialize>::deserialize(deserializer)?;
+        T::parse_raw(&raw)
             .map(Self)
             .map_err(serde::de::Error::custom)
     }

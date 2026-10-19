@@ -152,3 +152,5 @@ impl<T: Model + AsyncCheck> serde::Serialize for AsyncValidated<T> {
             .serialize(serializer)
     }
 }
+
+impl AsyncCheck for Box<crate::RawValue> {}

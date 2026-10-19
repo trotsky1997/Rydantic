@@ -265,7 +265,7 @@ impl<'de, T: BorrowModel<'de>> serde::Deserialize<'de> for BorrowValidated<'de, 
 
 macro_rules! owned {
     ($($ty:ty),* $(,)?) => {$(impl<'de> BorrowType<'de> for $ty {
-        fn decode(value:Input<'de>,ctx:&mut Context,coerce:bool)->Option<Self>{<Self as crate::JsonType>::decode(value.into_value(ctx)?,ctx,coerce)}
+        fn decode(value:Input<'de>,ctx:&mut Context,coerce:bool)->Option<Self>{<Self as crate::JsonType>::decode_input(value,ctx,coerce)}
         fn encode(&self,ctx:&mut Context)->Value{<Self as crate::JsonType>::encode(self,ctx)}
         fn schema(ctx:&mut SchemaContext,coerce:bool)->Value{<Self as crate::JsonType>::schema(ctx,coerce)}
         fn validate_into(&self,ctx:&mut Context){<Self as crate::JsonType>::validate_into(self,ctx)}
@@ -712,3 +712,5 @@ impl<'de, T: BorrowType<'de>, S: BuildHasher + Default> BorrowType<'de> for Hash
         T::async_required(seen)
     }
 }
+
+owned!(Box<RawValue>);

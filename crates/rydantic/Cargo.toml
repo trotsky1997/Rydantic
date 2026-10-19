@@ -12,6 +12,7 @@ derive = ["dep:rydantic-derive"]
 dynamic = ["dep:jsonschema"]
 chrono = ["dep:chrono"]
 decimal = ["dep:rust_decimal"]
+capnp = ["dep:capnp"]
 
 [dependencies]
 serde.workspace = true
@@ -23,6 +24,8 @@ jsonschema = { workspace = true, optional = true }
 
 chrono = { version = "0.4", default-features = false, features = ["std"], optional = true }
 rust_decimal = { version = "1", default-features = false, features = ["std"], optional = true }
+
+capnp = { version = "0.27", optional = true }
 
 [dev-dependencies]
 jsonschema.workspace = true

@@ -1,6 +1,6 @@
 use crate::{
-    Context, JsonType, LengthType, NumericType, SchemaContext, SchemaMode, Stage, StringType,
-    TypeKind, ValidationError, Value,
+    Context, Input, JsonType, LengthType, NumericType, SchemaContext, SchemaMode, Stage,
+    StringType, TypeKind, ValidationError, Value,
 };
 use serde_json::{json, Number};
 use std::{
@@ -31,6 +31,7 @@ fn mismatch(ctx: &mut Context, expected: &str, value: &Value) {
 macro_rules! integer {
     ($($ty:ty),* $(,)?) => {$(
         impl JsonType for $ty {
+            fn decode_input(input:Input<'_>,ctx:&mut Context,coerce:bool)->Option<Self>{Self::decode(crate::direct::scalar(input,ctx,"integer")?,ctx,coerce)}
             fn decode(value: Value, ctx: &mut Context, coerce: bool) -> Option<Self> {
                 if coerce {
                     if let Value::String(text) = &value {
@@ -62,6 +63,7 @@ integer!(i8, i16, i32, i64, i128, isize, u8, u16, u32, u64, u128, usize);
 macro_rules! float {
     ($($ty:ty),*) => {$(
         impl JsonType for $ty {
+            fn decode_input(input:Input<'_>,ctx:&mut Context,coerce:bool)->Option<Self>{Self::decode(crate::direct::scalar(input,ctx,"number")?,ctx,coerce)}
             fn decode(value: Value, ctx: &mut Context, coerce: bool) -> Option<Self> {
                 let parsed = match &value {
                     Value::Number(number) => number.as_f64().and_then(|number| {
@@ -96,6 +98,9 @@ macro_rules! float {
 float!(f32, f64);
 
 impl JsonType for String {
+    fn decode_input(input: Input<'_>, ctx: &mut Context, coerce: bool) -> Option<Self> {
+        Self::decode(crate::direct::scalar(input, ctx, "string")?, ctx, coerce)
+    }
     fn decode(value: Value, ctx: &mut Context, coerce: bool) -> Option<Self> {
         match value {
             Value::String(text) => Some(text),
@@ -125,6 +130,9 @@ impl StringType for String {}
 impl LengthType for String {}
 
 impl JsonType for bool {
+    fn decode_input(input: Input<'_>, ctx: &mut Context, coerce: bool) -> Option<Self> {
+        Self::decode(crate::direct::scalar(input, ctx, "boolean")?, ctx, coerce)
+    }
     fn decode(value: Value, ctx: &mut Context, coerce: bool) -> Option<Self> {
         match value {
             Value::Bool(boolean) => Some(boolean),
@@ -153,6 +161,13 @@ impl JsonType for bool {
 }
 
 impl<T: JsonType> JsonType for Option<T> {
+    fn decode_input(input: Input<'_>, ctx: &mut Context, coerce: bool) -> Option<Self> {
+        if input.is_null() {
+            Some(None)
+        } else {
+            T::decode_input(input, ctx, coerce).map(Some)
+        }
+    }
     fn normalize(self, rules: &crate::rules::Rules, ctx: &mut Context) -> Option<Self> {
         match self {
             Some(value) => value.normalize(rules, ctx).map(Some),
@@ -205,6 +220,9 @@ impl<T: NumericType> NumericType for Option<T> {}
 impl<T: LengthType> LengthType for Option<T> {}
 
 impl<T: JsonType> JsonType for Box<T> {
+    fn decode_input(input: Input<'_>, ctx: &mut Context, coerce: bool) -> Option<Self> {
+        T::decode_input(input, ctx, coerce).map(Box::new)
+    }
     fn normalize(self, rules: &crate::rules::Rules, ctx: &mut Context) -> Option<Self> {
         (*self).normalize(rules, ctx).map(Box::new)
     }
@@ -245,6 +263,18 @@ impl<T: NumericType> NumericType for Box<T> {}
 impl<T: LengthType> LengthType for Box<T> {}
 
 impl<T: JsonType> JsonType for Vec<T> {
+    fn decode_input(input: Input<'_>, ctx: &mut Context, coerce: bool) -> Option<Self> {
+        let items = input.array(ctx)?;
+        let mut values = Vec::with_capacity(items.len());
+        let mut complete = true;
+        for (index, item) in items.into_iter().enumerate() {
+            match ctx.at(index, |ctx| T::decode_input(item, ctx, coerce)) {
+                Some(value) => values.push(value),
+                None => complete = false,
+            }
+        }
+        complete.then_some(values)
+    }
     fn async_required(seen: &mut std::collections::HashSet<&'static str>) -> bool {
         T::async_required(seen)
     }
@@ -294,6 +324,23 @@ impl<T: JsonType> JsonType for Vec<T> {
 impl<T> LengthType for Vec<T> {}
 
 impl<T: JsonType, const N: usize> JsonType for [T; N] {
+    fn decode_input(input: Input<'_>, ctx: &mut Context, coerce: bool) -> Option<Self> {
+        let values = Vec::<T>::decode_input(input, ctx, coerce)?;
+        let len = values.len();
+        values
+            .try_into()
+            .map_err(|_| {
+                ctx.push(
+                    ValidationError::new(
+                        "array_length",
+                        format!("array must contain exactly {N} items"),
+                    )
+                    .with_param("expected", N)
+                    .with_param("actual", len),
+                )
+            })
+            .ok()
+    }
     fn async_required(seen: &mut std::collections::HashSet<&'static str>) -> bool {
         T::async_required(seen)
     }
@@ -346,6 +393,19 @@ impl<T: JsonType, const N: usize> JsonType for [T; N] {
 impl<T, const N: usize> LengthType for [T; N] {}
 
 impl<T: JsonType> JsonType for BTreeMap<String, T> {
+    fn decode_input(input: Input<'_>, ctx: &mut Context, coerce: bool) -> Option<Self> {
+        let mut result = Self::new();
+        let mut complete = true;
+        for (key, item) in input.object(ctx)? {
+            match ctx.at(key.clone(), |ctx| T::decode_input(item, ctx, coerce)) {
+                Some(value) => {
+                    result.insert(key, value);
+                }
+                None => complete = false,
+            }
+        }
+        complete.then_some(result)
+    }
     fn async_required(seen: &mut std::collections::HashSet<&'static str>) -> bool {
         T::async_required(seen)
     }
@@ -400,6 +460,10 @@ impl<T: JsonType> JsonType for BTreeMap<String, T> {
 impl<T> LengthType for BTreeMap<String, T> {}
 
 impl<T: JsonType, S: BuildHasher + Default> JsonType for HashMap<String, T, S> {
+    fn decode_input(input: Input<'_>, ctx: &mut Context, coerce: bool) -> Option<Self> {
+        BTreeMap::<String, T>::decode_input(input, ctx, coerce)
+            .map(|values| values.into_iter().collect())
+    }
     fn async_required(seen: &mut std::collections::HashSet<&'static str>) -> bool {
         T::async_required(seen)
     }
@@ -452,6 +516,9 @@ impl JsonType for Value {
 }
 
 impl JsonType for () {
+    fn decode_input(input: Input<'_>, ctx: &mut Context, coerce: bool) -> Option<Self> {
+        Self::decode(crate::direct::scalar(input, ctx, "null")?, ctx, coerce)
+    }
     fn decode(value: Value, ctx: &mut Context, _: bool) -> Option<Self> {
         if value.is_null() {
             Some(())
@@ -465,5 +532,28 @@ impl JsonType for () {
     }
     fn schema(_: &mut SchemaContext, _: bool) -> Value {
         json!({"type":"null"})
+    }
+}
+
+impl JsonType for Box<crate::RawValue> {
+    fn decode(value: Value, ctx: &mut Context, _: bool) -> Option<Self> {
+        serde_json::value::to_raw_value(&value)
+            .map_err(|error| ctx.push(ValidationError::new("raw_json", error.to_string())))
+            .ok()
+    }
+    fn decode_input(input: Input<'_>, ctx: &mut Context, _: bool) -> Option<Self> {
+        match input {
+            Input::Borrowed(raw) => Some(raw.to_owned()),
+            value => Self::decode(value.into_value(ctx)?, ctx, false),
+        }
+    }
+    fn encode(&self, ctx: &mut Context) -> Value {
+        serde_json::from_str(self.get()).unwrap_or_else(|error| {
+            ctx.push(ValidationError::new("raw_json", error.to_string()));
+            Value::Null
+        })
+    }
+    fn schema(_: &mut SchemaContext, _: bool) -> Value {
+        json!({})
     }
 }
