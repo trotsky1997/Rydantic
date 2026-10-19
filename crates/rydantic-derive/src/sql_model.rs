@@ -238,7 +238,7 @@ pub(super) fn expand(input: DeriveInput) -> syn::Result<Tokens> {
         columns.push(quote!(#rd::sql::Column{name:#column,sql_type:<#ty as #rd::sql::SqlValue>::SQL_TYPE,nullable:<#ty as #rd::sql::SqlValue>::NULLABLE && !#pk,primary_key:#pk,auto_increment:#auto,unique:#unique,index:#indexed,references:#references,length:#length}));
         reads.push(quote!(#ident:<__RydanticDb as #rd::sql::SqlBackend>::read::<#ty>(row,#column).map_err(|error|#rd::sqlx::Error::ColumnDecode{index:#column.to_owned(),source: ::std::boxed::Box::new(error)})?));
         let location = &field.input;
-        bindings.push(quote!(#index=>#rd::sql::bind_value::<__RydanticDb,#ty>(&self.#ident,&Self::COLUMNS[#index],query).map_err(|error|error.at(#location))));
+        bindings.push(quote!(#index=>#rd::sql::bind_value::<__RydanticDb,#ty>(&self.#ident,&<Self as #rd::SqlModel>::COLUMNS[#index],query).map_err(|error|error.at(#location))));
         let include = if auto {
             quote!(!<#ty as #rd::sql::AutoKey>::needs_generation(&self.#ident))
         } else {

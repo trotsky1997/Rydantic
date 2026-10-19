@@ -76,17 +76,23 @@ async fn run<DB: SqlBackend>(pool: Pool<DB>) -> Result<(), Box<dyn std::error::E
     if std::env::args().any(|arg| arg == "--smoke") {
         use rydantic::axum::framework::{body::Body, http::Request};
         use tower::ServiceExt;
-        let response = router(pool)
+        let input =
+            rydantic::json!({"name":format!(" Rydantic smoke {} ",std::process::id()),"age":25})
+                .to_string();
+        let response = router(pool.clone())
             .oneshot(
                 Request::builder()
                     .method("POST")
                     .uri("/users")
                     .header("content-type", "application/json")
-                    .body(Body::from(r#"{"name":" Alice ","age":25}"#))?,
+                    .body(Body::from(input))?,
             )
             .await?;
         assert_eq!(response.status(), StatusCode::CREATED);
-        println!("Validated HTTP -> SQLite -> JSON: OK");
+        let bytes = rydantic::axum::framework::body::to_bytes(response.into_body(), 4096).await?;
+        let user = User::parse_slice(&bytes)?;
+        User::delete(&pool, &user.id.expect("generated smoke key")).await?;
+        println!("Validated HTTP -> {:?} -> JSON: OK", DB::DIALECT);
         return Ok(());
     }
     let address: std::net::SocketAddr = std::env::var("LISTEN_ADDR")
