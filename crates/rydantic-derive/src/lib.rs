@@ -6,7 +6,18 @@ use syn::{
     Member, Type,
 };
 mod attrs;
+#[cfg(feature = "capnp")]
+mod auto_protocol;
 mod native;
+
+/// Derive a complete Cap'n Proto protocol and its bindings from an inline model module.
+#[cfg(feature = "capnp")]
+#[proc_macro_attribute]
+pub fn capnp_models(args: TokenStream, input: TokenStream) -> TokenStream {
+    auto_protocol::expand(args.into(), input.into())
+        .unwrap_or_else(syn::Error::into_compile_error)
+        .into()
+}
 
 #[proc_macro_derive(Model, attributes(model))]
 pub fn derive_model(input: TokenStream) -> TokenStream {

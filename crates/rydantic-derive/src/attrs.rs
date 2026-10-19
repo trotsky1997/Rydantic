@@ -43,6 +43,8 @@ pub struct Field {
     pub flatten: bool,
     pub extra: bool,
     pub capnp_name: Option<String>,
+    pub capnp_ordinal: Option<u16>,
+    pub capnp_as: Option<syn::Type>,
     pub capnp_data: bool,
     pub capnp_text: bool,
     pub capnp_enum: bool,
@@ -194,6 +196,10 @@ pub fn field(attrs: &[Attribute]) -> syn::Result<Field> {
                 "before" => result.before = Some(meta.value()?.parse()?),
                 "async_validate" => result.async_validate = Some(meta.value()?.parse()?),
                 "capnp_name" => result.capnp_name = Some(meta.value()?.parse::<LitStr>()?.value()),
+                "capnp_ordinal" => {
+                    result.capnp_ordinal = Some(meta.value()?.parse::<LitInt>()?.base10_parse()?)
+                }
+                "capnp_as" => result.capnp_as = Some(meta.value()?.parse::<LitStr>()?.parse()?),
                 "capnp_data" => result.capnp_data = true,
                 "capnp_text" => result.capnp_text = true,
                 "capnp_enum" => result.capnp_enum = true,
@@ -262,16 +268,33 @@ impl Field {
 }
 
 pub fn variant_name(attrs: &[Attribute], fallback: &str) -> syn::Result<String> {
+    variant_names(attrs, fallback).map(|(json, _)| json)
+}
+
+pub fn native_variant_name(attrs: &[Attribute], fallback: &str) -> syn::Result<String> {
+    variant_names(attrs, fallback).map(|(json, native)| native.unwrap_or(json))
+}
+
+fn variant_names(attrs: &[Attribute], fallback: &str) -> syn::Result<(String, Option<String>)> {
     let mut name = fallback.to_owned();
+    let mut native = None;
     let mut seen = HashSet::new();
     for attr in attrs.iter().filter(|attr| attr.path().is_ident("model")) {
         attr.parse_nested_meta(|meta| {
-            if key(&meta, &mut seen)? != "rename" {
-                return Err(meta.error("enum variants support only rename"));
+            match key(&meta, &mut seen)?.as_str() {
+                "rename" => name = meta.value()?.parse::<LitStr>()?.value(),
+                "capnp_name" => native = Some(meta.value()?.parse::<LitStr>()?.value()),
+                "capnp_ordinal" => {
+                    let _: u16 = meta.value()?.parse::<LitInt>()?.base10_parse()?;
+                }
+                _ => {
+                    return Err(
+                        meta.error("enum variants support rename, capnp_name and capnp_ordinal")
+                    )
+                }
             }
-            name = meta.value()?.parse::<LitStr>()?.value();
             Ok(())
         })?;
     }
-    Ok(name)
+    Ok((name, native))
 }

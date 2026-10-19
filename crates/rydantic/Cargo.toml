@@ -20,7 +20,7 @@ derive = ["dep:rydantic-derive"]
 dynamic = ["dep:jsonschema"]
 chrono = ["dep:chrono"]
 decimal = ["dep:rust_decimal"]
-capnp = ["dep:capnp"]
+capnp = ["dep:capnp", "rydantic-derive?/capnp"]
 
 [dependencies]
 serde.workspace = true
