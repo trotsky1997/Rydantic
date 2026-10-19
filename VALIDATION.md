@@ -4,9 +4,9 @@
 
 ## 自动化验证
 
-- `cargo test --workspace --all-features --locked`：通过。76 项功能测试：27 项原有模型行为、11 项原有 Schema、5 项动态 Schema、19 项新增模型组合、11 项异步／流式、3 项日期／Decimal。
+- `cargo test --workspace --all-features --locked`：通过。78 项功能测试：27 项原有模型行为、11 项原有 Schema、5 项动态 Schema、19 项新增模型组合、11 项异步／流式、3 项日期／Decimal、2 项 Schema 路径。
 - 另有 1 项文档测试与 1 项编译期测试入口。编译期入口在常规模式下核对 11 个失败用例：生命周期逃逸、矛盾长度、重复别名、缺失 extra 存储、extra 存储类型、无效正则、只读包装修改、tag／untagged 冲突、tuple 字段 exclude、未知属性、规则与字段类型不匹配。
-- 原有 Schema 边界矩阵继续对照 1,400 组输入；独立 `jsonschema` 验证器检查 103 个原有成功输出。新增用例还检查 tuple／untagged、借用递归与泛型引用、optional flatten、flatten 默认值、键冲突、日期／Decimal 的输入与输出 Schema。
+- 原有 Schema 边界矩阵继续对照 1,400 组输入；独立 `jsonschema` 验证器检查 103 个原有成功输出。新增用例还检查 tuple／untagged、借用递归与泛型引用、optional flatten、flatten 默认值、键冲突、日期／Decimal 的输入与输出 Schema。路径回归用例确认带空格、中文、百分号和 JSON Pointer 转义字符的规则位置能够在 Schema 中直接解析，生成的 `$ref` 继续使用 URI 片段编码。
 - `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings`：通过。
 - `cargo check -p rydantic --no-default-features --lib --locked`：通过。
 - `cargo check -p rydantic --no-default-features --features chrono,decimal --lib --locked`：通过。

@@ -48,7 +48,7 @@ impl SchemaReport {
                                     child,
                                     &format!(
                                         "{path}/{keyword}/{}",
-                                        encode_fragment(&key.replace('~', "~0").replace('/', "~1"))
+                                        key.replace('~', "~0").replace('/', "~1")
                                     ),
                                     out,
                                 );
