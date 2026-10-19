@@ -36,10 +36,16 @@ jobs:
         run: cargo test --workspace --all-features --locked
       - name: Clippy
         run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+      - name: Verify official Cap'n Proto CLI interoperability
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y capnproto
+          cargo test --locked -p rydantic-capnp-fixture --test native -- --ignored
       - name: Check runtime without derive or dynamic features
         run: cargo check -p rydantic --no-default-features --lib --locked
       - name: Check optional runtime features without derive
-        run: cargo check -p rydantic --no-default-features --features chrono,decimal --lib --locked
+        run: cargo check -p rydantic --no-default-features --features chrono,decimal,capnp --lib --locked
       - name: Build documentation
         env:
           RUSTDOCFLAGS: -D warnings
@@ -53,3 +59,4 @@ jobs:
           cargo run --locked --quiet -p rydantic --example streaming
           cargo run --locked --quiet -p rydantic --example asynchronous
           cargo run --locked --quiet -p rydantic --example dates_decimal --features chrono,decimal
+          cargo run --locked --quiet -p rydantic-capnp-fixture

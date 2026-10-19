@@ -6,7 +6,7 @@ use syn::{
     Member, Type,
 };
 mod attrs;
-mod capnp;
+mod native;
 
 #[proc_macro_derive(Model, attributes(model))]
 pub fn derive_model(input: TokenStream) -> TokenStream {
@@ -549,7 +549,7 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
         }
     };
     let container = attrs::container(&input.attrs)?;
-    let native_capnp = capnp::expand(&input, &container, &rd)?;
+    let native_capnp = native::expand(&input, &container, &rd)?;
     let name = &input.ident;
     let title = container.title.clone().unwrap_or_else(|| name.to_string());
     let borrowed = input.generics.lifetimes().next().is_some();
