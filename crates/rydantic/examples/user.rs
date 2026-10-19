@@ -18,7 +18,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("{}", user.dump_json()?);
 
     let errors =
-        User::parse_value(json!({"name":"李", "age":17, "email":"invalid", "unknown":true}))
+        User::parse_value(json!({"name":"A", "age":17, "email":"invalid", "unknown":true}))
             .unwrap_err();
     println!("{}", serde_json::to_string_pretty(&errors)?);
 

@@ -885,7 +885,7 @@ checksum = "cf54715a573b99ac80df0bc206da022bcd442c974952c7b9720069370852e21f"
 
 [[package]]
 name = "rydantic"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "capnp",
  "chrono",
@@ -902,7 +902,7 @@ dependencies = [
 
 [[package]]
 name = "rydantic-auto-capnp-fixture"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "rydantic",
  "tempfile",
@@ -911,7 +911,7 @@ dependencies = [
 
 [[package]]
 name = "rydantic-capnp-fixture"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "capnp",
  "capnpc",
@@ -921,7 +921,7 @@ dependencies = [
 
 [[package]]
 name = "rydantic-derive"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "capnpc",
  "heck",
@@ -937,7 +937,7 @@ dependencies = [
 
 [[package]]
 name = "rydantic-renamed-fixture"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "rydantic",
 ]

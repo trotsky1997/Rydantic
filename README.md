@@ -2,21 +2,21 @@
 
 [![CI](https://github.com/trotsky1997/Rydantic/actions/workflows/ci.yml/badge.svg)](https://github.com/trotsky1997/Rydantic/actions/workflows/ci.yml)
 
-Rust 的统一数据模型库，当前版本 **0.3.0**，支持 JSON 与原生 Cap’n Proto。
+Unified data models for Rust, currently **0.3.1**, with JSON and native Cap'n Proto support.
 
-0.3 新增 `#[rydantic::capnp_models]`：从 Rust 模型自动推导 `.capnp` Schema、生成官方 Rust 绑定并关联模型。无需维护 Schema、绑定或 `build.rs`。
+Version 0.3 introduces `#[rydantic::capnp_models]`: infer a complete `.capnp` schema from Rust models, generate official Rust bindings, and connect each model automatically. No separate schema, generated source, or `build.rs` needs to be maintained.
 
-一份 `#[derive(Model)]` 声明提供：JSON 解析、显式类型转换、字符串规范化、约束校验、结构化错误、Serde 序列化／反序列化，以及 JSON Schema Draft 2020-12。
+One `#[derive(Model)]` declaration provides JSON parsing, explicit type coercion, string normalization, constraints, structured errors, Serde serialization and deserialization, and JSON Schema Draft 2020-12.
 
-工作区包含运行时 `rydantic`、过程宏 `rydantic-derive`、依赖重命名示例和 Cap’n Proto 协议集成示例。已使用 Rust 1.98.1 验证；工作区附带 Cargo.lock。
+The workspace contains the `rydantic` runtime, the `rydantic-derive` procedural macros, a renamed-dependency example, and Cap'n Proto integration examples. It has been verified with Rust 1.98.1 and includes Cargo.lock.
 
-## 快速开始
+## Quick start
 
-在项目的 Cargo.toml 中添加 crates.io 依赖：
+Add the crates.io dependency to your Cargo.toml:
 
 ```toml
 [dependencies]
-rydantic = "0.3.0"
+rydantic = "0.3.1"
 ```
 
 ```rust
@@ -56,7 +56,7 @@ fn main() -> Result<(), rydantic::ValidationErrors> {
 }
 ```
 
-`Model` 同时生成 Serde 的 `Serialize`、`Deserialize` 实现。模型只需派生一次 `Model`；Serde 实现中的反序列化会执行完整校验，序列化会重新校验当前对象。
+`Model` also generates Serde's `Serialize` and `Deserialize` implementations. Derive `Model` once per model. Deserialization runs full validation, and serialization revalidates the current object.
 
 ```sh
 cargo run -p rydantic --example user
@@ -65,48 +65,48 @@ cargo run -p rydantic --example tool_call -- --schema
 cargo run -p rydantic --example tool_call -- '{"kind":"ping"}'
 ```
 
-## 已实现的类型与规则
+## Supported types and rules
 
-支持 `String`、借用的 `&str`／`Cow<str>`、`bool`、8/16/32/64/128 位有符号和无符号整数、`isize`／`usize`、`f32`／`f64`、`Option<T>`、`Box<T>`、`Vec<T>`、`[T; N]`、字符串键的 `BTreeMap`／`HashMap`、`serde_json::Value`、保留原文的 `Box<RawValue>`，以及嵌套、递归、泛型模型。
+Supported types include `String`, borrowed `&str` and `Cow<str>`, `bool`, signed and unsigned 8/16/32/64/128-bit integers, `isize`, `usize`, `f32`, `f64`, `Option<T>`, `Box<T>`, `Vec<T>`, `[T; N]`, string-keyed `BTreeMap` and `HashMap`, `serde_json::Value`, source-preserving `Box<RawValue>`, and nested, recursive, and generic models.
 
-| 字段属性 | 行为 |
+| Field attribute | Behavior |
 | --- | --- |
-| `trim`、`lowercase`、`uppercase` | 按声明的固定流水线规范化字符串 |
-| `coerce` | 数字字符串转换为数值；`"true"`／`"false"` 转为布尔值；数值／布尔值转为字符串 |
-| `min_length`、`max_length` | 字符串 Unicode 标量数量、集合元素数量、映射条目数量 |
-| `ge`、`gt`、`le`、`lt` | 数值范围；阈值使用数值字面量或精确十进制字符串 |
-| `pattern = "..."` | Rust regex；模式在编译期检查，在运行时缓存 |
-| `email` | 使用 `email_address` 的邮箱地址规则 |
-| `default` | 字段类型的 `Default::default()` |
-| `default = expression` | 显式默认值；字符串字面量可直接用于 String |
-| `default_factory = path` | 每次缺失字段时调用工厂函数 |
-| `required` | 即使字段为 Option，也要求输入中出现该字段 |
-| `rename = "..."` | 同时设置输入与输出名称 |
-| `validation_alias`、`serialization_alias` | 分别设置输入与输出名称 |
-| `exclude` | 输出与输出 Schema 中省略，输入仍按规则处理 |
-| `before = path` | 原始 JSON 值处理函数 |
-| `validate = path` | 字段类型构造完成后的自定义校验 |
-| `description = "..."` | Schema 描述；也自动读取字段文档注释 |
-| `flatten` | 将具名模型或字符串键映射展开到当前 JSON 对象 |
-| `extra` | 保存未知字段的映射，配合容器 `extra = "allow"` |
-| `async_validate = path` | 等待异步字段校验函数 |
+| `trim`, `lowercase`, `uppercase` | Normalize strings through a fixed pipeline |
+| `coerce` | Convert numeric strings to numbers, `"true"`/`"false"` to booleans, and numbers/booleans to strings |
+| `min_length`, `max_length` | Count Unicode scalar values in strings, collection elements, or map entries |
+| `ge`, `gt`, `le`, `lt` | Apply numeric bounds using number literals or exact decimal strings |
+| `pattern = "..."` | Use Rust regex syntax; patterns are checked at compile time and cached at runtime |
+| `email` | Validate email addresses with `email_address` |
+| `default` | Use the field type's `Default::default()` |
+| `default = expression` | Use an explicit default; string literals can be used directly for String fields |
+| `default_factory = path` | Call a factory whenever the field is missing |
+| `required` | Require the field to appear in the input, including Option fields |
+| `rename = "..."` | Set both input and output names |
+| `validation_alias`, `serialization_alias` | Set input and output names separately |
+| `exclude` | Omit the field from output and the output schema; input rules still apply |
+| `before = path` | Transform the raw JSON value before type decoding |
+| `validate = path` | Run a custom validator after constructing the typed field |
+| `description = "..."` | Add a schema description; field documentation comments are also read automatically |
+| `flatten` | Merge a named model or string-keyed map into the current JSON object |
+| `extra` | Capture unknown fields in a map, together with container-level `extra = "allow"` |
+| `async_validate = path` | Await an asynchronous field validator |
 
-容器属性：`extra = "forbid"`（默认）、`extra = "ignore"`、`extra = "allow"`、`title = "..."`、`validate = path`、`async_validate = path`、枚举的 `tag = "..."` 或 `untagged`。
+Container attributes: `extra = "forbid"` (default), `extra = "ignore"`, `extra = "allow"`, `title = "..."`, `validate = path`, `async_validate = path`, and `tag = "..."` or `untagged` for enums.
 
-解析顺序为：读取输入／产生默认值 → before → 类型解析与显式转换 → trim → 大小写转换 → 字段约束 → 字段自定义校验 → 模型自定义校验。默认值也经过同一流程。独立字段的错误会收集到同一份结果中；父模型的自定义校验在其字段全部成功后执行。
+The parsing pipeline is: read input or produce a default → before callback → type decoding and explicit coercion → trim → case conversion → field constraints → custom field validation → custom model validation. Defaults follow the same pipeline. Errors from independent fields are collected together; a parent model's custom validator runs after all its fields succeed.
 
-数字字符串需要显式启用 `coerce`。JSON 数值 `25.0` 可用于整数，`25.5` 会失败；这与 JSON Schema 对数学整数的定义一致。范围比较保留 128 位整数精度；极大指数输入会经过有界处理。浮点数遵循 Rust 的 IEEE 754 表示，NaN、无穷值以及超出目标类型范围的数值会失败。
+Numeric strings require explicit `coerce`. A JSON number such as `25.0` is accepted for an integer, while `25.5` fails, following JSON Schema's definition of mathematical integers. Range comparisons preserve 128-bit integer precision, and extremely large exponents are processed with bounded work. Floating-point values follow Rust's IEEE 754 representations; NaN, infinity, and values outside the target type's range fail validation.
 
-## 缺失字段与 null
+## Missing fields and null
 
-| 声明 | 输入可省略 | 接受 null |
+| Declaration | May be omitted | Accepts null |
 | --- | --- | --- |
-| `name: String` | 否 | 否 |
-| `name: Option<String>` | 是，得到 None | 是 |
-| `#[model(required)] name: Option<String>` | 否 | 是 |
-| `#[model(default = "guest")] name: String` | 是，得到默认值 | 否 |
+| `name: String` | No | No |
+| `name: Option<String>` | Yes, produces None | Yes |
+| `#[model(required)] name: Option<String>` | No | Yes |
+| `#[model(default = "guest")] name: String` | Yes, uses the default | No |
 
-## 自定义校验
+## Custom validation
 
 ```rust
 use rydantic::{Model, ValidationError, ValidationErrors, Value};
@@ -134,7 +134,7 @@ struct Window {
 }
 ```
 
-嵌套时自定义错误路径会自动加上父级路径。`ValidationErrors::errors()` 提供错误切片，`to_json()` 提供结构化 JSON。每个错误包含 `loc`、`code`、`message`、`stage` 与约束参数；`pointer()` 输出转义后的 JSON Pointer。
+Custom error paths are automatically prefixed with the parent path when nested. `ValidationErrors::errors()` returns an error slice, and `to_json()` returns structured JSON. Each error includes `loc`, `code`, `message`, `stage`, and constraint parameters; `pointer()` returns an escaped JSON Pointer.
 
 ```json
 [
@@ -148,9 +148,9 @@ struct Window {
 ]
 ```
 
-## 枚举与工具参数
+## Enums and tool arguments
 
-无字段枚举编码为字符串。带字段枚举通过显式 discriminator 编码为对象：
+Enums with unit variants encode as strings. Enums with fields can encode as objects with an explicit discriminator:
 
 ```rust
 use rydantic::Model;
@@ -170,11 +170,11 @@ enum ToolCall {
 }
 ```
 
-对应输入为 `{"kind":"search","query":"Rust"}` 或 `{"kind":"ping"}`，生成的 Schema 使用 `oneOf`、`const` 和明确的必需字段。
+Inputs include `{"kind":"search","query":"Rust"}` and `{"kind":"ping"}`. The generated schema uses `oneOf`, `const`, and explicit required fields.
 
-## 借用模型
+## Borrowed models
 
-带生命周期的声明使用同一个 `Model` derive，并通过 `BorrowModel` 解析。输入缓冲区需要覆盖模型的使用周期。
+Declarations with lifetimes use the same `Model` derive and parse through `BorrowModel`. The input buffer must outlive the model's use.
 
 ```rust
 use rydantic::{BorrowModel, Model};
@@ -194,11 +194,11 @@ assert_eq!(view.name, "Alice");
 assert_eq!(view.note, "hello\nworld");
 ```
 
-`&str` 引用未转义的原始 JSON 字符串；`trim` 通过切片保留借用。需要解码转义或改变大小写时，使用 `Cow<str>`，它按需分配。需要分配的 `&str` 输入会返回 `borrowed_string`／`borrowed_transform` 错误。`before` 产生拥有所有权的 JSON 值，适合搭配 `Cow` 或拥有所有权的字段。
+`&str` references the original, unescaped JSON string. `trim` preserves the borrow by slicing it. Use `Cow<str>` when decoding escapes or changing case may require allocation. Inputs that require allocation for an `&str` field return `borrowed_string` or `borrowed_transform` errors. A `before` callback produces an owned JSON value and works with `Cow` or owned fields.
 
-借用模型支持嵌套、递归、泛型、多生命周期、集合、flatten、Serde `from_str`／`from_slice`，以及 `BorrowValidated` 只读包装。`parse_slice` 从字节缓冲区借用；读取器入口用于拥有所有权的模型。
+Borrowed models support nesting, recursion, generics, multiple lifetimes, collections, flattening, Serde `from_str`/`from_slice`, and the read-only `BorrowValidated` wrapper. `parse_slice` borrows from a byte buffer; reader-based entry points work with owned models.
 
-## Tuple struct 与 untagged enum
+## Tuple structs and untagged enums
 
 ```rust
 use rydantic::Model;
@@ -219,11 +219,11 @@ enum ResultValue {
 }
 ```
 
-newtype 编码为内部值，多个 tuple 字段编码为固定长度数组，unit struct 编码为 `null`，空 tuple struct 编码为 `[]`。Tuple 字段支持校验和转换；名称、默认值、flatten 与 exclude 用在具名字段上。
+Newtypes encode as their inner value, multiple tuple fields encode as fixed-length arrays, unit structs encode as `null`, and empty tuple structs encode as `[]`. Tuple fields support validation and coercion. Names, defaults, flattening, and exclusion apply to named fields.
 
-Untagged 按声明顺序试解析，选择第一个通过同步校验的分支。失败时返回 `union_no_match` 和各分支的结构化错误；Schema 使用 `anyOf`。异步校验随后检查已选分支。内部标签枚举继续使用具名字段或 unit variant。
+Untagged enums try variants in declaration order and select the first one that passes synchronous validation. Failure returns `union_no_match` with structured errors for each branch; the schema uses `anyOf`. Asynchronous validation then checks the selected branch. Internally tagged enums use named fields or unit variants.
 
-## Flatten 与额外字段保留
+## Flattening and extra fields
 
 ```rust
 use rydantic::{Model, Value};
@@ -247,19 +247,19 @@ assert_eq!(person.extra["score"], 9);
 assert_eq!(person.dump()?["city"], "Paris");
 ```
 
-Flatten 支持具名模型、`Option`／`Box` 包装和字符串键的 `BTreeMap`／`HashMap`。先消费声明字段，再消费展开字段，最后由一个映射接收剩余键。允许多个展开的固定对象；每层允许一个接收未知键的字段。`extra = "allow"` 要求显式声明一个 `#[model(extra)]` 映射，映射值也会进行类型检查。
+Flattening supports named models, `Option`/`Box` wrappers, and string-keyed `BTreeMap`/`HashMap`. Parsing consumes declared fields first, flattened fields next, and finally sends remaining keys to a capture map. Multiple flattened fixed objects are supported, with one field per level allowed to capture unknown keys. `extra = "allow"` requires an explicit `#[model(extra)]` map, whose values are also type-checked.
 
-Optional flatten 在其所有键缺失时得到 `None`；出现部分键时检查内部必需字段。空的展开输入可以触发显式默认值。错误位置沿用展开后的 JSON 路径。声明字段的输入／输出名称会保留，额外字段键与这些名称重叠时返回 `field_collision`；序列化合并也检查键冲突。
+Optional flattened fields become `None` when all their keys are absent; partially present objects are checked for required inner fields. Empty flattened input can trigger an explicit default. Error locations follow the flattened JSON paths. Input/output names of declared fields are preserved; overlapping extra keys return `field_collision`, and serialization also checks for key collisions when merging objects.
 
-## 日期与 Decimal
+## Dates and Decimal
 
 ```toml
-rydantic = { version = "0.3.0", features = ["chrono", "decimal"] }
+rydantic = { version = "0.3.1", features = ["chrono", "decimal"] }
 ```
 
-`chrono` feature 支持 `NaiveDate`、`NaiveTime`、`NaiveDateTime`、`DateTime<Utc>`、`DateTime<FixedOffset>`，并从 `rydantic::chrono` 重导出类型。格式分别为 `YYYY-MM-DD`、`HH:MM:SS[.fraction]`、无时区的 ISO 日期时间、RFC 3339 日期时间。校验实际日历、四位年份、最多 9 位小数秒与 RFC 3339 时区；UTC 类型会换算到 UTC。
+The `chrono` feature supports `NaiveDate`, `NaiveTime`, `NaiveDateTime`, `DateTime<Utc>`, and `DateTime<FixedOffset>`, re-exported through `rydantic::chrono`. Their formats are `YYYY-MM-DD`, `HH:MM:SS[.fraction]`, an ISO date-time without a time zone, and RFC 3339 date-times. Validation checks calendar dates, four-digit years, at most nine fractional-second digits, and RFC 3339 time zones. UTC types are converted to UTC.
 
-`decimal` feature 提供 `rydantic::rust_decimal::Decimal`，保留 96 位系数与最多 28 位小数。默认通过十进制字符串输入和输出，保留 scale；显式 `coerce` 也接受 JSON 数值。精度损失会失败，范围约束按精确十进制比较。
+The `decimal` feature provides `rydantic::rust_decimal::Decimal`, preserving a 96-bit coefficient and up to 28 fractional digits. Input and output use decimal strings by default and preserve scale; explicit `coerce` also accepts JSON numbers. Loss of precision fails validation, and range constraints use exact decimal comparisons.
 
 ```rust
 use rydantic::{Model, rust_decimal::Decimal};
@@ -271,9 +271,9 @@ struct Price {
 }
 ```
 
-日期语义、Decimal 精度和字符串数值范围会标记为 Schema 本地规则。运行 `cargo run -p rydantic --example dates_decimal --features chrono,decimal` 查看完整示例。
+Date semantics, Decimal precision, and numeric bounds on string representations are marked as schema-local rules. Run `cargo run -p rydantic --example dates_decimal --features chrono,decimal` for a complete example.
 
-## 异步校验
+## Asynchronous validation
 
 ```rust
 use rydantic::{Model, ValidationError};
@@ -290,18 +290,18 @@ struct Account {
     name: String,
 }
 
-// 在 async 函数中：
+// Inside an async function:
 // let account = Account::parse_json_async(input).await?;
 // let json = account.dump_json_async().await?;
 ```
 
-字段异步函数返回 `Result<(), ValidationError>`；容器异步函数返回 `Result<(), ValidationErrors>`。同步解析和校验全部成功后，按字段顺序等待异步校验；嵌套模型与集合会继续向内执行，同层字段错误会收集到一起。运行时采用 `Send` future，可搭配 Tokio 等执行器。
+Asynchronous field validators return `Result<(), ValidationError>`; container validators return `Result<(), ValidationErrors>`. After synchronous parsing and validation succeed, asynchronous validators are awaited in field order. Nested models and collections are traversed recursively, and errors from sibling fields are collected together. The runtime uses `Send` futures and works with executors such as Tokio.
 
-包含异步规则的模型及其父模型，使用 `parse_json_async`／`parse_value_async`、`validate_async`、`dump_async`／`dump_json_async`。同步解析、Serde 和同步 dump 会返回 `async_validation_required`。拥有所有权的模型可使用 `parse_validated_json_async`／`AsyncValidated::new`，其只读结果支持 Serde 序列化。借用模型也支持异步解析、校验和 dump。
+Models with asynchronous rules, and their parent models, use `parse_json_async`/`parse_value_async`, `validate_async`, and `dump_async`/`dump_json_async`. Synchronous parsing, Serde, and synchronous dump return `async_validation_required`. Owned models can use `parse_validated_json_async`/`AsyncValidated::new`; their read-only results support Serde serialization. Borrowed models also support asynchronous parsing, validation, and dumping.
 
-derive 生成的异步支持要求字段类型实现 `AsyncCheck`，该 trait 要求 `Sync`。纯同步自定义类型可以添加空实现 `impl AsyncCheck for MyType {}`；自定义类型通过它提供异步遍历。存在异步规则时，`JsonType::async_required`／`BorrowType::async_required` 需返回对应元数据。库本身无需依赖执行器。`asynchronous` 示例使用开发依赖 Tokio。
+Generated asynchronous support requires field types to implement `AsyncCheck`, which requires `Sync`. A synchronous custom type can provide an empty `impl AsyncCheck for MyType {}`; custom types use this trait to define asynchronous traversal. Types with asynchronous rules must expose the corresponding metadata through `JsonType::async_required`/`BorrowType::async_required`. The library itself has no executor dependency. The `asynchronous` example uses Tokio as a development dependency.
 
-## 流式解析
+## Streaming parsing
 
 ```rust
 use rydantic::{stream, Model};
@@ -320,18 +320,18 @@ stream::visit_array::<_, Row, _>(Cursor::new("[{\"id\":1},{\"id\":2}]"), |row| {
 })?;
 ```
 
-| 入口 | 输入与错误处理 |
+| Entry point | Input and error handling |
 | --- | --- |
-| `Model::parse_reader` | 从 `Read` 读取单个 JSON 文档 |
-| `stream::json_stream` | 空白分隔的文档序列；校验错误后继续，JSON 语法错误后终止 |
-| `stream::ndjson` | 从 `BufRead` 逐行读取；空行跳过，语法／校验错误后继续下一行，附 `stream_line` |
-| `stream::visit_array` | 逐元素回调；校验错误携带数组索引，回调返回错误即停止读取 |
-| `stream::borrow_stream`／`visit_borrowed_array` | 从 `&str` 借用字段，返回值可在输入缓冲区存活期间保留 |
-| `stream::documents` | 逐条返回 `Box<RawValue>`，可在循环中调用 `parse_json_async` |
+| `Model::parse_reader` | Read one JSON document from `Read` |
+| `stream::json_stream` | Read whitespace-separated documents; continue after validation errors and stop after JSON syntax errors |
+| `stream::ndjson` | Read lines from `BufRead`; skip blank lines, continue after syntax/validation errors, and attach `stream_line` |
+| `stream::visit_array` | Visit each element; validation errors include the array index, and a callback error stops reading |
+| `stream::borrow_stream`/`visit_borrowed_array` | Borrow fields from `&str`; returned values remain usable while the input buffer lives |
+| `stream::documents` | Yield `Box<RawValue>` documents for calls to `parse_json_async` inside the loop |
 
-这些入口使用同步 I/O。序列与数组访问器仅物化当前记录；内存随单条记录大小增长。读取器自身的缓冲策略由调用者决定。异步应用可在合适的 I/O 层接入，并逐条等待模型校验。同步 typed stream 遇到含异步规则的模型，会给出 `async_validation_required`。
+These entry points use synchronous I/O. Sequence and array visitors materialize only the current record, so memory use scales with that record's size. The caller controls the reader's buffering strategy. Asynchronous applications can integrate at the appropriate I/O layer and await validation for each model. Synchronous typed streams return `async_validation_required` for models with asynchronous rules.
 
-运行示例：
+Run the examples:
 
 ```sh
 cargo run -p rydantic --example borrowed
@@ -339,11 +339,11 @@ cargo run -p rydantic --example streaming
 cargo run -p rydantic --example asynchronous
 ```
 
-## 输入与输出 Schema
+## Input and output schemas
 
-`SchemaMode::Input` 使用输入别名、输入必需字段与额外字段策略。`SchemaMode::Output` 使用输出别名、移除 exclude 字段，并将所有实际输出字段设为必需字段。递归模型通过 `$defs`／`$ref` 表达，定义名称包含完整 Rust 类型路径。
+`SchemaMode::Input` uses input aliases, input requirements, and the extra-field policy. `SchemaMode::Output` uses output aliases, removes excluded fields, and requires every field that is actually emitted. Recursive models use `$defs`/`$ref`, with definition names containing the full Rust type path.
 
-去空格、类型转换、自定义函数，以及 regex／email 的具体实现规则需要 Rydantic 执行。导出的 Schema 使用 `x-rydantic-local-rules` 标记这些行为；调用 `schema_report(mode)` 可以得到对应位置与规则。输入转换后的约束采用结构上的宽容描述，输出 Schema 则描述处理后的数据。字面量默认值仅在输入 Schema 中作为注释导出；生成 Schema 从不执行默认值工厂。
+Trimming, coercion, custom functions, and the specific regex/email implementations require Rydantic's runtime. Exported schemas mark these behaviors with `x-rydantic-local-rules`; `schema_report(mode)` returns their locations and rules. Input constraints affected by transformations use a permissive structural description, while output schemas describe the processed data. Literal defaults appear as annotations only in input schemas. Schema generation never executes default factories.
 
 ```rust
 let report = User::schema_report(rydantic::SchemaMode::Input);
@@ -352,14 +352,14 @@ for local in &report.local_rules {
 }
 ```
 
-Schema 的用途包括 API 文档与工具参数描述。实际执行入口仍应调用模型解析，确保本地规则得到执行。
+Schemas can describe API documentation and tool arguments. Use model parsing at execution boundaries to run the local rules.
 
-## 运行时动态 Schema
+## Runtime dynamic schemas
 
-可选 `dynamic` feature 使用 `jsonschema` 提供运行时 Schema 编译与复用。默认依赖关闭网络／文件解析功能，本地 `$ref` 可正常使用。
+The optional `dynamic` feature uses `jsonschema` to compile and reuse schemas at runtime. Network and file resolution are disabled in the default dependency configuration; local `$ref` references are supported.
 
 ```toml
-rydantic = { version = "0.3.0", features = ["dynamic"] }
+rydantic = { version = "0.3.1", features = ["dynamic"] }
 ```
 
 ```rust
@@ -376,28 +376,28 @@ assert!(model.is_valid(&json!({"age":25})));
 assert!(model.validate(&json!({"age":17})).is_err());
 ```
 
-`DynamicModel::compile` 会拒绝含 `x-rydantic-local-rules` 的 Schema。`compile_structural` 提供显式选择，仅执行标准 JSON Schema 断言。动态验证遵循后端默认的 format 注释语义，保留输入原样；默认值填充与转换由类型模型路径负责。
+`DynamicModel::compile` rejects schemas containing `x-rydantic-local-rules`. `compile_structural` explicitly opts into standard JSON Schema assertions only. Dynamic validation follows the backend's default format-annotation semantics and preserves the input. Typed models handle default filling and coercion.
 
-## 对象生命周期
+## Object lifecycle
 
-Rust 中可直接构造或修改普通模型。调用 `validate()` 检查当前对象，调用 `dump()`／`dump_json()` 会先重新校验；这两个检查入口保持当前字段值。规范化发生在解析路径。
+Rust code can directly construct or modify ordinary models. Call `validate()` to check the current object; `dump()`/`dump_json()` revalidate it before serialization. These checks preserve field values. Normalization takes place during parsing.
 
-需要只读访问时使用 `User::parse_validated_json(...)` 或 `Validated::new(user)`，得到无 `DerefMut` 的 `Validated<User>`。`into_inner()` 可取回普通模型。自定义带内部可变性的 JsonType，需要自行维护修改规则。
+For read-only access, use `User::parse_validated_json(...)` or `Validated::new(user)` to obtain a `Validated<User>` without `DerefMut`. `into_inner()` returns the ordinary model. Custom JsonType implementations with interior mutability are responsible for their own mutation rules.
 
-## 原生 Cap’n Proto
+## Native Cap'n Proto
 
-启用 `capnp` feature 后，模型直接读取和构建[官方 Cap’n Proto](https://capnproto.org/) Schema 的字段。二进制布局与其他语言的官方实现互通，支持普通消息和 packed 消息。
+With the `capnp` feature, models read and build fields in [official Cap'n Proto](https://capnproto.org/) schemas directly. The binary layout interoperates with official implementations in other languages and supports both standard and packed messages.
 
-### 从 Rust 模型自动生成协议
+### Generate a protocol from Rust models
 
-只需要一个依赖：
+Add one dependency:
 
 ```toml
 [dependencies]
-rydantic = { version = "0.3.0", features = ["capnp"] }
+rydantic = { version = "0.3.1", features = ["capnp"] }
 ```
 
-首次配置开发环境时安装官方 `capnp` 编译器：macOS 使用 `brew install capnp`，Debian／Ubuntu 使用 `sudo apt-get install capnproto`。编译时属性宏自动调用该编译器，并使用官方 `capnpc` 生成绑定；支持通过 `RYDANTIC_CAPNP_COMPILER` 指定编译器可执行文件。
+Install the official `capnp` compiler when setting up the development environment: `brew install capnp` on macOS, or `sudo apt-get install capnproto` on Debian/Ubuntu. During compilation, the attribute macro invokes that compiler and uses the official `capnpc` generator for Rust bindings. Set `RYDANTIC_CAPNP_COMPILER` to use a specific compiler executable.
 
 ```rust
 use rydantic::{CapnpModel, CapnpSchema, Model};
@@ -429,27 +429,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let packed = user.dump_capnp_packed()?;
     assert_eq!(User::parse_capnp_packed(&packed)?, user);
 
-    // 导出完整协议，供其他语言的官方生成器使用。
+    // Export the complete protocol for official generators in other languages.
     User::write_capnp_schema("users.capnp")?;
     Ok(())
 }
 ```
 
-宏自动添加 `Model` 派生，可同时保留 `Debug`、`PartialEq` 等其他派生。模块包含：
+The macro adds the `Model` derive automatically and preserves other derives such as `Debug` and `PartialEq`. The module exposes:
 
-- `models::wire`：官方生成的公开 Rust Reader／Builder／Enum。
-- `models::CAPNP_SCHEMA`、`CAPNP_SCHEMA_ID`：完整协议文本和文件 ID。
-- 每个模型的 `CapnpSchema`：`capnp_schema()`、`write_capnp_schema(path)` 和根类型名 `CAPNP_TYPE`。普通枚举也支持作为根消息进行二进制往返，协议中自动添加根包装类型。
+- `models::wire`: public Rust Reader, Builder, and Enum bindings from the official generator.
+- `models::CAPNP_SCHEMA` and `CAPNP_SCHEMA_ID`: the complete schema text and file ID.
+- `CapnpSchema` for each model: `capnp_schema()`, `write_capnp_schema(path)`, and the root type name `CAPNP_TYPE`. Unit enums also support binary roundtrips as root messages through automatically generated root wrapper types.
 
-默认映射自动覆盖嵌套及递归模型、`Box`、`Option`、`Vec`、固定数组、String 键的 `BTreeMap`／`HashMap`、普通枚举和带数据枚举。`Vec<u8>` 推导为 `Data`；完整范围 `i128`／`u128`、日期和 Decimal 推导为 `Text`，容器中的这些类型也适用。模块内的类型别名、带具体类型参数的容器别名、显式 `use` 别名和内联子模块可以一起使用。日期和 Decimal 分别需要启用 `chrono`／`decimal` feature。
+Default mappings cover nested and recursive models, `Box`, `Option`, `Vec`, fixed arrays, String-keyed `BTreeMap`/`HashMap`, unit enums, and data enums. `Vec<u8>` becomes `Data`; full-range `i128`/`u128`, dates, and Decimal become `Text`, including inside containers. Module-local type aliases, container aliases with concrete type arguments, explicit `use` aliases, and inline submodules work together. Dates and Decimal require the `chrono` and `decimal` features respectively.
 
-模型需要使用具体且拥有所有权的类型，并放在属性覆盖的内联模块内。带数据枚举继续声明 JSON 表示规则：命名字段可使用 `#[model(tag = "kind")]`，元组变体使用 `#[model(untagged)]`。`capnp_name` 单独控制协议名字；`capnp_skip` 配合默认值保留本地字段；JSON 别名、flatten、extra、exclude 继续控制 JSON 表示。外部未知类型可使用默认值与 `capnp_skip`，或继续采用下面的已有 Schema 接入方式。
+Models must use concrete, owned types within the annotated inline module. Data enums still declare their JSON representation: named fields can use `#[model(tag = "kind")]`, while tuple variants use `#[model(untagged)]`. `capnp_name` controls the protocol name independently. `capnp_skip` with a default preserves a local field. JSON aliases, flattening, extra fields, and exclusion continue to control the JSON representation. Unsupported external types can use a default with `capnp_skip`, or the existing-schema integration below.
 
-### 协议 ID 与兼容演进
+### Protocol IDs and compatible evolution
 
-默认文件 ID 从 Cargo 包名与当前模型模块名稳定计算；生产协议建议显式设置固定的 `namespace = "my_app.users"` 或 `id = 0x...`。同一包中多个同名模型模块应分配不同的 namespace；发布后保持 namespace／id、模型名和子模块路径稳定。
+The default file ID is derived deterministically from the Cargo package name and the current model module name. For production protocols, set a fixed `namespace = "my_app.users"` or `id = 0x...`. Give distinct namespaces to multiple model modules with the same name in one package. Keep the namespace/ID, model names, and submodule paths stable after publication.
 
-字段和枚举成员默认按声明顺序从 `@0` 编号。追加字段保留旧编号。需要调整声明顺序时，可在每个协议字段或枚举成员上固定 `#[model(capnp_ordinal = N)]`，编号须唯一、连续并从零开始。例如：
+Fields and enum members are numbered from `@0` in declaration order by default. Appending fields preserves existing ordinals. To reorder declarations, pin each wire field or enum member with `#[model(capnp_ordinal = N)]`; ordinals must be unique, contiguous, and start at zero. For example:
 
 ```rust
 #[rydantic::capnp_models(namespace = "my_app.counters")]
@@ -463,29 +463,29 @@ mod models {
 }
 ```
 
-带数据枚举的命名／元组组字段共享协议编号空间；变体上的 `capnp_ordinal` 指定该变体的起始字段编号，字段本身也可固定编号。协议类型变更、删除字段、改名和修改 union 分组需要遵循[官方兼容规则](https://capnproto.org/language.html#evolving-your-protocol)。导出的 Schema 适合纳入代码审查；生成的 Rust 绑定会随模型自动更新。
+Named and tuple group fields in data enums share the protocol's ordinal space. A variant's `capnp_ordinal` specifies its first field ordinal; fields can also have explicit ordinals. Type changes, field removal, renaming, and union regrouping must follow the [official compatibility rules](https://capnproto.org/language.html#evolving-your-protocol). Export schemas for code review; Rust bindings update automatically with the models.
 
-完整自动生成示例和互操作测试见 [fixtures/auto-capnp](https://github.com/trotsky1997/Rydantic/tree/main/fixtures/auto-capnp)：
+See [fixtures/auto-capnp](https://github.com/trotsky1997/Rydantic/tree/main/fixtures/auto-capnp) for complete examples and interoperability tests:
 
 ```sh
 cargo run -p rydantic-auto-capnp-fixture
 cargo test -p rydantic-auto-capnp-fixture
 ```
 
-### 接入已有 Schema
+### Integrate an existing schema
 
-已有 `.capnp` 协议可继续使用显式绑定：
+Existing `.capnp` protocols can use explicit bindings:
 
 ```toml
 [dependencies]
-rydantic = { version = "0.3.0", features = ["capnp"] }
+rydantic = { version = "0.3.1", features = ["capnp"] }
 capnp = { version = "0.27", features = ["unaligned"] }
 
 [build-dependencies]
 capnpc = "0.27"
 ```
 
-用 `capnp id` 产生自己的文件 ID，然后编写 `schema/user.capnp`：
+Generate a file ID with `capnp id`, then create `schema/user.capnp`:
 
 ```capnp
 @0xc886a6cb051d0cab;
@@ -495,7 +495,7 @@ struct User {
 }
 ```
 
-在 `build.rs` 调用官方代码生成器；本机需要安装 `capnp` 编译器：
+Call the official code generator from `build.rs`; the `capnp` compiler must be installed locally:
 
 ```rust
 fn main() {
@@ -508,7 +508,7 @@ fn main() {
 }
 ```
 
-在 crate 根模块引入生成的绑定，再关联模型：
+Include the generated bindings at the crate root and connect the model:
 
 ```rust
 pub mod user_capnp {
@@ -535,48 +535,48 @@ fn main() -> Result<(), rydantic::ValidationErrors> {
 }
 ```
 
-| Rust 模型 | 原生 Schema 字段 |
+| Rust model | Native schema field |
 | --- | --- |
-| 布尔、整数、浮点数、String | Bool、对应数值类型、Text；整数宽度转换检查溢出 |
-| 嵌套模型、Box | 关联模型的 Struct |
-| Vec、固定数组 | List；固定数组检查长度，支持嵌套列表和结构列表 |
-| Option | 含 `union { none @0 :Void; some @1 :T; }` 的包装 Struct |
-| 字符串键映射 | `List(Entry)`，Entry 包含 `key :Text` 和 `value :T`；拒绝重复键 |
+| Booleans, integers, floats, String | Bool, corresponding numeric types, Text; integer-width conversions check overflow |
+| Nested models, Box | The associated model's Struct |
+| Vec, fixed arrays | List; fixed arrays check length, with nested lists and struct lists supported |
+| Option | A wrapper Struct containing `union { none @0 :Void; some @1 :T; }` |
+| String-keyed maps | `List(Entry)` with `key :Text` and `value :T`; duplicate keys are rejected |
 | `#[model(capnp_data)] Vec<u8>` | Data |
-| `#[model(capnp_text)]` | Text；适用于日期、Decimal、完整范围 i128/u128 的标量表示 |
-| `#[model(capnp_enum)]` 字段 | 原生 Enum；Rust 枚举声明 `#[model(capnp_enum = "wire_capnp::Role")]` |
-| 数据枚举 | 原生 union，支持 unit、单字段及具名 group 分支；JSON 可使用 `untagged` 或受支持的 `tag` 形式 |
-| Newtype、tuple、unit struct | 分别关联含 `value`、`item0`／`item1` 字段的 Struct，以及空 Struct |
+| `#[model(capnp_text)]` | Text for dates, Decimal, and full-range i128/u128 scalar representations |
+| `#[model(capnp_enum)]` fields | Native Enum; the Rust enum declares `#[model(capnp_enum = "wire_capnp::Role")]` |
+| Data enums | Native unions with unit, single-field, and named group variants; JSON uses `untagged` or a supported `tag` representation |
+| Newtype, tuple, unit structs | Structs containing `value`, `item0`/`item1`, or no fields respectively |
 
-默认使用 Rust 字段名寻找生成的访问器，`#[model(capnp_name = "fullName")]` 可单独指定协议字段；`#[model(capnp_skip, default = "local")]` 保存模型内部字段。JSON 的别名、flatten、extra 与 exclude 控制 JSON 表示；原生字段布局由 `.capnp` 文件决定。
+Generated accessors are found using Rust field names by default. `#[model(capnp_name = "fullName")]` selects a protocol field independently; `#[model(capnp_skip, default = "local")]` retains an internal model field. JSON aliases, flattening, extra fields, and exclusion control the JSON representation. The `.capnp` file determines the native field layout.
 
-`parse_capnp` 执行模型规范化与同步校验，`dump_capnp` 重新校验当前对象。异步模型使用 `parse_capnp_async`／`dump_capnp_async` 及 packed 对应入口。`parse_capnp_with_options` 接受官方 `ReaderOptions`，可调整遍历与嵌套限制；单消息入口拒绝尾随数据。`from_capnp_reader` 接受官方生成的 Reader，`to_capnp_message` 返回可供官方 API 使用的消息 Builder。`read_capnp`／`write_capnp` 是组合映射用的底层接口，完整校验应使用上述公开解析／输出入口。
+`parse_capnp` performs model normalization and synchronous validation; `dump_capnp` revalidates the current object. Asynchronous models use `parse_capnp_async`/`dump_capnp_async` and their packed equivalents. `parse_capnp_with_options` accepts the official `ReaderOptions` for traversal and nesting limits; single-message entry points reject trailing data. `from_capnp_reader` accepts an officially generated Reader, and `to_capnp_message` returns a message Builder for use with the official API. `read_capnp`/`write_capnp` are low-level composition interfaces; use the public parsing and output entry points above for full validation.
 
-原生关联要求具体的拥有所有权的模型。构造 Rust 模型会分配 String 和集合；需要直接访问消息内存时可保留官方 Reader。协议缺省值遵循 Cap’n Proto 语义；可选值用显式 union 表达，`capnp_skip` 字段使用模型默认值。JSON 的 `before` 回调仍接收该字段的 Value，日期与 Decimal 的 `capnp_text` 映射复用标量转换规则。
+Native bindings require concrete, owned models. Constructing a Rust model allocates Strings and collections; keep an official Reader when direct message-memory access is needed. Protocol defaults follow Cap'n Proto semantics. Optional values use explicit unions, and `capnp_skip` fields use model defaults. JSON `before` callbacks still receive a field Value, and `capnp_text` mappings for dates and Decimal reuse scalar conversion rules.
 
-完整 Schema、官方生成的绑定和可执行示例见 [fixtures/capnp](https://github.com/trotsky1997/Rydantic/tree/main/fixtures/capnp)。运行示例和官方命令行互操作测试：
+See [fixtures/capnp](https://github.com/trotsky1997/Rydantic/tree/main/fixtures/capnp) for a complete schema, officially generated bindings, and an executable example. Run the example and official CLI interoperability tests:
 
 ```sh
 cargo run -p rydantic-capnp-fixture
 cargo test -p rydantic-capnp-fixture --test native
-# 需要系统 capnp 编译器：
+# Requires the system capnp compiler:
 cargo test -p rydantic-capnp-fixture --test native -- --include-ignored
-# 修改示例 Schema 后重新生成并格式化绑定：
+# Regenerate and format bindings after changing the example schema:
 RYDANTIC_REGENERATE_CAPNP=1 cargo check -p rydantic-capnp-fixture
 cargo fmt --all
 ```
 
-## 实现范围与升级
+## Implementation scope and upgrading
 
-0.2 已覆盖 0.1 README 列出的八类后续功能：借用字段、tuple struct、untagged union、flatten、内置日期／Decimal、异步 validator、额外字段保留与流式解析，同时扩展到 128 位整数。
+Version 0.2 completed the eight follow-up areas listed in the 0.1 README: borrowed fields, tuple structs, untagged unions, flattening, built-in dates/Decimal, asynchronous validators, extra-field preservation, and streaming parsing. It also added 128-bit integers.
 
-拥有所有权的模型使用 `JsonType`／`Model`，借用模型使用 `BorrowType<'de>`／`BorrowModel<'de>`。两条 JSON 解析路径均从 `RawValue` 的原始字段切片直接构造模型和集合，省去完整输入的 Value 树；类型默认值也直接遍历校验。拥有所有权的模型按需构造 String，借用模型可保留输入中的字符串引用。Reader 入口缓存单个文档的原文，流式入口保留当前记录。
+Owned models use `JsonType`/`Model`; borrowed models use `BorrowType<'de>`/`BorrowModel<'de>`. Both JSON parsing paths construct models and collections directly from raw field slices in `RawValue`, without building a complete Value tree for the input. Typed defaults are validated through direct traversal as well. Owned models construct Strings as needed; borrowed models can retain string references into the input. Reader entry points buffer the raw text of one document, while streaming entry points retain the current record.
 
-显式 `Value` 字段、`parse_value` 输入、`before` 回调，以及仅实现 `decode(Value, …)` 的自定义类型按各自接口使用 Value。原生标量复用轻量标量适配器；自定义类型可以覆盖 `JsonType::decode_input`，直接接收 `Input::Borrowed`。无需展开的任意 JSON 可保存为 `Box<RawValue>`，保留原文与数值写法。
+Explicit `Value` fields, `parse_value` inputs, `before` callbacks, and custom types implementing only `decode(Value, …)` use Value through their respective interfaces. Native scalar types reuse lightweight scalar adapters. Custom types can override `JsonType::decode_input` to accept `Input::Borrowed` directly. Arbitrary JSON that requires no traversal can be stored as `Box<RawValue>`, preserving its source text and numeric notation.
 
-0.1 的拥有所有权的模型入口继续可用。`StringType`／`NumericType`／`LengthType` 作为独立能力标记，泛型辅助函数需要显式声明 `JsonType` 或 `BorrowType` 约束。 自定义字段类型还需实现 `AsyncCheck` 并满足 `Sync`；原有纯同步类型可使用空的 `AsyncCheck` 实现。可通过 crates.io 的 `rydantic = "0.3.0"` 安装，也可使用 GitHub 的 v0.3.0 标签；工作区内部使用本地路径依赖。
+Owned-model entry points from 0.1 remain available. `StringType`, `NumericType`, and `LengthType` are independent capability markers; generic helpers must explicitly declare `JsonType` or `BorrowType` bounds. Custom field types also implement `AsyncCheck` and satisfy `Sync`; existing synchronous types can provide an empty `AsyncCheck` implementation. Install with `rydantic = "0.3.1"` from crates.io or use the GitHub v0.3.1 tag. Workspace members use local path dependencies.
 
-## 验证
+## Validation
 
 ```sh
 cargo test --workspace --all-features
@@ -586,6 +586,6 @@ cargo check -p rydantic --no-default-features --lib
 cargo run -p rydantic-renamed-fixture
 ```
 
-测试包含解析／序列化完整流程、递归／泛型／借用模型、缺失与 null、规范化、默认值、128 位精确整数边界、日期与 Decimal、异步与取消恢复、流式增量读取、错误路径、独立 JSON Schema 验证器对照，以及编译失败用例。边界矩阵覆盖 1,400 组输入；独立验证器还检查成功输出与输出 Schema 的一致性。
+Tests cover complete parsing/serialization flows; recursive, generic, and borrowed models; missing fields and null; normalization and defaults; exact 128-bit integer boundaries; dates and Decimal; asynchronous validation and cancellation recovery; incremental streaming; error paths; independent JSON Schema validation; and compile-fail cases. The boundary matrix covers 1,400 inputs. The independent validator also checks that successful outputs satisfy their output schemas.
 
 License: MIT.
