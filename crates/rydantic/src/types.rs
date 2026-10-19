@@ -31,6 +31,7 @@ fn mismatch(ctx: &mut Context, expected: &str, value: &Value) {
 macro_rules! integer {
     ($($ty:ty),* $(,)?) => {$(
         impl JsonType for $ty {
+            fn prepare_default(self,ctx:&mut Context)->Option<Self>{self.validate_into(ctx);Some(self)}
             fn decode_input(input:Input<'_>,ctx:&mut Context,coerce:bool)->Option<Self>{Self::decode(crate::direct::scalar(input,ctx,"integer")?,ctx,coerce)}
             fn decode(value: Value, ctx: &mut Context, coerce: bool) -> Option<Self> {
                 if coerce {
@@ -63,6 +64,7 @@ integer!(i8, i16, i32, i64, i128, isize, u8, u16, u32, u64, u128, usize);
 macro_rules! float {
     ($($ty:ty),*) => {$(
         impl JsonType for $ty {
+            fn prepare_default(self,ctx:&mut Context)->Option<Self>{self.validate_into(ctx);Some(self)}
             fn decode_input(input:Input<'_>,ctx:&mut Context,coerce:bool)->Option<Self>{Self::decode(crate::direct::scalar(input,ctx,"number")?,ctx,coerce)}
             fn decode(value: Value, ctx: &mut Context, coerce: bool) -> Option<Self> {
                 let parsed = match &value {
@@ -98,6 +100,10 @@ macro_rules! float {
 float!(f32, f64);
 
 impl JsonType for String {
+    fn prepare_default(self, ctx: &mut Context) -> Option<Self> {
+        self.validate_into(ctx);
+        Some(self)
+    }
     fn decode_input(input: Input<'_>, ctx: &mut Context, coerce: bool) -> Option<Self> {
         Self::decode(crate::direct::scalar(input, ctx, "string")?, ctx, coerce)
     }
@@ -130,6 +136,10 @@ impl StringType for String {}
 impl LengthType for String {}
 
 impl JsonType for bool {
+    fn prepare_default(self, ctx: &mut Context) -> Option<Self> {
+        self.validate_into(ctx);
+        Some(self)
+    }
     fn decode_input(input: Input<'_>, ctx: &mut Context, coerce: bool) -> Option<Self> {
         Self::decode(crate::direct::scalar(input, ctx, "boolean")?, ctx, coerce)
     }
@@ -161,6 +171,12 @@ impl JsonType for bool {
 }
 
 impl<T: JsonType> JsonType for Option<T> {
+    fn prepare_default(self, ctx: &mut Context) -> Option<Self> {
+        match self {
+            Some(v) => v.prepare_default(ctx).map(Some),
+            None => Some(None),
+        }
+    }
     fn decode_input(input: Input<'_>, ctx: &mut Context, coerce: bool) -> Option<Self> {
         if input.is_null() {
             Some(None)
@@ -220,6 +236,9 @@ impl<T: NumericType> NumericType for Option<T> {}
 impl<T: LengthType> LengthType for Option<T> {}
 
 impl<T: JsonType> JsonType for Box<T> {
+    fn prepare_default(self, ctx: &mut Context) -> Option<Self> {
+        (*self).prepare_default(ctx).map(Box::new)
+    }
     fn decode_input(input: Input<'_>, ctx: &mut Context, coerce: bool) -> Option<Self> {
         T::decode_input(input, ctx, coerce).map(Box::new)
     }
@@ -263,6 +282,20 @@ impl<T: NumericType> NumericType for Box<T> {}
 impl<T: LengthType> LengthType for Box<T> {}
 
 impl<T: JsonType> JsonType for Vec<T> {
+    fn validate_rules(&self, rules: &crate::rules::Rules, ctx: &mut Context) {
+        rules.validate_length(self.len(), ctx)
+    }
+    fn prepare_default(self, ctx: &mut Context) -> Option<Self> {
+        let mut result = Vec::with_capacity(self.len());
+        let mut complete = true;
+        for (i, value) in self.into_iter().enumerate() {
+            match ctx.at(i, |ctx| value.prepare_default(ctx)) {
+                Some(v) => result.push(v),
+                None => complete = false,
+            }
+        }
+        complete.then_some(result)
+    }
     fn decode_input(input: Input<'_>, ctx: &mut Context, coerce: bool) -> Option<Self> {
         let items = input.array(ctx)?;
         let mut values = Vec::with_capacity(items.len());
@@ -324,6 +357,14 @@ impl<T: JsonType> JsonType for Vec<T> {
 impl<T> LengthType for Vec<T> {}
 
 impl<T: JsonType, const N: usize> JsonType for [T; N] {
+    fn validate_rules(&self, rules: &crate::rules::Rules, ctx: &mut Context) {
+        rules.validate_length(self.len(), ctx)
+    }
+    fn prepare_default(self, ctx: &mut Context) -> Option<Self> {
+        Vec::<T>::prepare_default(Vec::from(self), ctx)?
+            .try_into()
+            .ok()
+    }
     fn decode_input(input: Input<'_>, ctx: &mut Context, coerce: bool) -> Option<Self> {
         let values = Vec::<T>::decode_input(input, ctx, coerce)?;
         let len = values.len();
@@ -393,6 +434,22 @@ impl<T: JsonType, const N: usize> JsonType for [T; N] {
 impl<T, const N: usize> LengthType for [T; N] {}
 
 impl<T: JsonType> JsonType for BTreeMap<String, T> {
+    fn validate_rules(&self, rules: &crate::rules::Rules, ctx: &mut Context) {
+        rules.validate_length(self.len(), ctx)
+    }
+    fn prepare_default(self, ctx: &mut Context) -> Option<Self> {
+        let mut result = Self::new();
+        let mut complete = true;
+        for (k, v) in self {
+            match ctx.at(k.clone(), |ctx| v.prepare_default(ctx)) {
+                Some(v) => {
+                    result.insert(k, v);
+                }
+                None => complete = false,
+            }
+        }
+        complete.then_some(result)
+    }
     fn decode_input(input: Input<'_>, ctx: &mut Context, coerce: bool) -> Option<Self> {
         let mut result = Self::new();
         let mut complete = true;
@@ -460,6 +517,13 @@ impl<T: JsonType> JsonType for BTreeMap<String, T> {
 impl<T> LengthType for BTreeMap<String, T> {}
 
 impl<T: JsonType, S: BuildHasher + Default> JsonType for HashMap<String, T, S> {
+    fn validate_rules(&self, rules: &crate::rules::Rules, ctx: &mut Context) {
+        rules.validate_length(self.len(), ctx)
+    }
+    fn prepare_default(self, ctx: &mut Context) -> Option<Self> {
+        BTreeMap::<String, T>::prepare_default(self.into_iter().collect(), ctx)
+            .map(|values| values.into_iter().collect())
+    }
     fn decode_input(input: Input<'_>, ctx: &mut Context, coerce: bool) -> Option<Self> {
         BTreeMap::<String, T>::decode_input(input, ctx, coerce)
             .map(|values| values.into_iter().collect())
@@ -516,6 +580,10 @@ impl JsonType for Value {
 }
 
 impl JsonType for () {
+    fn prepare_default(self, ctx: &mut Context) -> Option<Self> {
+        self.validate_into(ctx);
+        Some(self)
+    }
     fn decode_input(input: Input<'_>, ctx: &mut Context, coerce: bool) -> Option<Self> {
         Self::decode(crate::direct::scalar(input, ctx, "null")?, ctx, coerce)
     }

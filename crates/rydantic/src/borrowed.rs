@@ -511,6 +511,9 @@ impl<'de, T: BorrowType<'de>> BorrowType<'de> for Box<T> {
     }
 }
 impl<'de, T: BorrowType<'de>> BorrowType<'de> for Vec<T> {
+    fn validate_rules(&self, rules: &Rules, ctx: &mut Context) {
+        rules.validate_length(self.len(), ctx)
+    }
     fn prepare_default(self, ctx: &mut Context) -> Option<Self> {
         let mut result = Vec::with_capacity(self.len());
         let mut complete = true;
@@ -566,6 +569,9 @@ impl<'de, T: BorrowType<'de>> BorrowType<'de> for Vec<T> {
     }
 }
 impl<'de, T: BorrowType<'de>, const N: usize> BorrowType<'de> for [T; N] {
+    fn validate_rules(&self, rules: &Rules, ctx: &mut Context) {
+        rules.validate_length(self.len(), ctx)
+    }
     fn prepare_default(self, ctx: &mut Context) -> Option<Self> {
         <Vec<T> as BorrowType>::prepare_default(Vec::from(self), ctx)?
             .try_into()
@@ -619,6 +625,9 @@ impl<'de, T: BorrowType<'de>, const N: usize> BorrowType<'de> for [T; N] {
     }
 }
 impl<'de, T: BorrowType<'de>> BorrowType<'de> for BTreeMap<String, T> {
+    fn validate_rules(&self, rules: &Rules, ctx: &mut Context) {
+        rules.validate_length(self.len(), ctx)
+    }
     fn prepare_default(self, ctx: &mut Context) -> Option<Self> {
         let mut result = Self::new();
         let mut complete = true;
@@ -675,6 +684,9 @@ impl<'de, T: BorrowType<'de>> BorrowType<'de> for BTreeMap<String, T> {
     }
 }
 impl<'de, T: BorrowType<'de>, S: BuildHasher + Default> BorrowType<'de> for HashMap<String, T, S> {
+    fn validate_rules(&self, rules: &Rules, ctx: &mut Context) {
+        rules.validate_length(self.len(), ctx)
+    }
     fn prepare_default(self, ctx: &mut Context) -> Option<Self> {
         <BTreeMap<String, T> as BorrowType>::prepare_default(self.into_iter().collect(), ctx)
             .map(|v| v.into_iter().collect())

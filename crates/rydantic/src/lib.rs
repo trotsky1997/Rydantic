@@ -72,6 +72,10 @@ pub trait JsonType: Sized {
     fn decode_input(input: Input<'_>, ctx: &mut Context, coerce: bool) -> Option<Self> {
         Self::decode(input.into_value(ctx)?, ctx, coerce)
     }
+    fn prepare_default(self, ctx: &mut Context) -> Option<Self> {
+        let value = self.encode_input(ctx);
+        Self::decode(value, ctx, false)
+    }
     fn encode(&self, ctx: &mut Context) -> Value;
     /// Representation using input aliases and including output-excluded fields.
     /// Used to validate typed defaults without losing required input information.

@@ -184,16 +184,10 @@ fn field_value(field: &Field, raw: Tokens, mode: &Mode) -> Tokens {
         __rydantic_raw=match #path(value){Ok(value)=>#rd::Input::Owned(value),Err(error)=>{__rydantic_ctx.push(error.with_stage(#rd::Stage::Parse));return None;}};
     });
     let decoded = mode.decode(ty, quote!(__rydantic_raw), field.attr.coerce);
-    let default_flow = if mode.borrow {
-        if field.attr.before.is_some() {
-            quote! {let value:#ty=#missing?;let value=<#ty as #tr>::encode_input(&value,__rydantic_ctx);let mut __rydantic_raw=#rd::Input::Owned(value);#before #decoded?}
-        } else {
-            quote! {let value:#ty=#missing?;<#ty as #tr>::prepare_default(value,__rydantic_ctx)?}
-        }
+    let default_flow = if field.attr.before.is_some() {
+        quote! {let value:#ty=#missing?;let value=<#ty as #tr>::encode_input(&value,__rydantic_ctx);let mut __rydantic_raw=#rd::Input::Owned(value);#before #decoded?}
     } else {
-        // Typed defaults traverse input aliases and all nested normalization hooks.
-        let decode_default = mode.decode(ty, quote!(__rydantic_raw), field.attr.coerce);
-        quote! {let value:#ty=#missing?;let value=<#ty as #tr>::encode_input(&value,__rydantic_ctx);let mut __rydantic_raw=#rd::Input::Owned(value);#before #decode_default?}
+        quote! {let value:#ty=#missing?;<#ty as #tr>::prepare_default(value,__rydantic_ctx)?}
     };
     let custom=field.attr.validate.as_ref().map(|path|quote!{if __rydantic_ctx.error_count()==__rydantic_start{if let Err(error)=#path(&__rydantic_value){__rydantic_ctx.push(error);}}});
     let builtin=field.attr.has_rules().then(||quote!{let rules=#rule;__rydantic_value=<#ty as #tr>::normalize(__rydantic_value,rules,__rydantic_ctx)?;<#ty as #tr>::validate_rules(&__rydantic_value,rules,__rydantic_ctx);});
@@ -758,7 +752,7 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
             ))
         }
     };
-    let prepare_default = if borrowed {
+    let prepare_default = {
         let arms = match &input.data {
             Data::Struct(data) => {
                 let fields = fields(&data.fields, None, &container)?;
@@ -783,8 +777,6 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
         };
         let custom=container.validate.as_ref().map(|path|quote!{if start==ctx.error_count(){if let Some(value)=&value{if let Err(errors)=#path(value){ctx.extend(errors);}}}});
         quote! {fn prepare_default(self,ctx:&mut #rd::Context)->Option<Self>{let start=ctx.error_count();let value={let __rydantic_ctx=&mut *ctx;match self{#arms}};#custom value}}
-    } else {
-        quote!()
     };
     let mut generics = input.generics.clone();
     if borrowed {
@@ -879,7 +871,7 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
     let bridge=(!borrowed).then(||quote!{
         impl #de_impl_generics #rd::BorrowType<'__rydantic_de> for #name #ty_generics #de_where_clause{
             fn decode(raw:#rd::Input<'__rydantic_de>,ctx:&mut #rd::Context,coerce:bool)->Option<Self>{<Self as #rd::JsonType>::decode_input(raw,ctx,coerce)}
-            fn prepare_default(self,ctx:&mut #rd::Context)->Option<Self>{let value=<Self as #rd::JsonType>::encode_input(&self,ctx);<Self as #rd::JsonType>::decode(value,ctx,false)}
+            fn prepare_default(self,ctx:&mut #rd::Context)->Option<Self>{<Self as #rd::JsonType>::prepare_default(self,ctx)}
             fn encode(&self,ctx:&mut #rd::Context)->#rd::Value{<Self as #rd::JsonType>::encode(self,ctx)}
             fn encode_input(&self,ctx:&mut #rd::Context)->#rd::Value{<Self as #rd::JsonType>::encode_input(self,ctx)}
             fn schema(ctx:&mut #rd::SchemaContext,coerce:bool)->#rd::Value{<Self as #rd::JsonType>::schema(ctx,coerce)}

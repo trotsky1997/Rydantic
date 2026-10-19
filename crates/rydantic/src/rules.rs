@@ -143,6 +143,28 @@ impl Rules {
             }
         }
     }
+    pub fn validate_length(&self, length: usize, ctx: &mut Context) {
+        for (bound, is_min, code) in [
+            (self.min_length, true, "too_short"),
+            (self.max_length, false, "too_long"),
+        ] {
+            if let Some(bound) = bound {
+                if (is_min && length < bound) || (!is_min && length > bound) {
+                    ctx.push(
+                        ValidationError::new(
+                            code,
+                            format!(
+                                "length must be {} {bound}",
+                                if is_min { ">=" } else { "<=" }
+                            ),
+                        )
+                        .with_param("limit", bound)
+                        .with_param("actual", length),
+                    );
+                }
+            }
+        }
+    }
     pub fn validate(&self, value: &Value, ctx: &mut Context) {
         // Optional fields retain all constraints on Some and accept explicit null.
         if value.is_null() {
@@ -155,26 +177,7 @@ impl Rules {
             _ => None,
         };
         if let Some(length) = length {
-            for (bound, is_min, code) in [
-                (self.min_length, true, "too_short"),
-                (self.max_length, false, "too_long"),
-            ] {
-                if let Some(bound) = bound {
-                    if (is_min && length < bound) || (!is_min && length > bound) {
-                        ctx.push(
-                            ValidationError::new(
-                                code,
-                                format!(
-                                    "length must be {} {bound}",
-                                    if is_min { ">=" } else { "<=" }
-                                ),
-                            )
-                            .with_param("limit", bound)
-                            .with_param("actual", length),
-                        );
-                    }
-                }
-            }
+            self.validate_length(length, ctx);
         }
         if let Value::Number(number) = value {
             for (bound, operator, code) in [
