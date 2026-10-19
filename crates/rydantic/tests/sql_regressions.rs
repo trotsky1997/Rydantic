@@ -12,6 +12,26 @@ async fn pool() -> SqlitePool {
         .unwrap()
 }
 
+mod qualified {
+    #[derive(Debug, PartialEq, rydantic::Model, rydantic::SqlModel)]
+    pub struct Row {
+        #[sql(primary_key)]
+        pub id: i64,
+        pub name: String,
+    }
+}
+#[tokio::test]
+async fn qualified_derives_work_in_nested_modules_without_trait_imports() {
+    let db = pool().await;
+    qualified::Row::create_table(&db).await.unwrap();
+    let row = qualified::Row {
+        id: 1,
+        name: "Alice".into(),
+    };
+    assert_eq!(row.insert(&db).await.unwrap(), row);
+    assert_eq!(qualified::Row::get(&db, &1).await.unwrap(), Some(row));
+}
+
 fn remove_prefix(value: Value) -> Result<Value, ValidationError> {
     match value {
         Value::String(value) => Ok(Value::String(

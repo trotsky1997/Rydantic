@@ -5,7 +5,7 @@ error[E0277]: the trait bound `Option<u64>: AutoKey` is not satisfied
   |                                                        ^^^^^^^^^^^ the trait `AutoKey` is not implemented for `Option<u64>`
   |
 help: the trait `AutoKey` is implemented for `Option<i64>`
- --> src/sql/value.rs
+ --> src/sql/parameter.rs
   |
   | impl AutoKey for Option<i64> {
   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^

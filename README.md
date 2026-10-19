@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/trotsky1997/Rydantic/actions/workflows/ci.yml/badge.svg)](https://github.com/trotsky1997/Rydantic/actions/workflows/ci.yml)
 
-Unified data models for Rust, currently **0.4.0**, with JSON, native Cap'n Proto, Axum HTTP adapters, and SQLx database models.
+Unified data models for Rust, currently **0.5.0**, with JSON, native Cap'n Proto, Axum HTTP adapters, and SQLx database models.
 
 Version 0.4 adds validated Axum JSON extractors/responses and SQLModel-style SQLite persistence on SQLx and Tokio. One model can define HTTP input, JSON Schema, database columns, and validated CRUD operations.
 
@@ -18,7 +18,7 @@ Add the crates.io dependency to your Cargo.toml:
 
 ```toml
 [dependencies]
-rydantic = "0.4.0"
+rydantic = "0.5.0"
 ```
 
 ```rust
@@ -256,7 +256,7 @@ Optional flattened fields become `None` when all their keys are absent; partiall
 ## Dates and Decimal
 
 ```toml
-rydantic = { version = "0.4.0", features = ["chrono", "decimal"] }
+rydantic = { version = "0.5.0", features = ["chrono", "decimal"] }
 ```
 
 The `chrono` feature supports `NaiveDate`, `NaiveTime`, `NaiveDateTime`, `DateTime<Utc>`, and `DateTime<FixedOffset>`, re-exported through `rydantic::chrono`. Their formats are `YYYY-MM-DD`, `HH:MM:SS[.fraction]`, an ISO date-time without a time zone, and RFC 3339 date-times. Validation checks calendar dates, four-digit years, at most nine fractional-second digits, and RFC 3339 time zones. UTC types are converted to UTC.
@@ -361,7 +361,7 @@ Schemas can describe API documentation and tool arguments. Use model parsing at 
 The optional `dynamic` feature uses `jsonschema` to compile and reuse schemas at runtime. Network and file resolution are disabled in the default dependency configuration; local `$ref` references are supported.
 
 ```toml
-rydantic = { version = "0.4.0", features = ["dynamic"] }
+rydantic = { version = "0.5.0", features = ["dynamic"] }
 ```
 
 ```rust
@@ -392,7 +392,7 @@ Enable the `axum` feature to use Axum 0.8 adapters:
 
 ```toml
 [dependencies]
-rydantic = { version = "0.4.0", features = ["axum"] }
+rydantic = { version = "0.5.0", features = ["axum"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "net"] }
 ```
 
@@ -448,11 +448,11 @@ Here `Account` is a model with asynchronous validators, as shown in the asynchro
 
 ## SQLModel-style database models
 
-Enable `sqlx` for SQLx 0.9 integration. The initial database backend is SQLite, with a bundled SQLite library and Tokio runtime support:
+Use SQLx 0.9 and Tokio with SQLite, PostgreSQL or MySQL. Enable `sqlx` for bundled SQLite, `postgres` for PostgreSQL, or `mysql` for MySQL. The server features also include the SQLite integration and Rustls TLS support:
 
 ```toml
 [dependencies]
-rydantic = { version = "0.4.0", features = ["axum", "sqlx"] }
+rydantic = { version = "0.5.0", features = ["axum", "sqlx"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ```
 
@@ -502,10 +502,55 @@ Derive `Model` and `SqlModel` together. `Model` supplies JSON/Serde/schema/valid
 | `#[sql(rename = "display_name")]` | Set the database column name independently of JSON aliases |
 | `#[sql(unique)]` | Generate a database uniqueness constraint |
 | `#[sql(index)]` | Generate an index together with the table |
+| `#[sql(length = 256)]` | Set a MySQL VARCHAR/VARBINARY bound; otherwise use model `max_length`, or 191 for indexed text/binary columns |
 | `#[sql(references = "users.id", on_delete = "cascade")]` | Add a foreign key; deletion policies include `no_action`, `restrict`, `cascade`, and `set_null` (requires a nullable non-key column) |
 | `#[sql(skip)]` | Keep a local field outside the table; provide a model default or optional field for row decoding |
 
 SQL identifiers are checked at compile time and quoted in generated statements. CRUD and filter values use bound parameters. Column metadata is exposed as `User::COLUMNS`; `create_table_sql()` and `create_index_sql()` expose generated DDL.
+
+### PostgreSQL and MySQL
+
+Enable either driver or both:
+
+```toml
+rydantic = { version = "0.5.0", features = ["axum", "postgres", "mysql"] }
+```
+
+Keep the same `User` model and CRUD calls. The pool or transaction type selects the driver:
+
+```rust
+use rydantic::sqlx::{postgres::PgPoolOptions, mysql::MySqlPoolOptions};
+
+let postgres = PgPoolOptions::new()
+    .connect(&std::env::var("POSTGRES_URL")?).await?;
+let mysql = MySqlPoolOptions::new()
+    .connect(&std::env::var("MYSQL_URL")?).await?;
+
+User::create_table(&postgres).await?;
+User::create_table(&mysql).await?;
+let user = User::parse_json(r#"{"name":" Alice ","age":25}"#)?;
+let pg_user = user.insert(&postgres).await?;
+let my_user = user.insert(&mysql).await?;
+assert!(User::get(&postgres, &pg_user.id.unwrap()).await?.is_some());
+assert!(User::get(&mysql, &my_user.id.unwrap()).await?.is_some());
+let users = User::select().limit(20).fetch_all(&postgres).await?;
+```
+
+| Backend | Feature | SQLx pool | Generated key |
+| --- | --- | --- | --- |
+| SQLite | `sqlx` | `SqlitePool` | INTEGER PRIMARY KEY AUTOINCREMENT |
+| PostgreSQL | `postgres` | `PgPool` | BIGINT GENERATED BY DEFAULT AS IDENTITY |
+| MySQL 8 | `mysql` | `MySqlPool` | BIGINT AUTO_INCREMENT |
+
+Each enabled driver gets a validated SQLx `FromRow` implementation. The adapter uses native parameter binding, identifier quoting and pagination syntax. PostgreSQL and SQLite return written rows with `RETURNING`. MySQL reads the stored row by its key on the same transaction and connection, then validates it before committing; unchanged updates still return the existing row. Omitted keys use the returned insert ID. Explicit zero keys follow MySQL's SQL mode, and the returned model contains the stored key.
+
+`User::create_table_sql()` and `create_index_sql()` keep their SQLite defaults. Use `User::create_table_sql_for::<rydantic::sqlx::Postgres>()` or `::<rydantic::sqlx::MySql>()` to preview another dialect. Schema creation and CRUD reject overlong server identifiers before executing SQL. Generated server index and foreign-key names fit identifier limits.
+
+MySQL creates InnoDB tables with `utf8mb4_0900_bin` collation and inline indexes/foreign keys. Unbounded text/binary fields use LONGTEXT/LONGBLOB. Keys, unique/indexed fields and references use VARCHAR/VARBINARY: `#[sql(length = N)]` overrides the model's `max_length`, with a default of 191 when neither is set. Writes check those bounds before executing SQL and report `sql_length` with a field path. Select bounds that fit the server's row/index limits, and use compatible definitions for referenced columns.
+
+MySQL `create_table` requires a pool and rejects borrowed connections or transactions with `sql_ddl_connection`, preserving caller-owned transactions from DDL's implicit commits. Its indexes are included when creating a new table, so `create_index_sql_for::<MySql>()` returns an empty list. Use SQLx migrations for changes to existing tables. PostgreSQL and SQLite schema creation can participate in caller-owned transactions.
+
+Configure production connection options with SQLx's [PgConnectOptions](https://docs.rs/sqlx/0.9.0/sqlx/postgres/struct.PgConnectOptions.html) or [MySqlConnectOptions](https://docs.rs/sqlx/0.9.0/sqlx/mysql/struct.MySqlConnectOptions.html), including the desired TLS verification policy.
 
 ### Queries and transactions
 
@@ -530,26 +575,42 @@ transaction.rollback().await?;
 
 Writes await synchronous and asynchronous model validation before acquiring a connection, then recheck returned rows synchronously before committing. Reads validate stored typed values and release acquired pooled connections before awaiting asynchronous callbacks. Models with asynchronous rules require a pool: insert, update, get and select return `sql_async_connection` immediately for borrowed connections and transactions, which can otherwise hold the only pool slot needed by a callback. Synchronous models support all three connection forms. Normalization runs during JSON/model parsing; persistence checks preserve stored typed values. Skipped fields use the same default preparation, `before` callbacks, and normalization as a missing JSON field. Synchronous SQLx `query_as` uses the generated `FromRow` validator; models with asynchronous rules use the awaiting `SqlModel` entry points.
 
-SQLite storage mappings are INTEGER for booleans and integer types through 64 bits, REAL for floats, TEXT for strings, dates, Decimal and 128-bit integers, and BLOB for `Vec<u8>`. Unsigned 64-bit values must fit SQLite's signed integer range; conversions reject overflow. Decimal and 128-bit integer text storage preserves precision. SQL comparisons and ordering on those columns follow SQLite's text semantics. `Option<T>` maps to SQL NULL, and `Box<T>` uses its inner representation. Enable `chrono`/`decimal` for the corresponding field types.
+Portable fields use these native storage declarations:
 
-`create_table` creates missing tables and indexes. Use explicit SQLx migrations when changing an existing database schema. Foreign keys describe database references; application queries load related models. The table layer currently covers single-column keys and SQLite scalar columns, with `SqlValue` as the extension point for custom field representations.
+| Rust field | SQLite | PostgreSQL | MySQL |
+| --- | --- | --- | --- |
+| Integer types through 64 bits | INTEGER | BIGINT | BIGINT |
+| `bool` | INTEGER | BOOLEAN | BOOLEAN |
+| `f32`, `f64` | REAL | DOUBLE PRECISION | DOUBLE |
+| `String` | TEXT | TEXT | LONGTEXT or bounded VARCHAR |
+| `Vec<u8>` | BLOB | BYTEA | LONGBLOB or bounded VARBINARY |
+| Dates, Decimal, `i128`, `u128` | TEXT | TEXT | LONGTEXT or bounded VARCHAR |
+
+Unsigned 64-bit values use the common signed 64-bit SQL range; conversions reject overflow. Decimal and 128-bit text storage preserves precision. Comparisons and ordering for these text fields follow the database's text semantics. `Option<T>` uses correctly typed SQL NULL parameters, and `Box<T>` uses its inner representation. Enable `chrono`/`decimal` for the corresponding field types. Identity sequences follow each database's native behavior, including gaps after rolled-back writes.
+
+`SqlValue` remains the extension point for custom field representations. Its existing SQLite `bind` and `read` hooks are supported. Implement `to_parameter` and `from_parameter` using `SqlParameter` to enable PostgreSQL/MySQL and portable query filters. Manual `SqlModel` implementations also implement `SqlRow<DB>` for their drivers; the derive generates this automatically. `SqlType::Boolean` and `Column::length` expose the additional 0.5 metadata.
+
+`create_table` creates missing tables with their declared indexes. Use explicit SQLx migrations when changing an existing database schema. Foreign keys describe database references; application queries load related models. The table layer covers single-column keys and the portable scalar mappings above.
 
 ### Complete HTTP and database example
 
-The [sqlite_api example](https://github.com/trotsky1997/Rydantic/blob/main/crates/rydantic/examples/sqlite_api.rs) uses the same model for validated HTTP input, JSON responses, table creation and CRUD:
+The [database_api example](https://github.com/trotsky1997/Rydantic/blob/main/crates/rydantic/examples/database_api.rs) selects SQLite, PostgreSQL or MySQL from `DATABASE_URL` and uses the same model for validated HTTP input, JSON responses, table creation and CRUD:
 
 ```sh
-cargo run -p rydantic --example sqlite_api --features axum,sqlx
+cargo run -p rydantic --example database_api --features axum,sqlx
+# Connect the same API to a server database:
+DATABASE_URL="$POSTGRES_URL" cargo run -p rydantic --example database_api --features axum,postgres
+DATABASE_URL="$MYSQL_URL" cargo run -p rydantic --example database_api --features axum,mysql
 # POST /users, GET /users, GET/PUT/DELETE /users/{id}
 curl -X POST http://127.0.0.1:3000/users \
   -H 'Content-Type: application/json' \
   -d '{"name":" Alice ","age":25}'
 
 # Run the example without starting a persistent server:
-cargo run -p rydantic --example sqlite_api --features axum,sqlx -- --smoke
+cargo run -p rydantic --example database_api --features axum,sqlx -- --smoke
 ```
 
-The example defaults to an in-memory database and only accepts loopback bind addresses. Set `DATABASE_URL='sqlite://app.db?mode=rwc'` for a local database file and `LISTEN_ADDR` for another loopback address or port. With both integrations enabled, `SqlError` implements Axum responses: validation errors return 422, missing rows return 404, database constraint violations return 409, and other driver errors return a generic 500 response.
+The original `sqlite_api` example remains available. The multi-database example defaults to an in-memory database and only accepts loopback bind addresses. Set `DATABASE_URL='sqlite://app.db?mode=rwc'` for a local database file and `LISTEN_ADDR` for another loopback address or port. With both integrations enabled, `SqlError` implements Axum responses: validation errors return 422, missing rows return 404, database constraint violations return 409, and other driver errors return a generic 500 response.
 
 ## Native Cap'n Proto
 
@@ -561,7 +622,7 @@ Add one dependency:
 
 ```toml
 [dependencies]
-rydantic = { version = "0.4.0", features = ["capnp"] }
+rydantic = { version = "0.5.0", features = ["capnp"] }
 ```
 
 Install the official `capnp` compiler when setting up the development environment: `brew install capnp` on macOS, or `sudo apt-get install capnproto` on Debian/Ubuntu. During compilation, the attribute macro invokes that compiler and uses the official `capnpc` generator for Rust bindings. Set `RYDANTIC_CAPNP_COMPILER` to use a specific compiler executable.
@@ -645,7 +706,7 @@ Existing `.capnp` protocols can use explicit bindings:
 
 ```toml
 [dependencies]
-rydantic = { version = "0.4.0", features = ["capnp"] }
+rydantic = { version = "0.5.0", features = ["capnp"] }
 capnp = { version = "0.27", features = ["unaligned"] }
 
 [build-dependencies]
@@ -741,7 +802,7 @@ Owned models use `JsonType`/`Model`; borrowed models use `BorrowType<'de>`/`Borr
 
 Explicit `Value` fields, `parse_value` inputs, `before` callbacks, and custom types implementing only `decode(Value, …)` use Value through their respective interfaces. Native scalar types reuse lightweight scalar adapters. Custom types can override `JsonType::decode_input` to accept `Input::Borrowed` directly. Arbitrary JSON that requires no traversal can be stored as `Box<RawValue>`, preserving its source text and numeric notation.
 
-Owned-model entry points from 0.1 remain available. `StringType`, `NumericType`, and `LengthType` are independent capability markers; generic helpers must explicitly declare `JsonType` or `BorrowType` bounds. Custom field types also implement `AsyncCheck` and satisfy `Sync`; existing synchronous types can provide an empty `AsyncCheck` implementation. Install with `rydantic = "0.4.0"` from crates.io or use the GitHub v0.4.0 tag. Workspace members use local path dependencies.
+Owned-model entry points from 0.1 remain available. `StringType`, `NumericType`, and `LengthType` are independent capability markers; generic helpers must explicitly declare `JsonType` or `BorrowType` bounds. Custom field types also implement `AsyncCheck` and satisfy `Sync`; existing synchronous types can provide an empty `AsyncCheck` implementation. Install with `rydantic = "0.5.0"` from crates.io or use the GitHub v0.5.0 tag. Workspace members use local path dependencies.
 
 ## Validation
 

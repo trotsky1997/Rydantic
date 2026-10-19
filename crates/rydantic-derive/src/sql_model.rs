@@ -3,7 +3,7 @@ use heck::ToSnakeCase;
 use proc_macro2::{Span, TokenStream as Tokens};
 use quote::{format_ident, quote, quote_spanned};
 use std::collections::HashSet;
-use syn::{spanned::Spanned, Data, DeriveInput, Fields, LitStr};
+use syn::{spanned::Spanned, Data, DeriveInput, Fields, LitInt, LitStr};
 
 #[derive(Default)]
 struct Options {
@@ -15,6 +15,7 @@ struct Options {
     skip: bool,
     references: Option<(String, String)>,
     on_delete: Option<String>,
+    length: Option<usize>,
 }
 fn identifier(value: &str, span: Span) -> syn::Result<()> {
     let mut chars = value.chars();
@@ -60,6 +61,13 @@ fn options(attributes: &[syn::Attribute], container: bool) -> syn::Result<Option
                 "unique" => result.unique = true,
                 "index" => result.index = true,
                 "skip" => result.skip = true,
+                "length" => {
+                    let value = meta.value()?.parse::<LitInt>()?.base10_parse::<usize>()?;
+                    if value == 0 {
+                        return Err(meta.error("SQL length must be greater than zero"));
+                    }
+                    result.length = Some(value);
+                }
                 "references" => {
                     let value = meta.value()?.parse::<LitStr>()?;
                     let text = value.value();
@@ -104,6 +112,7 @@ fn options(attributes: &[syn::Attribute], container: bool) -> syn::Result<Option
             || result.unique
             || result.index
             || result.references.is_some()
+            || result.length.is_some()
             || result.name.is_some())
     {
         return Err(syn::Error::new(
@@ -190,6 +199,13 @@ pub(super) fn expand(input: DeriveInput) -> syn::Result<Tokens> {
         let auto = options.auto_increment;
         let unique = options.unique;
         let indexed = options.index;
+        let length = crate::option(&options.length.or(field.attr.max_length));
+        if options.length.is_some() {
+            checks.push(quote_spanned!(ty.span()=>
+                const _: () = assert!(matches!(<#ty as #rd::sql::SqlValue>::SQL_TYPE, #rd::sql::SqlType::Text | #rd::sql::SqlType::Blob),
+                    "SQL length requires a text or binary column");
+            ));
+        }
         if options.on_delete.as_deref() == Some("set_null") {
             checks.push(quote_spanned!(ty.span()=>
                 const _: () = assert!(<#ty as #rd::sql::SqlValue>::NULLABLE && !#pk,
@@ -219,10 +235,10 @@ pub(super) fn expand(input: DeriveInput) -> syn::Result<Tokens> {
         } else {
             quote!(::core::option::Option::None)
         };
-        columns.push(quote!(#rd::sql::Column{name:#column,sql_type:<#ty as #rd::sql::SqlValue>::SQL_TYPE,nullable:<#ty as #rd::sql::SqlValue>::NULLABLE && !#pk,primary_key:#pk,auto_increment:#auto,unique:#unique,index:#indexed,references:#references}));
-        reads.push(quote!(#ident:<#ty as #rd::sql::SqlValue>::read(row,#column).map_err(|error|#rd::sqlx::Error::ColumnDecode{index:#column.to_owned(),source: ::std::boxed::Box::new(error)})?));
+        columns.push(quote!(#rd::sql::Column{name:#column,sql_type:<#ty as #rd::sql::SqlValue>::SQL_TYPE,nullable:<#ty as #rd::sql::SqlValue>::NULLABLE && !#pk,primary_key:#pk,auto_increment:#auto,unique:#unique,index:#indexed,references:#references,length:#length}));
+        reads.push(quote!(#ident:<__RydanticDb as #rd::sql::SqlBackend>::read::<#ty>(row,#column).map_err(|error|#rd::sqlx::Error::ColumnDecode{index:#column.to_owned(),source: ::std::boxed::Box::new(error)})?));
         let location = &field.input;
-        bindings.push(quote!(#index=><#ty as #rd::sql::SqlValue>::bind(&self.#ident,query).map_err(|error|error.at(#location))));
+        bindings.push(quote!(#index=>#rd::sql::bind_value::<__RydanticDb,#ty>(&self.#ident,&<Self as #rd::SqlModel>::COLUMNS[#index],query).map_err(|error|error.at(#location))));
         let include = if auto {
             quote!(!<#ty as #rd::sql::AutoKey>::needs_generation(&self.#ident))
         } else {
@@ -236,6 +252,26 @@ pub(super) fn expand(input: DeriveInput) -> syn::Result<Tokens> {
             "SqlModel requires one #[sql(primary_key)] field",
         ));
     };
+    let from_row = |db: Tokens, row: Tokens| {
+        quote! {
+            impl<'__rydantic_row> #rd::sqlx::FromRow<'__rydantic_row,#row> for #name {
+                fn from_row(row:&'__rydantic_row #row)->::core::result::Result<Self,#rd::sqlx::Error>{
+                    let value=<Self as #rd::sql::SqlRow<#db>>::decode_sql_row(row)?;
+                    <Self as #rd::Model>::validate(&value).map_err(|error|#rd::sqlx::Error::Decode(::std::boxed::Box::new(error)))?;
+                    Ok(value)
+                }
+            }
+        }
+    };
+    let sqlite_row = from_row(
+        quote!(#rd::sqlx::Sqlite),
+        quote!(#rd::sqlx::sqlite::SqliteRow),
+    );
+    let postgres_row = from_row(
+        quote!(#rd::sqlx::Postgres),
+        quote!(#rd::sqlx::postgres::PgRow),
+    );
+    let mysql_row = from_row(quote!(#rd::sqlx::MySql), quote!(#rd::sqlx::mysql::MySqlRow));
     Ok(quote! {
         #(#checks)*
         impl #rd::SqlModel for #name {
@@ -243,16 +279,16 @@ pub(super) fn expand(input: DeriveInput) -> syn::Result<Tokens> {
             const TABLE:&'static str=#table;
             const COLUMNS:&'static [#rd::sql::Column]=&[#(#columns),*];
             fn key(&self)->::core::option::Option<&Self::Key>{<#key_ty as #rd::sql::Key>::value(&self.#key)}
-            fn decode_row(row:&#rd::sqlx::sqlite::SqliteRow)->::core::result::Result<Self,#rd::sqlx::Error>{Ok(Self{#(#reads),*})}
-            fn bind_column(&self,index:usize,query:&mut #rd::sqlx::QueryBuilder<#rd::sqlx::Sqlite>)->::core::result::Result<(),#rd::SqlError>{match index{#(#bindings,)* _=>unreachable!("generated SQL column index")}}
+            fn decode_row(row:&#rd::sqlx::sqlite::SqliteRow)->::core::result::Result<Self,#rd::sqlx::Error>{<Self as #rd::sql::SqlRow<#rd::sqlx::Sqlite>>::decode_sql_row(row)}
+            fn bind_column(&self,index:usize,query:&mut #rd::sqlx::QueryBuilder<#rd::sqlx::Sqlite>)->::core::result::Result<(),#rd::SqlError>{<Self as #rd::sql::SqlRow<#rd::sqlx::Sqlite>>::bind_sql_column(self,index,query)}
             fn include_insert_column(&self,index:usize)->bool{match index{#(#included,)* _=>false}}
         }
-        impl<'__rydantic_row> #rd::sqlx::FromRow<'__rydantic_row,#rd::sqlx::sqlite::SqliteRow> for #name {
-            fn from_row(row:&'__rydantic_row #rd::sqlx::sqlite::SqliteRow)->::core::result::Result<Self,#rd::sqlx::Error>{
-                let value=<Self as #rd::SqlModel>::decode_row(row)?;
-                <Self as #rd::Model>::validate(&value).map_err(|error|#rd::sqlx::Error::Decode(::std::boxed::Box::new(error)))?;
-                Ok(value)
-            }
+        impl<__RydanticDb: #rd::sql::SqlBackend> #rd::sql::SqlRow<__RydanticDb> for #name {
+            fn decode_sql_row(row:&__RydanticDb::Row)->::core::result::Result<Self,#rd::sqlx::Error>{Ok(Self{#(#reads),*})}
+            fn bind_sql_column(&self,index:usize,query:&mut #rd::sqlx::QueryBuilder<__RydanticDb>)->::core::result::Result<(),#rd::SqlError>{match index{#(#bindings,)* _=>unreachable!("generated SQL column index")}}
         }
+        #sqlite_row
+        #rd::__rydantic_postgres!{#postgres_row}
+        #rd::__rydantic_mysql!{#mysql_row}
     })
 }
