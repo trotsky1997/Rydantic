@@ -5,6 +5,14 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
+homepage = "https://github.com/trotsky1997/Rydantic"
+documentation = "https://docs.rs/rydantic"
+readme = "../../README.md"
+keywords = ["validation", "serde", "json-schema", "capnp", "pydantic"]
+categories = ["data-structures", "encoding", "parsing"]
+
+[package.metadata.docs.rs]
+all-features = true
 
 [features]
 default = ["derive"]

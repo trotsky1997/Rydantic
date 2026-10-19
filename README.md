@@ -10,11 +10,11 @@ Rust 的统一数据模型库，当前版本 **0.2.0**，支持 JSON 与原生 C
 
 ## 快速开始
 
-在项目的 Cargo.toml 中添加 GitHub 版本依赖：
+在项目的 Cargo.toml 中添加 crates.io 依赖：
 
 ```toml
 [dependencies]
-rydantic = { git = "https://github.com/trotsky1997/Rydantic", tag = "v0.2.0" }
+rydantic = "0.2.0"
 ```
 
 ```rust
@@ -252,7 +252,7 @@ Optional flatten 在其所有键缺失时得到 `None`；出现部分键时检�
 ## 日期与 Decimal
 
 ```toml
-rydantic = { git = "https://github.com/trotsky1997/Rydantic", tag = "v0.2.0", features = ["chrono", "decimal"] }
+rydantic = { version = "0.2.0", features = ["chrono", "decimal"] }
 ```
 
 `chrono` feature 支持 `NaiveDate`、`NaiveTime`、`NaiveDateTime`、`DateTime<Utc>`、`DateTime<FixedOffset>`，并从 `rydantic::chrono` 重导出类型。格式分别为 `YYYY-MM-DD`、`HH:MM:SS[.fraction]`、无时区的 ISO 日期时间、RFC 3339 日期时间。校验实际日历、四位年份、最多 9 位小数秒与 RFC 3339 时区；UTC 类型会换算到 UTC。
@@ -357,7 +357,7 @@ Schema 的用途包括 API 文档与工具参数描述。实际执行入口仍�
 可选 `dynamic` feature 使用 `jsonschema` 提供运行时 Schema 编译与复用。默认依赖关闭网络／文件解析功能，本地 `$ref` 可正常使用。
 
 ```toml
-rydantic = { git = "https://github.com/trotsky1997/Rydantic", tag = "v0.2.0", features = ["dynamic"] }
+rydantic = { version = "0.2.0", features = ["dynamic"] }
 ```
 
 ```rust
@@ -388,7 +388,7 @@ Rust 中可直接构造或修改普通模型。调用 `validate()` 检查当前�
 
 ```toml
 [dependencies]
-rydantic = { git = "https://github.com/trotsky1997/Rydantic", tag = "v0.2.0", features = ["capnp"] }
+rydantic = { version = "0.2.0", features = ["capnp"] }
 capnp = { version = "0.27", features = ["unaligned"] }
 
 [build-dependencies]
@@ -464,7 +464,7 @@ fn main() -> Result<(), rydantic::ValidationErrors> {
 
 原生关联要求具体的拥有所有权的模型。构造 Rust 模型会分配 String 和集合；需要直接访问消息内存时可保留官方 Reader。协议缺省值遵循 Cap’n Proto 语义；可选值用显式 union 表达，`capnp_skip` 字段使用模型默认值。JSON 的 `before` 回调仍接收该字段的 Value，日期与 Decimal 的 `capnp_text` 映射复用标量转换规则。
 
-完整 Schema、官方生成的绑定和可执行示例见 [fixtures/capnp](fixtures/capnp)。运行示例和官方命令行互操作测试：
+完整 Schema、官方生成的绑定和可执行示例见 [fixtures/capnp](https://github.com/trotsky1997/Rydantic/tree/main/fixtures/capnp)。运行示例和官方命令行互操作测试：
 
 ```sh
 cargo run -p rydantic-capnp-fixture
@@ -484,7 +484,7 @@ cargo fmt --all
 
 显式 `Value` 字段、`parse_value` 输入、`before` 回调，以及仅实现 `decode(Value, …)` 的自定义类型按各自接口使用 Value。原生标量复用轻量标量适配器；自定义类型可以覆盖 `JsonType::decode_input`，直接接收 `Input::Borrowed`。无需展开的任意 JSON 可保存为 `Box<RawValue>`，保留原文与数值写法。
 
-0.1 的拥有所有权的模型入口继续可用。`StringType`／`NumericType`／`LengthType` 作为独立能力标记，泛型辅助函数需要显式声明 `JsonType` 或 `BorrowType` 约束。 自定义字段类型还需实现 `AsyncCheck` 并满足 `Sync`；原有纯同步类型可使用空的 `AsyncCheck` 实现。通过 GitHub 的 v0.2.0 标签接入；工作区内部使用本地路径依赖，尚未发布到 crates.io。
+0.1 的拥有所有权的模型入口继续可用。`StringType`／`NumericType`／`LengthType` 作为独立能力标记，泛型辅助函数需要显式声明 `JsonType` 或 `BorrowType` 约束。 自定义字段类型还需实现 `AsyncCheck` 并满足 `Sync`；原有纯同步类型可使用空的 `AsyncCheck` 实现。可通过 crates.io 的 `rydantic = "0.2.0"` 安装，也可使用 GitHub 的 v0.2.0 标签；工作区内部使用本地路径依赖。
 
 ## 验证
 
