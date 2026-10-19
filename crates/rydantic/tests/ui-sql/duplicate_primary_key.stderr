@@ -1,0 +1,5 @@
+error: SqlModel supports one primary key
+ --> tests/ui-sql/duplicate_primary_key.rs:3:71
+  |
+3 | struct Duplicate { #[sql(primary_key)] first:i64, #[sql(primary_key)] second:i64 }
+  |                                                                       ^^^^^^

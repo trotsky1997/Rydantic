@@ -1,0 +1,5 @@
+error: SQL identifiers must contain ASCII letters, digits or underscores and start with a letter or underscore
+ --> tests/ui-sql/invalid_identifier.rs:3:13
+  |
+3 | #[sql(table="users; DROP TABLE users")]
+  |             ^^^^^^^^^^^^^^^^^^^^^^^^^

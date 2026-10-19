@@ -1,0 +1,5 @@
+error[E0080]: evaluation panicked: on_delete = set_null requires a nullable non-primary-key column
+ --> tests/ui-sql/set_null_primary_key.rs:5:9
+  |
+5 |     id: Option<i64>,
+  |         ^^^^^^ evaluation of `_` failed here

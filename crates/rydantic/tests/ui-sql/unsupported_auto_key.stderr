@@ -1,0 +1,11 @@
+error[E0277]: the trait bound `Option<u64>: AutoKey` is not satisfied
+ --> tests/ui-sql/unsupported_auto_key.rs:3:56
+  |
+3 | struct Invalid { #[sql(primary_key,auto_increment)] id:Option<u64> }
+  |                                                        ^^^^^^^^^^^ the trait `AutoKey` is not implemented for `Option<u64>`
+  |
+help: the trait `AutoKey` is implemented for `Option<i64>`
+ --> src/sql/value.rs
+  |
+  | impl AutoKey for Option<i64> {
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -20,6 +20,16 @@
 extern crate self as rydantic;
 
 mod asynchronous;
+#[cfg(feature = "axum")]
+pub mod axum;
+#[cfg(feature = "sqlx")]
+pub mod sql;
+#[cfg(all(feature = "sqlx", feature = "derive"))]
+pub use rydantic_derive::SqlModel;
+#[cfg(feature = "sqlx")]
+pub use sql::{SqlError, SqlModel};
+#[cfg(feature = "sqlx")]
+pub use sqlx;
 mod borrowed;
 #[cfg(feature = "capnp")]
 pub mod capnp_support;

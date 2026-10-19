@@ -6,7 +6,7 @@ Use the `rydantic` crate, which enables and re-exports `#[derive(Model)]` by def
 
 ```toml
 [dependencies]
-rydantic = "0.3.1"
+rydantic = "0.4.0"
 ```
 
 ```rust
@@ -30,3 +30,5 @@ See the [API documentation](https://docs.rs/rydantic) and [complete guide](https
 With `rydantic`'s `capnp` feature, `#[rydantic::capnp_models]` on an inline model module also infers the complete Cap'n Proto schema, invokes the installed official `capnp` compiler, and generates native Rust bindings automatically. Consumers maintain Rust model definitions without a separate schema, generated source file, or build script. The schema is available through `CapnpSchema` and the model module's `CAPNP_SCHEMA` constant.
 
 License: MIT.
+
+With the `sqlx` feature, `#[derive(Model, SqlModel)]` also generates SQLite table metadata, validated SQLx row decoding, and asynchronous CRUD with transactions. Combine it with the `axum` feature to use one model for HTTP JSON validation and database persistence. See the complete guide for `#[sql(...)]` attributes, queries, and the Tokio HTTP server example.

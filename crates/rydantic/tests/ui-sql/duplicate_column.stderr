@@ -1,0 +1,5 @@
+error: duplicate SQL column name
+ --> tests/ui-sql/duplicate_column.rs:3:106
+  |
+3 | struct Duplicate { #[sql(primary_key)] id:i64, #[sql(rename="Name")] first:String, #[sql(rename="name")] second:String }
+  |                                                                                                          ^^^^^^
