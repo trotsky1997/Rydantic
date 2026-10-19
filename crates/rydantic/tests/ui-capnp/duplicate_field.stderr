@@ -1,0 +1,5 @@
+error: duplicate native Cap'n Proto field mapping
+ --> tests/ui-capnp/duplicate_field.rs:5:9
+  |
+5 |         pub first: u32,
+  |         ^^^

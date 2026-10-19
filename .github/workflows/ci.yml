@@ -30,6 +30,14 @@ jobs:
           persist-credentials: false
       - name: Install the tested Rust toolchain
         run: rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy
+      - name: Install Cap'n Proto compiler (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y capnproto
+      - name: Install Cap'n Proto compiler (macOS)
+        if: runner.os == 'macOS'
+        run: brew install capnp
       - name: Check formatting
         run: cargo fmt --all -- --check
       - name: Test models, schema parity, compile diagnostics and documentation
@@ -38,10 +46,7 @@ jobs:
         run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
       - name: Verify official Cap'n Proto CLI interoperability
         if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y capnproto
-          cargo test --locked -p rydantic-capnp-fixture --test native -- --ignored
+        run: cargo test --locked -p rydantic-capnp-fixture --test native -- --ignored
       - name: Check runtime without derive or dynamic features
         run: cargo check -p rydantic --no-default-features --lib --locked
       - name: Check optional runtime features without derive
@@ -60,3 +65,5 @@ jobs:
           cargo run --locked --quiet -p rydantic --example asynchronous
           cargo run --locked --quiet -p rydantic --example dates_decimal --features chrono,decimal
           cargo run --locked --quiet -p rydantic-capnp-fixture
+          cargo run --locked --quiet -p rydantic-auto-capnp-fixture
+          cargo run --locked --quiet -p rydantic --example auto_capnp --features capnp

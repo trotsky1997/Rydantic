@@ -1,16 +1,45 @@
-//! Native schema-first Cap'n Proto integration. Model data is mapped directly to generated readers/builders.
+//! Native Cap'n Proto integration with automatic protocols and existing schemas.
+//! Model data maps directly to official readers and builders.
+//!
+//! ```
+//! use rydantic::{CapnpModel, CapnpSchema};
+//! #[rydantic::capnp_models(namespace = "docs.users")]
+//! mod models {
+//!     #[derive(Debug, PartialEq)]
+//!     pub struct User { pub name: String, pub age: u8 }
+//! }
+//! let user = models::User { name: "Alice".into(), age: 25 };
+//! assert_eq!(models::User::parse_capnp(&user.dump_capnp()?)?, user);
+//! assert!(models::User::capnp_schema().contains("struct User"));
+//! # Ok::<(), rydantic::ValidationErrors>(())
+//! ```
 use crate::{AsyncCheck, Context, Model, Stage, ValidationError, ValidationErrors};
 use capnp::{
     message::{Builder, HeapAllocator, ReaderOptions},
     traits::Owned,
 };
 
+/// The exported protocol derived by `#[rydantic::capnp_models]`.
+pub trait CapnpSchema: Model {
+    const CAPNP_SCHEMA: &'static str;
+    /// Root declaration for this model (including enum root wrappers).
+    const CAPNP_TYPE: &'static str;
+    fn capnp_schema() -> &'static str {
+        Self::CAPNP_SCHEMA
+    }
+    fn write_capnp_schema(path: impl AsRef<std::path::Path>) -> std::io::Result<()> {
+        std::fs::write(path, Self::CAPNP_SCHEMA)
+    }
+}
+
 pub trait CapnpEnum: Sized {
     type Wire;
     fn read_enum(value: Self::Wire, ctx: &mut Context) -> Option<Self>;
     fn write_enum(&self) -> Self::Wire;
 }
-/// A model bound to an official capnpc-generated schema (`#[model(capnp = "wire::module")]`).
+/// A model bound to official Cap'n Proto readers/builders.
+/// Use `#[rydantic::capnp_models]` to infer the protocol automatically, or
+/// `#[model(capnp = "wire::module")]` to bind an existing schema.
 pub trait CapnpModel: Model {
     type Wire: Owned;
     fn read_capnp(reader: <Self::Wire as Owned>::Reader<'_>, ctx: &mut Context) -> Option<Self>;
@@ -340,6 +369,7 @@ macro_rules! integer_read {
                 match value {
                     Int8(n) => converted(n,ctx), Int16(n) => converted(n,ctx), Int32(n) => converted(n,ctx), Int64(n) => converted(n,ctx),
                     UInt8(n) => converted(n,ctx), UInt16(n) => converted(n,ctx), UInt32(n) => converted(n,ctx), UInt64(n) => converted(n,ctx),
+                    Text(text) => <Self as crate::JsonType>::decode(crate::Value::String(read_result(text.to_str(),ctx)?.to_owned()),ctx,true),
                     _ => {mismatch(ctx);None}
                 }
             }
@@ -356,6 +386,11 @@ macro_rules! scalar_read {
             ) -> Option<Self> {
                 match value {
                     capnp::dynamic_value::Reader::$variant(value) => Some(value),
+                    capnp::dynamic_value::Reader::Text(text) => <Self as crate::JsonType>::decode(
+                        crate::Value::String(read_result(text.to_str(), ctx)?.to_owned()),
+                        ctx,
+                        true,
+                    ),
                     _ => {
                         mismatch(ctx);
                         None
@@ -389,6 +424,17 @@ impl<T: CapnpRead> CapnpRead for Option<T> {
 }
 impl<T: CapnpRead> CapnpRead for Vec<T> {
     fn read_value(value: capnp::dynamic_value::Reader<'_>, ctx: &mut Context) -> Option<Self> {
+        if let capnp::dynamic_value::Reader::Data(data) = value {
+            return data
+                .iter()
+                .enumerate()
+                .map(|(index, byte)| {
+                    ctx.at(index, |ctx| {
+                        T::read_value(capnp::dynamic_value::Reader::UInt8(*byte), ctx)
+                    })
+                })
+                .collect();
+        }
         let capnp::dynamic_value::Reader::List(list) = value else {
             mismatch(ctx);
             return None;
@@ -450,3 +496,33 @@ macro_rules! map_read {
 }
 map_read!(std::collections::BTreeMap<String,T>);
 map_read!(std::collections::HashMap<String,T>);
+
+#[cfg(any(feature = "chrono", feature = "decimal"))]
+macro_rules! text_read {
+    ($ty:ty) => {
+        impl CapnpRead for $ty {
+            fn read_value(
+                value: capnp::dynamic_value::Reader<'_>,
+                ctx: &mut Context,
+            ) -> Option<Self> {
+                <Self as crate::JsonType>::decode(
+                    crate::Value::String(text_value(value, ctx)?.to_owned()),
+                    ctx,
+                    true,
+                )
+            }
+        }
+    };
+}
+#[cfg(feature = "chrono")]
+text_read!(chrono::NaiveDate);
+#[cfg(feature = "chrono")]
+text_read!(chrono::NaiveTime);
+#[cfg(feature = "chrono")]
+text_read!(chrono::NaiveDateTime);
+#[cfg(feature = "chrono")]
+text_read!(chrono::DateTime<chrono::Utc>);
+#[cfg(feature = "chrono")]
+text_read!(chrono::DateTime<chrono::FixedOffset>);
+#[cfg(feature = "decimal")]
+text_read!(rust_decimal::Decimal);

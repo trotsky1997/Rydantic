@@ -1,0 +1,9 @@
+error: capnp_ordinal values must be unique and contiguous from zero
+ --> tests/ui-capnp/duplicate_ordinal.rs:3:26
+  |
+3 |       pub struct Duplicate {
+  |  __________________________^
+4 | |         #[model(capnp_ordinal = 0)] pub first: u32,
+5 | |         #[model(capnp_ordinal = 0)] pub second: u32,
+6 | |     }
+  | |_____^

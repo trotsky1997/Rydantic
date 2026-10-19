@@ -6,7 +6,18 @@ use syn::{
     Member, Type,
 };
 mod attrs;
+#[cfg(feature = "capnp")]
+mod auto_protocol;
 mod native;
+
+/// Derive a complete Cap'n Proto protocol and its bindings from an inline model module.
+#[cfg(feature = "capnp")]
+#[proc_macro_attribute]
+pub fn capnp_models(args: TokenStream, input: TokenStream) -> TokenStream {
+    auto_protocol::expand(args.into(), input.into())
+        .unwrap_or_else(syn::Error::into_compile_error)
+        .into()
+}
 
 #[proc_macro_derive(Model, attributes(model))]
 pub fn derive_model(input: TokenStream) -> TokenStream {
@@ -22,7 +33,7 @@ struct Field {
     attr: attrs::Field,
     input: String,
     output: String,
-    doc: Option<String>,
+    doc: ::core::option::Option<String>,
 }
 #[derive(Clone, Copy, PartialEq)]
 enum Shape {
@@ -39,7 +50,7 @@ fn shape(fields: &Fields) -> Shape {
 }
 fn fields(
     source: &Fields,
-    tag: Option<&str>,
+    tag: ::core::option::Option<&str>,
     container: &attrs::Container,
 ) -> syn::Result<Vec<Field>> {
     let mut inputs = std::collections::HashSet::new();
@@ -87,7 +98,7 @@ fn fields(
     }
     Ok(result)
 }
-fn option<T: quote::ToTokens>(value: &Option<T>) -> Tokens {
+fn option<T: quote::ToTokens>(value: &::core::option::Option<T>) -> Tokens {
     match value {
         Some(v) => quote!(Some(#v)),
         None => quote!(None),
@@ -101,7 +112,7 @@ fn rules(field: &Field, rd: &Tokens) -> Tokens {
     let email = a.email;
     let min = option(&a.min_length);
     let max = option(&a.max_length);
-    let number = |v: &Option<String>| match v {
+    let number = |v: &::core::option::Option<String>| match v {
         Some(v) => quote!(Some(#rd::__private::number(#v))),
         None => quote!(None),
     };
@@ -139,7 +150,7 @@ impl Mode<'_> {
         }
     }
 }
-fn default_expr(field: &Field, borrow: bool) -> Option<Tokens> {
+fn default_expr(field: &Field, borrow: bool) -> ::core::option::Option<Tokens> {
     let ty = &field.ty;
     let a = &field.attr;
     if a.default_trait {
@@ -208,15 +219,20 @@ fn with_location(field: &Field, index: usize, shape: Shape, body: Tokens, _rd: &
         quote! {__rydantic_ctx.at(#input,|__rydantic_ctx|{#body})}
     }
 }
-fn object_names(fields: &[Field], rd: &Tokens, tag: Option<&str>) -> Tokens {
+fn object_names(fields: &[Field], rd: &Tokens, tag: ::core::option::Option<&str>) -> Tokens {
     let names=fields.iter().filter(|f|!f.attr.extra).map(|f|{let ty=&f.ty;let input=&f.input;let output=&f.output;let exclude=f.attr.exclude;
         if f.attr.flatten{quote!{if !(mode==#rd::SchemaMode::Output&&#exclude){names.extend(<#ty as #rd::ObjectType>::field_names(mode,seen));}}}
         else{quote!{if !(mode==#rd::SchemaMode::Output&&#exclude){names.push(if mode==#rd::SchemaMode::Input{#input}else{#output}.to_owned());}}}
     });
     let tag = tag.map(|tag| quote!(names.push(#tag.to_owned());));
-    quote! {let mut names=::std::vec::Vec::new();#tag #(#names)* names}
+    quote! {let mut names=::std::vec::Vec::<::std::string::String>::new();#tag #(#names)* names}
 }
-fn collision_checks(fields: &[Field], values: &[Tokens], rd: &Tokens, tag: Option<&str>) -> Tokens {
+fn collision_checks(
+    fields: &[Field],
+    values: &[Tokens],
+    rd: &Tokens,
+    tag: ::core::option::Option<&str>,
+) -> Tokens {
     let tag = tag.map(|key| quote!(names.push(#key.to_owned());));
     let entries = fields.iter().zip(values).map(|(field, value)| {
         let ty=&field.ty; let input=&field.input; let output=&field.output; let exclude=field.attr.exclude;
@@ -235,7 +251,7 @@ fn collision_checks(fields: &[Field], values: &[Tokens], rd: &Tokens, tag: Optio
         }
     }
 }
-fn layout_check(fields: &[Field], rd: &Tokens, tag: Option<&str>) -> Tokens {
+fn layout_check(fields: &[Field], rd: &Tokens, tag: ::core::option::Option<&str>) -> Tokens {
     let names = object_names(fields, rd, tag);
     let catches=fields.iter().filter(|f|f.attr.extra||f.attr.flatten).map(|f|{let ty=&f.ty;quote!(usize::from(<#ty as #rd::ObjectType>::captures_extra(&mut ::std::collections::HashSet::new())))});
     quote! {
@@ -249,7 +265,7 @@ fn parse_shape(
     constructor: Tokens,
     container: &attrs::Container,
     mode: &Mode,
-    tag: Option<&str>,
+    tag: ::core::option::Option<&str>,
 ) -> Tokens {
     let rd = mode.rd;
     let tr = mode.tr();
@@ -336,7 +352,7 @@ fn encode_shape(
     shape: Shape,
     mode: &Mode,
     input: bool,
-    tag: Option<(&str, &str)>,
+    tag: ::core::option::Option<(&str, &str)>,
 ) -> Tokens {
     let rd = mode.rd;
     let tr = mode.tr();
@@ -447,7 +463,7 @@ fn schema_shape(
     shape: Shape,
     container: &attrs::Container,
     mode: &Mode,
-    tag: Option<(&str, &str)>,
+    tag: ::core::option::Option<(&str, &str)>,
 ) -> Tokens {
     let rd = mode.rd;
     let tr = mode.tr();
@@ -778,7 +794,7 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
             _ => unreachable!(),
         };
         let custom=container.validate.as_ref().map(|path|quote!{if start==ctx.error_count(){if let Some(value)=&value{if let Err(errors)=#path(value){ctx.extend(errors);}}}});
-        quote! {fn prepare_default(self,ctx:&mut #rd::Context)->Option<Self>{let start=ctx.error_count();let value={let __rydantic_ctx=&mut *ctx;match self{#arms}};#custom value}}
+        quote! {fn prepare_default(self,ctx:&mut #rd::Context)->::core::option::Option<Self>{let start=ctx.error_count();let value={let __rydantic_ctx=&mut *ctx;match self{#arms}};#custom value}}
     };
     let mut generics = input.generics.clone();
     if borrowed {
@@ -872,13 +888,13 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
     let object_impl=object_impl.map(|body|quote!(impl #impl_generics #rd::ObjectType for #name #ty_generics #where_clause{#body}));
     let bridge=(!borrowed).then(||quote!{
         impl #de_impl_generics #rd::BorrowType<'__rydantic_de> for #name #ty_generics #de_where_clause{
-            fn decode(raw:#rd::Input<'__rydantic_de>,ctx:&mut #rd::Context,coerce:bool)->Option<Self>{<Self as #rd::JsonType>::decode_input(raw,ctx,coerce)}
-            fn prepare_default(self,ctx:&mut #rd::Context)->Option<Self>{<Self as #rd::JsonType>::prepare_default(self,ctx)}
+            fn decode(raw:#rd::Input<'__rydantic_de>,ctx:&mut #rd::Context,coerce:bool)->::core::option::Option<Self>{<Self as #rd::JsonType>::decode_input(raw,ctx,coerce)}
+            fn prepare_default(self,ctx:&mut #rd::Context)->::core::option::Option<Self>{<Self as #rd::JsonType>::prepare_default(self,ctx)}
             fn encode(&self,ctx:&mut #rd::Context)->#rd::Value{<Self as #rd::JsonType>::encode(self,ctx)}
             fn encode_input(&self,ctx:&mut #rd::Context)->#rd::Value{<Self as #rd::JsonType>::encode_input(self,ctx)}
             fn schema(ctx:&mut #rd::SchemaContext,coerce:bool)->#rd::Value{<Self as #rd::JsonType>::schema(ctx,coerce)}
             fn validate_into(&self,ctx:&mut #rd::Context){<Self as #rd::JsonType>::validate_into(self,ctx)}
-            fn normalize(self,rules:&#rd::rules::Rules,ctx:&mut #rd::Context)->Option<Self>{<Self as #rd::JsonType>::normalize(self,rules,ctx)}
+            fn normalize(self,rules:&#rd::rules::Rules,ctx:&mut #rd::Context)->::core::option::Option<Self>{<Self as #rd::JsonType>::normalize(self,rules,ctx)}
             fn validate_rules(&self,rules:&#rd::rules::Rules,ctx:&mut #rd::Context){<Self as #rd::JsonType>::validate_rules(self,rules,ctx)}
             fn async_required(seen:&mut ::std::collections::HashSet<&'static str>)->bool{<Self as #rd::JsonType>::async_required(seen)}
             fn kind()->#rd::TypeKind{<Self as #rd::JsonType>::kind()}
@@ -895,11 +911,11 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
         #(#assertions)* let start=__rydantic_ctx.error_count();let value=(||{#decode})();#custom_parse value
     };
     let decode_methods = if borrowed {
-        quote! {fn decode(__rydantic_raw:#rd::Input<'__rydantic_de>,__rydantic_ctx:&mut #rd::Context,_coerce:bool)->Option<Self>{#body}}
+        quote! {fn decode(__rydantic_raw:#rd::Input<'__rydantic_de>,__rydantic_ctx:&mut #rd::Context,_coerce:bool)->::core::option::Option<Self>{#body}}
     } else {
         quote! {
-            fn decode(raw:#rd::Value,ctx:&mut #rd::Context,coerce:bool)->Option<Self>{<Self as #rd::JsonType>::decode_input(#rd::Input::Owned(raw),ctx,coerce)}
-            fn decode_input(__rydantic_raw:#rd::Input<'_>,__rydantic_ctx:&mut #rd::Context,_coerce:bool)->Option<Self>{#body}
+            fn decode(raw:#rd::Value,ctx:&mut #rd::Context,coerce:bool)->::core::option::Option<Self>{<Self as #rd::JsonType>::decode_input(#rd::Input::Owned(raw),ctx,coerce)}
+            fn decode_input(__rydantic_raw:#rd::Input<'_>,__rydantic_ctx:&mut #rd::Context,_coerce:bool)->::core::option::Option<Self>{#body}
         }
     };
     Ok(quote! {
@@ -920,10 +936,10 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
             }
         }
         impl #impl_generics #rd::__private::serde::Serialize for #name #ty_generics #where_clause{
-            fn serialize<S:#rd::__private::serde::Serializer>(&self,serializer:S)->Result<S::Ok,S::Error>{let value=#dump.map_err(#rd::__private::serde::ser::Error::custom)?;#rd::__private::serde::Serialize::serialize(&value,serializer)}
+            fn serialize<S:#rd::__private::serde::Serializer>(&self,serializer:S)->::core::result::Result<S::Ok,S::Error>{let value=#dump.map_err(#rd::__private::serde::ser::Error::custom)?;#rd::__private::serde::Serialize::serialize(&value,serializer)}
         }
         impl #de_impl_generics #rd::__private::serde::Deserialize<'__rydantic_de> for #name #ty_generics #de_where_clause{
-            fn deserialize<D:#rd::__private::serde::Deserializer<'__rydantic_de>>(deserializer:D)->Result<Self,D::Error>{#deserialize}
+            fn deserialize<D:#rd::__private::serde::Deserializer<'__rydantic_de>>(deserializer:D)->::core::result::Result<Self,D::Error>{#deserialize}
         }
     })
 }

@@ -1,0 +1,5 @@
+error: cannot infer native wire type `std :: net :: IpAddr`; put the model/type alias in this capnp_models module or use capnp_skip with a default
+ --> tests/ui-capnp/unknown_type.rs:3:37
+  |
+3 |     pub struct Unknown { pub value: std::net::IpAddr }
+  |                                     ^^^

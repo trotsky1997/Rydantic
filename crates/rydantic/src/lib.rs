@@ -31,7 +31,11 @@ mod direct;
 #[cfg(feature = "capnp")]
 pub use capnp;
 #[cfg(feature = "capnp")]
+pub use capnp_support::CapnpSchema;
+#[cfg(feature = "capnp")]
 pub use capnp_support::{CapnpEnum, CapnpModel};
+#[cfg(all(feature = "capnp", feature = "derive"))]
+pub use rydantic_derive::capnp_models;
 #[cfg(feature = "dynamic")]
 mod dynamic;
 mod error;

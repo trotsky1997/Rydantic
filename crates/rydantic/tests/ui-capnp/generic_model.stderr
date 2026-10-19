@@ -1,0 +1,5 @@
+error: automatic Cap'n Proto models require concrete owned structs/enums; instantiate generic fields through concrete aliases
+ --> tests/ui-capnp/generic_model.rs:3:23
+  |
+3 |     pub struct Generic<T> { pub value: T }
+  |                       ^

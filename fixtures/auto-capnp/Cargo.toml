@@ -1,0 +1,15 @@
+[package]
+name = "rydantic-auto-capnp-fixture"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[dependencies]
+rd = { package = "rydantic", path = "../../crates/rydantic", features = ["capnp", "chrono", "decimal"] }
+
+[dev-dependencies]
+tempfile = "3"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+
+[lints]
+workspace = true

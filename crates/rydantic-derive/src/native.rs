@@ -1,5 +1,5 @@
 //! Generate calls to the official schema's typed accessors.
-use super::{attrs, constructor, default_expr, fields, shape, Shape};
+use super::{attrs, constructor, default_expr, fields, pattern, shape, Shape};
 use heck::{ToLowerCamelCase, ToSnakeCase, ToUpperCamelCase};
 use proc_macro2::TokenStream as Tokens;
 use quote::{format_ident, quote};
@@ -31,7 +31,7 @@ impl Access {
             Self::Dynamic(_) => unreachable!(),
         }
     }
-    fn init(&self, length: Option<Tokens>) -> Tokens {
+    fn init(&self, length: ::core::option::Option<Tokens>) -> Tokens {
         match (self, length) {
             (Self::Field(parent, name), length) => {
                 let method = format_ident!("init_{}", name.to_snake_case());
@@ -47,10 +47,30 @@ impl Access {
 }
 fn type_name(ty: &Type) -> String {
     if let Type::Path(path) = ty {
+        if path.path.segments.first().is_some_and(|segment| {
+            matches!(
+                segment.ident.to_string().as_str(),
+                "self" | "super" | "crate"
+            )
+        }) {
+            return String::new();
+        }
         path.path.segments.last().unwrap().ident.to_string()
     } else {
         String::new()
     }
+}
+fn mapped_type(field: &super::Field) -> &Type {
+    field.attr.capnp_as.as_ref().unwrap_or(&field.ty)
+}
+fn byte_vector(ty: &Type) -> bool {
+    type_name(ty) == "Vec" && args(ty).first().is_some_and(|ty| type_name(ty) == "u8")
+}
+fn scalar(ty: &Type) -> bool {
+    !matches!(
+        type_name(ty).as_str(),
+        "Vec" | "Option" | "Box" | "BTreeMap" | "HashMap"
+    ) && !matches!(ty, Type::Array(_))
 }
 fn args(ty: &Type) -> Vec<&Type> {
     let Type::Path(path) = ty else { return vec![] };
@@ -95,9 +115,9 @@ fn read(ty: &Type, access: Access, attr: &attrs::Field, rd: &Tokens) -> syn::Res
         return Ok(if name == "Box" {
             let inner = read(arguments[0], Access::Dynamic(value), attr, rd)?;
             quote!(::std::boxed::Box::new({#inner}))
-        } else if attr.capnp_data {
+        } else if attr.capnp_data && byte_vector(ty) {
             quote!(#rd::capnp_support::data_value(#value,__rydantic_ctx)?.to_vec())
-        } else if attr.capnp_text {
+        } else if attr.capnp_text && scalar(ty) {
             quote!({let text=#rd::capnp_support::text_value(#value,__rydantic_ctx)?;<#ty as #rd::JsonType>::decode(#rd::Value::String(text.to_owned()),__rydantic_ctx,true)?})
         } else {
             quote!(<#ty as #rd::capnp_support::CapnpRead>::read_value(#value,__rydantic_ctx)?)
@@ -123,9 +143,9 @@ fn read(ty: &Type, access: Access, attr: &attrs::Field, rd: &Tokens) -> syn::Res
             checked
         };
         quote!({let __wire_optional=#optional;if #rd::capnp_support::optional_some(__wire_optional.into(),__rydantic_ctx)?{Some({#value})}else{None}})
-    } else if attr.capnp_data {
+    } else if attr.capnp_data && byte_vector(ty) {
         quote!((#checked).to_vec())
-    } else if attr.capnp_text {
+    } else if attr.capnp_text && scalar(ty) {
         quote!({let text=#checked;let text=#rd::capnp_support::read_result(text.to_str(),__rydantic_ctx)?;<#ty as #rd::JsonType>::decode(#rd::Value::String(text.to_owned()),__rydantic_ctx,true)?})
     } else if name == "Vec" || matches!(ty, Type::Array(_)) {
         let element = if let Type::Array(array) = ty {
@@ -202,10 +222,10 @@ fn write(
             rd,
         )?;
         quote!({let mut __wire_optional=#init;if let Some(__wire_value)=#value{#some}else{#set_none;}})
-    } else if attr.capnp_data {
+    } else if attr.capnp_data && byte_vector(ty) {
         let set = access.set(quote!((#value).as_slice()));
         quote!(#rd::capnp_support::write_result(#set,__rydantic_ctx)?;)
-    } else if attr.capnp_text {
+    } else if attr.capnp_text && scalar(ty) {
         let set = access.set(quote!(__wire_text.as_str()));
         quote!({let __wire_text=match <#ty as #rd::JsonType>::encode(#value,__rydantic_ctx){#rd::Value::String(text)=>text,#rd::Value::Number(number)=>number.to_string(),_=>{__rydantic_ctx.push(#rd::ValidationError::new("capnp_text","capnp_text requires a scalar text or number representation"));return None;}};#rd::capnp_support::write_result(#set,__rydantic_ctx)?;})
     } else if name == "Vec" || matches!(ty, Type::Array(_)) {
@@ -295,7 +315,7 @@ fn read_fields(
             ));
         }
         let location = &field.input;
-        let ty = &field.ty;
+        let ty = mapped_type(field);
         let value = if field.attr.capnp_skip {
             if let Some(value) = default_expr(field, false) {
                 quote!(#value)
@@ -333,7 +353,7 @@ fn write_fields(
         let name = wire_name(field, i, shape, fields.len());
         let location = &field.input;
         let body = write(
-            &field.ty,
+            mapped_type(field),
             Access::Field(quote!(__wire_builder), name),
             value.clone(),
             &field.attr,
@@ -383,14 +403,14 @@ pub(super) fn expand(
             let id = &variant.ident;
             let native = format_ident!(
                 "{}",
-                attrs::variant_name(&variant.attrs, &id.to_string())?.to_upper_camel_case()
+                attrs::native_variant_name(&variant.attrs, &id.to_string())?.to_upper_camel_case()
             );
             reads.push(quote!(#wire::#native=>Some(Self::#id)));
             writes.push(quote!(Self::#id=>#wire::#native));
         }
         return Ok(
-            quote! {impl #rd::CapnpEnum for #name{type Wire=#wire;#[allow(unreachable_patterns)]fn read_enum(value:Self::Wire,ctx:&mut #rd::Context)->Option<Self>{match value{#(#reads,)* _=>{ctx.push(#rd::ValidationError::new("capnp_enum","native enum variant has no model mapping"));None}}}fn write_enum(&self)->Self::Wire{match self{#(#writes,)*}}}
-            impl #rd::capnp_support::CapnpRead for #name {fn read_value(value:#rd::capnp::dynamic_value::Reader<'_>,ctx:&mut #rd::Context)->Option<Self>{let #rd::capnp::dynamic_value::Reader::Enum(value)=value else{#rd::capnp_support::mismatch(ctx);return None;};let value=#rd::capnp_support::read_result(<#wire as ::core::convert::TryFrom<u16>>::try_from(value.get_value()),ctx)?;<Self as #rd::CapnpEnum>::read_enum(value,ctx)}}},
+            quote! {impl #rd::CapnpEnum for #name{type Wire=#wire;#[allow(unreachable_patterns)]fn read_enum(value:Self::Wire,ctx:&mut #rd::Context)->::core::option::Option<Self>{match value{#(#reads,)* _=>{ctx.push(#rd::ValidationError::new("capnp_enum","native enum variant has no model mapping"));None}}}fn write_enum(&self)->Self::Wire{match self{#(#writes,)*}}}
+            impl #rd::capnp_support::CapnpRead for #name {fn read_value(value:#rd::capnp::dynamic_value::Reader<'_>,ctx:&mut #rd::Context)->::core::option::Option<Self>{let #rd::capnp::dynamic_value::Reader::Enum(value)=value else{#rd::capnp_support::mismatch(ctx);return None;};let value=#rd::capnp_support::read_result(<#wire as ::core::convert::TryFrom<u16>>::try_from(value.get_value()),ctx)?;<Self as #rd::CapnpEnum>::read_enum(value,ctx)}}},
         );
     }
     let wire = container.capnp.as_ref().unwrap();
@@ -415,16 +435,17 @@ pub(super) fn expand(
             let mut writes = vec![];
             for variant in &data.variants {
                 let id = &variant.ident;
-                let native =
-                    attrs::variant_name(&variant.attrs, &id.to_string())?.to_lower_camel_case();
+                let native = attrs::native_variant_name(&variant.attrs, &id.to_string())?
+                    .to_lower_camel_case();
                 let fs = fields(&variant.fields, None, container)?;
                 let form = shape(&variant.fields);
-                let body = if form == Shape::Unit {
-                    quote!(Some(Self::#id))
+                let body = if form == Shape::Unit || fs.is_empty() {
+                    let value = constructor(&fs, form, quote!(Self::#id));
+                    quote!(Some(#value))
                 } else if form == Shape::Tuple && fs.len() == 1 {
                     let f = &fs[0];
                     let value = read(
-                        &f.ty,
+                        mapped_type(f),
                         Access::Dynamic(
                             quote!(#rd::capnp_support::field_value(__wire_reader.into(),#native,__rydantic_ctx)?),
                         ),
@@ -437,19 +458,13 @@ pub(super) fn expand(
                     quote!({let __wire_reader=#rd::capnp_support::field_value(__wire_reader.into(),#native,__rydantic_ctx)?;#body})
                 };
                 reads.push(quote!(#native=>{#body}));
-                let locals = fs.iter().map(|f| f.ident.clone()).collect::<Vec<_>>();
-                let values = locals.iter().map(|f| quote!(#f)).collect::<Vec<_>>();
-                let pattern = match form {
-                    Shape::Unit => quote!(Self::#id),
-                    Shape::Tuple => quote!(Self::#id(#(#locals),*)),
-                    Shape::Named => quote!(Self::#id{#(#locals),*}),
-                };
-                let body = if form == Shape::Unit {
+                let (pattern, values) = pattern(&fs, form, quote!(Self::#id));
+                let body = if form == Shape::Unit || fs.iter().all(|f| f.attr.capnp_skip) {
                     let set = Access::Field(quote!(__wire_builder), native.clone()).set(quote!(()));
                     quote!(#set;)
                 } else if form == Shape::Tuple && fs.len() == 1 {
                     let body = write(
-                        &fs[0].ty,
+                        mapped_type(&fs[0]),
                         Access::Field(quote!(__wire_builder), native.clone()),
                         values[0].clone(),
                         &fs[0].attr,
@@ -471,8 +486,8 @@ pub(super) fn expand(
         Data::Union(_) => return Err(syn::Error::new(input.span(), "Rust unions are unsupported")),
     };
     Ok(
-        quote! {impl #rd::CapnpModel for #name{type Wire=#wire::Owned;fn read_capnp(__wire_reader:<Self::Wire as #rd::capnp::traits::Owned>::Reader<'_>,__rydantic_ctx:&mut #rd::Context)->Option<Self>{#read_body}fn write_capnp(&self,mut __wire_builder:<Self::Wire as #rd::capnp::traits::Owned>::Builder<'_>,__rydantic_ctx:&mut #rd::Context){#write_body}}
-        impl #rd::capnp_support::CapnpRead for #name{fn read_value(value:#rd::capnp::dynamic_value::Reader<'_>,ctx:&mut #rd::Context)->Option<Self>{let reader=#rd::capnp_support::struct_value::<#wire::Owned>(value,ctx)?;<Self as #rd::CapnpModel>::read_capnp(reader,ctx)}}},
+        quote! {impl #rd::CapnpModel for #name{type Wire=#wire::Owned;fn read_capnp(__wire_reader:<Self::Wire as #rd::capnp::traits::Owned>::Reader<'_>,__rydantic_ctx:&mut #rd::Context)->::core::option::Option<Self>{#read_body}fn write_capnp(&self,mut __wire_builder:<Self::Wire as #rd::capnp::traits::Owned>::Builder<'_>,__rydantic_ctx:&mut #rd::Context){#write_body}}
+        impl #rd::capnp_support::CapnpRead for #name{fn read_value(value:#rd::capnp::dynamic_value::Reader<'_>,ctx:&mut #rd::Context)->::core::option::Option<Self>{let reader=#rd::capnp_support::struct_value::<#wire::Owned>(value,ctx)?;<Self as #rd::CapnpModel>::read_capnp(reader,ctx)}}},
     )
 }
 
