@@ -386,6 +386,11 @@ macro_rules! scalar_read {
             ) -> Option<Self> {
                 match value {
                     capnp::dynamic_value::Reader::$variant(value) => Some(value),
+                    capnp::dynamic_value::Reader::Text(text) => <Self as crate::JsonType>::decode(
+                        crate::Value::String(read_result(text.to_str(), ctx)?.to_owned()),
+                        ctx,
+                        true,
+                    ),
                     _ => {
                         mismatch(ctx);
                         None

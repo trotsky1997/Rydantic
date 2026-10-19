@@ -346,6 +346,21 @@ pub(super) struct Hints {
     pub enumeration: bool,
 }
 impl Spec {
+    pub fn accepts_text(&self) -> bool {
+        if self.bytes() {
+            return false;
+        }
+        match self {
+            Self::Scalar(name) => name != "bool",
+            Self::Text(..) => true,
+            Self::Model { .. } => false,
+            Self::Optional(inner)
+            | Self::Boxed(inner)
+            | Self::List(inner)
+            | Self::Array(inner, _) => inner.accepts_text(),
+            Self::Map { value, .. } => value.accepts_text(),
+        }
+    }
     pub fn bytes(&self) -> bool {
         matches!(self,Self::List(inner)if matches!(&**inner,Self::Scalar(n)if n=="u8"))
     }

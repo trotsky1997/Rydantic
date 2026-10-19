@@ -35,6 +35,8 @@ mod models {
     pub struct Scalars {
         pub signed: i128,
         pub floats: [f64; 2],
+        #[model(capnp_text)]
+        pub float_text: std::option::Option<Vec<f64>>,
         pub words: usize,
         pub offset: isize,
         pub flag: bool,
@@ -61,6 +63,7 @@ fn names_aliases_all_text_scalars_and_nested_optionals_roundtrip() {
     let scalar = Scalars {
         signed: i128::MIN,
         floats: [1.25, -0.5],
+        float_text: Some(vec![1.25, -0.5]),
         words: usize::MAX,
         offset: isize::MIN,
         flag: true,

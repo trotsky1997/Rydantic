@@ -347,10 +347,10 @@ fn add_field_metadata(
             "capnp_enum requires a unit enum model",
         ));
     }
-    if existing.capnp_text && hints.data {
+    if existing.capnp_text && !spec.accepts_text() {
         return Err(syn::Error::new(
             field.span(),
-            "a byte vector maps to Data; capnp_text requires a text or numeric scalar",
+            "capnp_text requires strings, dates, Decimal or numeric scalars, optionally nested in containers",
         ));
     }
     let name = wire_name(field, index, count)?;
