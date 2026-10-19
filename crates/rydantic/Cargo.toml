@@ -21,6 +21,8 @@ dynamic = ["dep:jsonschema"]
 chrono = ["dep:chrono"]
 decimal = ["dep:rust_decimal"]
 capnp = ["dep:capnp", "rydantic-derive?/capnp"]
+axum = ["dep:axum"]
+sqlx = ["dep:sqlx"]
 
 [dependencies]
 serde.workspace = true
@@ -34,11 +36,14 @@ chrono = { version = "0.4", default-features = false, features = ["std"], option
 rust_decimal = { version = "1", default-features = false, features = ["std"], optional = true }
 
 capnp = { version = "0.27", features = ["unaligned"], optional = true }
+axum = { version = "0.8.9", default-features = false, features = ["json", "tokio", "http1"], optional = true }
+sqlx = { version = "0.9", default-features = false, features = ["sqlite-bundled", "runtime-tokio"], optional = true }
 
 [dev-dependencies]
 jsonschema.workspace = true
 trybuild = "1"
-tokio = { version = "1", features = ["macros", "rt-multi-thread", "time"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "time", "net", "io-util"] }
+tower = { version = "0.5", features = ["util"] }
 
 [lints]
 workspace = true
@@ -50,3 +55,7 @@ required-features = ["chrono", "decimal"]
 [[example]]
 name = "auto_capnp"
 required-features = ["derive", "capnp"]
+
+[[example]]
+name = "sqlite_api"
+required-features = ["derive", "axum", "sqlx"]
