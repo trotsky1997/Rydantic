@@ -24,7 +24,9 @@ npm run login
 npm start
 ```
 
-Complete the browser authorization yourself. The bridge listens on `127.0.0.1:8787`, rejects browser-origin requests and exposes `GET /health`, `GET /v1/models` and `POST /v1/responses`. It is a local single-user sidecar. Put the authenticated Rust gateway in front of it for network access.
+Complete the browser authorization yourself. The bridge listens on `127.0.0.1:8787`, rejects browser-origin requests and exposes `GET /health`, `GET /v1/models` and `POST /v1/responses`. It is a local single-user sidecar without client authentication. Loopback binding and browser-origin rejection do not authenticate local processes: any process able to reach its port can use the authorized provider session. Run it only within a trusted local-process boundary, and never expose the bridge directly to network clients.
+
+For network access, use the authenticated Rust gateway behind an HTTPS reverse proxy as described in [Transport security](#transport-security). Persistent OAuth authorization and network deployment are separate operator decisions; authorizing pi does not make the bridge or gateway safe to expose.
 
 The supported request fields are `model`, `input`, `instructions`, `tools`, `text`, `reasoning`, `tool_choice`, `parallel_tool_calls`, `stream`, `store` and `include`. Requests use `store=false`. Unknown fields fail explicitly. The pi Codex transport has no `max_output_tokens` request parameter; `ResponsesProvider::pi_codex` uses schema instructions plus runtime validation. A native Responses endpoint can use provider JSON Schema and output limits through `ResponsesProvider::new`.
 
@@ -65,6 +67,14 @@ Return `Transition::Next(key)`, `Transition::End(output)` or `Transition::Pause(
 `Gateway` implements ordered model routing and per-client/global admission budgets. A gateway client implements `ModelProvider`, so the same agent can use a direct provider or a gateway. Only explicit HTTP 429/502/503/504 failures permit ordered failover. Transport/protocol failures and partially delivered streams are not replayed.
 
 The `rydantic-ai-gateway` executable exposes authenticated `GET /v1/models` and `POST /v1/responses` endpoints, including SSE. Configure gateway keys and upstream credentials by environment-variable **names** in a JSON config; credential values are excluded from the config file and error responses. See `examples/gateway.json`.
+
+### Transport security
+
+The executable serves **plaintext HTTP**, not HTTPS, at the configured `listen` address. Bearer authentication does not encrypt transport: direct network access can expose client keys, prompts and responses. The example stays on `127.0.0.1:8989`; changing `listen` to a non-loopback address does not enable TLS.
+
+For non-loopback clients, require HTTPS through a TLS-terminating reverse proxy. Prefer a proxy on the same host and keep the gateway bound to loopback. If a private interface is necessary, restrict the gateway listener to the proxy and protect any off-host proxy-to-gateway hop with encrypted transport; a private IP alone provides no encryption. Do not expose the plaintext gateway listener directly. Keep the pi bridge loopback-only, and use HTTPS for other network upstreams.
+
+These are deployment requirements, not protections configured by the executable or a claim that a deployment is secure. Operators must separately configure and verify TLS, access restrictions and their trusted local-process boundary.
 
 ```sh
 cargo run -p rydantic-ai --bin rydantic-ai-gateway -- crates/rydantic-ai/examples/gateway.json
