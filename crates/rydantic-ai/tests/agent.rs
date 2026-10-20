@@ -190,3 +190,72 @@ fn incomplete_refused_and_missing_usage_responses_fail_explicitly() {
     ]);
     assert!(matches!(refused.text(), Err(Error::Refusal)));
 }
+
+struct PendingCustomTool;
+impl rydantic_ai::Tool<()> for PendingCustomTool {
+    fn definition(&self) -> rydantic_ai::ToolDefinition {
+        rydantic_ai::ToolDefinition {
+            kind: "function".into(),
+            name: "add".into(),
+            description: "Synthetic pending tool".into(),
+            parameters: json!({"type":"object"}),
+            strict: false,
+        }
+    }
+    fn call(
+        &self,
+        _: String,
+        _: Arc<()>,
+        _: RunContext,
+    ) -> rydantic_ai::BoxFuture<'_, rydantic_ai::Result<String>> {
+        Box::pin(std::future::pending())
+    }
+}
+
+#[tokio::test]
+async fn custom_tool_execution_obeys_run_deadline() {
+    let provider = Arc::new(Scripted::new(vec![Ok(response_items(vec![call(
+        "one", "{}",
+    )]))]));
+    let agent = Agent::<(), Answer>::new(provider, "mock")
+        .tool(PendingCustomTool)
+        .unwrap();
+    let result = tokio::time::timeout(
+        Duration::from_millis(250),
+        agent.run(
+            "x",
+            Arc::new(()),
+            RunContext::with_timeout(Duration::from_millis(20)),
+        ),
+    )
+    .await;
+    assert!(
+        matches!(result, Ok(Err(Error::Timeout))),
+        "custom Tool must return the run deadline error, not hang until the outer safety timeout"
+    );
+}
+
+#[tokio::test]
+async fn custom_tool_execution_obeys_run_cancellation() {
+    let provider = Arc::new(Scripted::new(vec![Ok(response_items(vec![call(
+        "one", "{}",
+    )]))]));
+    let agent = Agent::<(), Answer>::new(provider, "mock")
+        .tool(PendingCustomTool)
+        .unwrap();
+    let context = RunContext::default();
+    let cancellation = context.cancellation.clone();
+    let cancel = async {
+        tokio::time::sleep(Duration::from_millis(20)).await;
+        cancellation.cancel();
+    };
+    let run = tokio::time::timeout(
+        Duration::from_millis(250),
+        agent.run("x", Arc::new(()), context),
+    );
+    let (result, ()) = tokio::join!(run, cancel);
+    assert!(
+        matches!(result, Ok(Err(Error::Cancelled))),
+        "custom Tool must return cancellation, not hang until the outer safety timeout"
+    );
+}
