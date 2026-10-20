@@ -4,8 +4,8 @@ Typed Rust agents, explicit workflow graphs and a Responses HTTP gateway, built 
 
 ```toml
 [dependencies]
-rydantic = "0.7.0-beta.1"
-rydantic-ai = "0.2.0"
+rydantic = "0.7.0-beta.3"
+rydantic-ai = "0.3.0"
 ```
 
 `rydantic-ai` has its own version and release lifecycle inside the Rydantic workspace. The core `rydantic` crate does not depend on it. Disable default features for graphs and custom providers without HTTP dependencies.
@@ -58,6 +58,46 @@ println!("{}", result.output.answer);
 
 Run `cargo run -p rydantic-ai --example pi_codex` for a real typed tool-call round trip. Set `RYDANTIC_AI_MODEL` to a model returned by the bridge's `/v1/models` endpoint. Agent limits bound model calls, tool calls, validation retries and observed token usage. Cancellation and the absolute deadline cover model calls, validation and tool handlers. Tools execute sequentially; execution errors stop the run and are never automatically replayed. Handlers own transactional/idempotency behavior for external side effects. Prompt content is not written to tracing spans; operations, tool names and usage are recorded with standard `tracing`.
 
+## Structured output streaming
+
+`Agent::stream_partial()` returns `Partial<T>`: a typed stream of provisional JSON snapshots followed by a fully validated final model. `Agent::stream_iterable()` returns `Iterable<T>`: complete, runtime-validated elements from an object with an `items` array. The object envelope supports native JSON Schema providers. Neither streaming mode requires `T: Clone` or HTTP transport.
+
+```rust,no_run
+use rydantic_ai::{rydantic::Model, Agent, ModelProvider, OutputEvent, RunContext};
+use std::sync::Arc;
+
+#[derive(Debug, Model)]
+struct Person { name: String, age: u8 }
+
+# async fn example(provider: Arc<dyn ModelProvider>) -> rydantic_ai::Result<()> {
+let agent = Agent::<(), Person>::new(provider, "your-model");
+let mut partial = agent.stream_partial("Extract one person", Arc::new(()), RunContext::default())?;
+while let Some(event) = partial.recv().await {
+    match event? {
+        OutputEvent::Delta { value, .. } => println!("{}", value.value),
+        OutputEvent::Complete(result) => println!("{}", result.output.name),
+        OutputEvent::Reset { .. } => { /* Clear previews from this attempt. */ }
+        OutputEvent::Started { .. } => {}
+    }
+}
+let people = agent.stream_iterable("Extract all people", Arc::new(()), RunContext::default())?
+    .collect().await?;
+for person in people.output { println!("{}", person.name); }
+# Ok(()) }
+```
+
+Consume `OutputEvent::Delta` from `Iterable::recv()` for individual `StreamItem<T>` values and zero-based indexes. `Complete` on an iterable reports the accepted item count and usage. `Partial::finish()` drains previews and returns `RunResult<T>`; `Iterable::collect()` consumes a fresh stream, discards invalidated attempts and returns `RunResult<Vec<T>>`.
+
+Each `Started`, `Delta` and `Reset` includes the one-based model-call number. All progress belongs to that attempt until final completion. `ResetReason::Validation` carries structured errors; `ToolContinuation` invalidates intermediate output before tool execution. A terminal error also invalidates unfinished progress. A syntactically complete preview may still fail final model validation. Missing required fields stay missing in previews; no defaults are invented.
+
+Partial snapshots use the existing bounded Rydantic JSON parser. Unfinished strings/keys wait for more input; whole-buffer snapshots can reparse prefixes and incur quadratic total work. Iterable parsing advances past emitted elements and waits for a right delimiter before committing scalar numbers. Async item validators run once per emitted item per attempt; collection finalization checks the strict envelope and syntax without rerunning those validators.
+
+`StreamOptions` controls progress queue capacity (default 16), JSON byte limit (default/hard maximum 1 MiB) and item limit (default 4096, hard maximum 100,000). Both modes cap nesting at 64 containers. Use `stream_partial_with_options` or `stream_iterable_with_options` for lower limits. Slow consumers apply backpressure. Run deadlines cover queue waits and async checks. Dropping or cancelling the stream stops its child task while preserving the parent's cancellation token.
+
+Providers send `response.output_text.delta` through `RunContext::emit`; original native-event sinks remain available. A provider without deltas produces events from its completed response. Deltas must belong to one text part per model call and exactly match the completed response. Refusals, premature transport termination and mismatches fail explicitly.
+
+Run `cargo run -p rydantic-ai --example structured` for an offline example. See the [structured output guide](https://rydantic.mintlify.site/integrations/structured-output) for event handling and correction behavior.
+
 ## TypeSafe Jev SDK
 
 `rydantic_ai::jev` supports native `noul`, `choice` and `score` questions, typed answers, probability distributions, confidence, score legends and usage. Configure only `TYPESAFE_BASEURL` (the `/v1` API base) and `TYPESAFE_APIKEY` locally, then construct `JevClient::from_env()`. The credential is sent unchanged as the complete bearer value. Explicit configuration also accepts `JevClient::new(base_url, api_key)`.
@@ -104,11 +144,11 @@ Client and global policies each use their own reservation size and cost estimate
 
 ## Independent releases
 
-RydanticAI uses tags such as `rydantic-ai-v0.2.0`. Its version is read from this package manifest and is independent of the core workspace version. A maintainer with the repository's GitHub identity and a local Cargo publishing credential can run from a clean repository checkout:
+RydanticAI uses tags such as `rydantic-ai-v0.3.0`. Its version is read from this package manifest and is independent of the core workspace version. A maintainer with the repository's GitHub identity and a local Cargo publishing credential can run from a clean repository checkout:
 
 ```sh
-python3 scripts/release_ai.py preflight --tag rydantic-ai-v0.2.0
-python3 scripts/release_ai.py publish --tag rydantic-ai-v0.2.0
+python3 scripts/release_ai.py preflight --tag rydantic-ai-v0.3.0
+python3 scripts/release_ai.py publish --tag rydantic-ai-v0.3.0
 ```
 
 The release script requires an existing remote tag on tested main history, successful exact-commit main-push CI, an unpublished registry version and a package containing no installed Node dependencies or credential files. It performs one upload attempt and verifies the registry checksum and sparse index, including after an uncertain upload exit status. It publishes only `rydantic-ai`. Use Python 3.11 or newer.

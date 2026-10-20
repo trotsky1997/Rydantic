@@ -86,6 +86,106 @@ async fn responses_http_preserves_native_events_and_auth_is_redacted() {
 }
 
 #[tokio::test]
+async fn structured_iterable_decodes_sse_split_at_every_byte() {
+    #[derive(Debug, rydantic_ai::rydantic::Model)]
+    struct Person {
+        name: String,
+    }
+    let seen = Arc::new(Mutex::new(vec![]));
+    let recorded = seen.clone();
+    let server = serve(Router::new().route(
+        "/v1/responses",
+        post(move |Json(body): Json<Value>| {
+            let recorded = recorded.clone();
+            async move {
+                recorded.lock().unwrap().push(body);
+                let text = r#"{"items":[{"name":"你好😊"},{"name":"Ada"}]}"#;
+                let mut wire = String::new();
+                for delta in [r#"{"items":[{"name":"你好😊"},"#, r#"{"name":"Ada"}]}"#] {
+                    wire.push_str(&format!(
+                        "data: {}\r\n\r\n",
+                        json!({"type":"response.output_text.delta","delta":delta})
+                    ));
+                }
+                wire.push_str(&format!(
+                    "data: {}\r\n\r\n",
+                    json!({"type":"response.completed","response":response(text).raw})
+                ));
+                let bytes: Vec<_> = wire
+                    .into_bytes()
+                    .into_iter()
+                    .map(|byte| Ok::<_, std::io::Error>(vec![byte]))
+                    .collect();
+                (
+                    [("content-type", "text/event-stream")],
+                    axum::body::Body::from_stream(futures_util::stream::iter(bytes)),
+                )
+            }
+        }),
+    ))
+    .await;
+    let provider = Arc::new(ResponsesProvider::new(&format!("{}/v1", server.base), None).unwrap());
+    let result = rydantic_ai::Agent::<(), Person>::new(provider, "mock")
+        .stream_iterable("extract", Arc::new(()), RunContext::default())
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    assert_eq!(
+        result
+            .output
+            .iter()
+            .map(|p| p.name.as_str())
+            .collect::<Vec<_>>(),
+        ["你好😊", "Ada"]
+    );
+    let requests = seen.lock().unwrap();
+    assert_eq!(requests[0]["stream"], true);
+    assert_eq!(
+        requests[0]["text"]["format"]["schema"]["properties"]["items"]["type"],
+        "array"
+    );
+}
+
+#[tokio::test]
+async fn structured_partial_never_commits_a_premature_sse_response() {
+    #[derive(Debug, rydantic_ai::rydantic::Model)]
+    struct Answer {
+        value: u8,
+    }
+    let server = serve(Router::new().route(
+        "/v1/responses",
+        post(|| async {
+            (
+                [("content-type", "text/event-stream")],
+                format!(
+                    "data: {}\n\n",
+                    json!({"type":"response.output_text.delta","delta":r#"{"value":1}"#})
+                ),
+            )
+        }),
+    ))
+    .await;
+    let provider = Arc::new(ResponsesProvider::new(&format!("{}/v1", server.base), None).unwrap());
+    let mut stream = rydantic_ai::Agent::<(), Answer>::new(provider, "mock")
+        .stream_partial("extract", Arc::new(()), RunContext::default())
+        .unwrap();
+    let mut error = false;
+    while let Some(event) = stream.recv().await {
+        match event {
+            Ok(rydantic_ai::OutputEvent::Complete(result)) => {
+                panic!("unexpected accepted result: {}", result.output.value)
+            }
+            Err(Error::Protocol(_)) => error = true,
+            other => {
+                assert!(other.is_ok());
+            }
+        }
+    }
+    assert!(error);
+}
+
+#[tokio::test]
 async fn premature_stream_and_non_success_http_are_errors() {
     let server = serve(Router::new().route(
         "/v1/responses",

@@ -1,0 +1,125 @@
+---
+title: "Structured output streams"
+description: "Stream partial JSON previews and validated list elements with bounded correction, cancellation and usage accounting."
+---
+
+RydanticAI 0.3.0 provides Instructor-style structured extraction inside the existing Agent API. Define a Rydantic model, then choose a partial-object stream or an iterable-item stream. Model definitions, async checks, tool execution, validation correction, history and usage remain shared with ordinary agent runs.
+
+```toml
+[dependencies]
+rydantic = "0.7.0-beta.3"
+rydantic-ai = "0.3.0"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+```
+
+Keep the direct `rydantic` dependency for model derive resolution. Custom providers work with `rydantic-ai = { version = "0.3.0", default-features = false }`. Streams start on the current Tokio runtime.
+
+## Partial object previews
+
+`Partial<T>` is a typed stream handle. Its snapshots contain JSON values with the fields available so far; the terminal result contains the fully validated `T`.
+
+```rust
+use rydantic::Model;
+use rydantic_ai::{Agent, OutputEvent, RunContext};
+use std::sync::Arc;
+
+#[derive(Debug, Model)]
+struct Person {
+    name: String,
+    #[model(ge = 18)]
+    age: u8,
+}
+
+// Inside an async function; provider implements ModelProvider.
+let agent = Agent::<(), Person>::new(provider, "your-model");
+let mut stream = agent.stream_partial(
+    "Extract the person: Ada, age 36", Arc::new(()), RunContext::default(),
+)?;
+while let Some(event) = stream.recv().await {
+    match event? {
+        OutputEvent::Started { attempt } => println!("Attempt {attempt}"),
+        OutputEvent::Delta { value, .. } => println!("Preview: {}", value.value),
+        OutputEvent::Reset { .. } => { /* Clear the previous preview. */ }
+        OutputEvent::Complete(result) => println!("Accepted: {}", result.output.name),
+    }
+}
+```
+
+A preview can look like `{"name":"Ada"}` while `age` is still missing. Required fields stay missing and final validators have not run. `complete_json` describes the syntax of the current buffer; the producer can still append bytes. Use the `Complete` event as the accepted model result.
+
+Unfinished strings and object keys wait for more input. Partial snapshots recover available containers, literals and numbers through the existing [partial JSON parser](/models/partial-json); truncated string contents are not exposed. Snapshots reparse accumulated buffers and can incur quadratic total work across many small chunks. `Partial::finish().await` drains progress and returns only `RunResult<T>`.
+
+## Stream validated list elements
+
+`Agent<Dependencies, T>::stream_iterable()` requests a JSON object containing `{"items": [T, ...]}`. This object envelope supports native JSON Schema endpoints, including providers that require an object at the root. Its schema is generated from `T`, including nested and recursive definitions.
+
+```rust
+let mut stream = agent.stream_iterable(
+    "Extract every person in the document", Arc::new(()), RunContext::default(),
+)?;
+while let Some(event) = stream.recv().await {
+    match event? {
+        OutputEvent::Delta { attempt, value } => {
+            println!("Attempt {attempt}, item {}: {}", value.index, value.value.name);
+        }
+        OutputEvent::Reset { .. } => { /* Remove this attempt's displayed items. */ }
+        OutputEvent::Complete(result) => println!("Accepted {} items", result.output),
+        OutputEvent::Started { .. } => {}
+    }
+}
+```
+
+Each `StreamItem<T>` contains a zero-based `index` and a fully parsed, normalized and validated `value: T`. Sync and async validators run before emission. No `Clone` implementation is required. Numbers wait for a right delimiter so a fragment `1` followed by `2,` becomes one item `12`. Nested values, Unicode, escaped strings and exact numeric lexemes are preserved.
+
+For an accepted list and complete metadata, collect a fresh stream:
+
+```rust
+let result = agent.stream_iterable(
+    "Extract every person", Arc::new(()), RunContext::default(),
+)?.collect().await?;
+let people: Vec<Person> = result.output;
+println!("{} people, {} model calls", people.len(), result.model_calls);
+```
+
+`collect()` clears invalidated attempts automatically. Call it before manually consuming item events; previously consumed items cannot be recovered. Async item checks run once per emitted element per attempt. Finalization checks the complete JSON envelope, duplicate/unknown fields and item count without rerunning those checks. A syntactically invalid tail can invalidate earlier valid items.
+
+## Validation correction and attempt boundaries
+
+Every progress event carries the one-based model-call number. Output validation failures produce `ResetReason::Validation(errors)` before bounded correction. The errors include field/index paths, and the Agent sends them back to the model. Tool turns produce `ResetReason::ToolContinuation` before execution. The next model call starts a new attempt with an empty preview or list.
+
+```rust
+use rydantic_ai::AgentLimits;
+
+let agent = agent.limits(AgentLimits {
+    max_validation_retries: 2,
+    max_model_calls: 6,
+    max_total_tokens: 20_000,
+    ..Default::default()
+});
+```
+
+All items and previews belong to an attempt until its completion. Discard them on reset or terminal error. Keep consequential application actions behind final acceptance. Tool errors stop the run; handlers are never automatically replayed. Usage sums all completed model calls, including correction and tool turns.
+
+## Backpressure, cancellation and limits
+
+```rust
+use rydantic_ai::StreamOptions;
+
+let stream = agent.stream_iterable_with_options(
+    "Extract every person", Arc::new(()), RunContext::default(),
+    StreamOptions { capacity: 8, max_output_bytes: 256 * 1024, max_items: 100, },
+)?;
+let result = stream.collect().await?;
+```
+
+Defaults are 16 queued progress events, 1 MiB of JSON per model call and 4096 list elements. Hard maximums are 1024 events, 1 MiB, 100,000 elements and 64 nested containers. Original native-event sinks also need active consumers when their bounded queues fill. Run deadlines and cancellation cover provider requests, queue waits and async validators. Terminal errors remain available even if the progress queue was full at timeout.
+
+Dropping a stream cancels its child task. `stream.cancel()` requests cancellation explicitly. The parent context remains available for other work; cancelling the parent also cancels the stream.
+
+## Provider integration
+
+The [Responses transport and pi bridge](/integrations/ai) forward native text deltas automatically. Custom providers emit `response.output_text.delta` events through their supplied `RunContext`. Streaming calls set `ModelRequest::stream = true` and retain the caller's original native-event sink.
+
+Deltas must belong to a single text part per model call and exactly match the text in the completed response. Refusals, incomplete transport termination, text mismatches and resource-limit failures stop the stream. Providers that return only a completed response still work; progress events become available after that response arrives.
+
+Run the offline example with `cargo run -p rydantic-ai --example structured`. The same APIs work with the HTTP feature disabled.
