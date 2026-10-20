@@ -4,9 +4,19 @@ description: "Release history and the current migration path."
 icon: "tag"
 ---
 
-## 0.7.0-beta.1 · Source candidate
+## 0.7.0-beta.2 · Source candidate
 
-This prerelease requires explicit opt-in after publication: `rydantic = "=0.7.0-beta.1"`. A version in the source tree is not a publication announcement; check [crates.io](https://crates.io/crates/rydantic/versions) and [GitHub Releases](https://github.com/trotsky1997/Rydantic/releases). Stable remains 0.6.0.
+After publication, opt in with `rydantic = "=0.7.0-beta.2"`. Source version metadata is not proof of publication; check [crates.io](https://crates.io/crates/rydantic/versions). Stable remains 0.6.0.
+
+- Add opt-in [settings](/models/settings): explicit ordered JSON, environment, strict dotenv-subset and flat secrets-directory sources, existing Model validation, and redacted source errors. This is not full pydantic-settings compatibility.
+- Accept exact zero with arbitrarily large positive or negative JSON exponents during integer normalization. Nonzero overflow, fractions, malformed JSON and numeric strings remain invalid.
+- Preserve the beta.1 explicit-derive contract and SQLite migration guards. No new breaking API change from beta.1; follow the upgrade and backup guidance below when coming from 0.6.0.
+
+Partial JSON, the new JSON Schema-to-Rust code generator, and phone/country/currency domain types are not included in this candidate.
+
+## 0.7.0-beta.1 · Published prerelease
+
+Published on 2026-10-20: [release and verification](https://github.com/trotsky1997/Rydantic/releases/tag/v0.7.0-beta.1). Both packages are available with explicit opt-in `rydantic = "=0.7.0-beta.1"`. This version does not contain settings. Stable remains 0.6.0.
 
 - Breaking: every struct and enum inside `capnp_models`, including nested models, must explicitly derive `Model`. No automatic derive insertion or compatibility layer remains.
 - Fix relative Cap'n Proto compiler paths, including Windows drive-relative and root-relative paths; imported aliases for `Model` are resolved by Rust.

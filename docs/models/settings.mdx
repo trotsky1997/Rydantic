@@ -4,10 +4,16 @@ description: "Explicit source layers, typed validation, and redacted loading err
 ---
 
 <Warning>
-The `settings` feature is unreleased and is not included in 0.7.0-beta.1 or 0.6.0. Use a checkout containing this module until a later version is published. This is a deliberately small settings API, not full pydantic-settings compatibility.
+The `settings` feature is introduced in the 0.7.0-beta.2 source candidate; it is not included in 0.7.0-beta.1 or stable 0.6.0. Check [registry availability](https://crates.io/crates/rydantic/versions) before installing the candidate. This is a deliberately small settings API, not full pydantic-settings compatibility.
 </Warning>
 
 Enable the `settings` Cargo feature in addition to the default `derive` feature. There are no added dependencies. Settings use the same `Model` fields, aliases, constraints, defaults and synchronous validators as ordinary JSON inputs.
+
+After publication, opt in explicitly:
+
+```toml
+rydantic = { version = "=0.7.0-beta.2", features = ["settings"] }
+```
 
 ## Start with deterministic input
 
