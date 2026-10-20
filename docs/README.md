@@ -1,6 +1,6 @@
 # Rydantic documentation
 
-This directory is a [Mintlify](https://www.mintlify.com/) documentation project. The guides describe the published 0.6.0 API, with upcoming source changes called out explicitly.
+This directory is a [Mintlify](https://www.mintlify.com/) documentation project. The guides describe the 0.7.0-beta.1 source candidate, with prerelease installation and breaking changes called out explicitly. Version 0.6.0 remains the latest stable release until promotion. Candidate version metadata is not proof of publication.
 
 ## Read the guides
 

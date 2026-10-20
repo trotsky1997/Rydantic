@@ -23,14 +23,14 @@ The default feature is `derive`. Every integration below is opt-in.
 
 <CodeGroup>
 ```toml JSON only
-rydantic = "0.6.0"
+rydantic = "=0.7.0-beta.1"
 ```
 ```toml HTTP + PostgreSQL
-rydantic = { version = "0.6.0", features = ["axum", "postgres"] }
+rydantic = { version = "=0.7.0-beta.1", features = ["axum", "postgres"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "net"] }
 ```
 ```toml Binary protocol
-rydantic = { version = "0.6.0", features = ["capnp"] }
+rydantic = { version = "=0.7.0-beta.1", features = ["capnp"] }
 ```
 </CodeGroup>
 
@@ -38,4 +38,4 @@ Automatic Cap’n Proto binding generation requires the official `capnp` compile
 
 ## API reference
 
-The [Rust API documentation](https://docs.rs/rydantic/0.6.0/rydantic/) lists runtime traits and methods. The [source manifest](https://github.com/trotsky1997/Rydantic/blob/main/crates/rydantic/Cargo.toml) contains the complete dependency and feature definitions.
+The [stable 0.6.0 Rust API documentation](https://docs.rs/rydantic/0.6.0/rydantic/) lists runtime traits and methods. The [source manifest](https://github.com/trotsky1997/Rydantic/blob/main/crates/rydantic/Cargo.toml) contains the complete dependency and feature definitions.

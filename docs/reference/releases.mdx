@@ -4,6 +4,20 @@ description: "Release history and the current migration path."
 icon: "tag"
 ---
 
+## 0.7.0-beta.1 · Source candidate
+
+This prerelease requires explicit opt-in after publication: `rydantic = "=0.7.0-beta.1"`. A version in the source tree is not a publication announcement; check [crates.io](https://crates.io/crates/rydantic/versions) and [GitHub Releases](https://github.com/trotsky1997/Rydantic/releases). Stable remains 0.6.0.
+
+- Breaking: every struct and enum inside `capnp_models`, including nested models, must explicitly derive `Model`. No automatic derive insertion or compatibility layer remains.
+- Fix relative Cap'n Proto compiler paths, including Windows drive-relative and root-relative paths; imported aliases for `Model` are resolved by Rust.
+- Reject SQLite rebuilds with non-BINARY collation or descending index order, including primary-key indexes, instead of silently losing semantics. Ordinary BINARY ascending indexes, no-op migrations and native rename-only changes remain supported.
+
+Review the [Cap'n Proto migration guidance](/integrations/capnp) and [database migration limits](/integrations/migrations). Back up databases and test migration plans before upgrades. Users are responsible for existing deployments and data; unsupported custom SQLite schemas need a reviewed manual migration, not removal of constraints to bypass the guard.
+
+### Main and beta rhythm
+
+Main stays releasable. Breaking or substantial changes first receive numbered beta packages and GitHub prereleases; no permanent beta branch is maintained. Stable promotion is not time-based: require exact-commit integrated CI, package verification, a fresh registry-only consumer, and no release-blocking issues. Stable 0.7.0 is a new immutable version with fresh validation, not a renamed beta.
+
 ## 0.6.0 · Model-driven database migrations
 
 - Automatic migration plans for SQLite, PostgreSQL and MySQL.

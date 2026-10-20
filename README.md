@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/trotsky1997/Rydantic/actions/workflows/ci.yml/badge.svg)](https://github.com/trotsky1997/Rydantic/actions/workflows/ci.yml)
 
-Unified data models for Rust, currently **0.6.0**, with JSON, native Cap'n Proto, Axum HTTP adapters, and SQLx database models.
+Unified data models for Rust, source candidate **0.7.0-beta.1**, with JSON, native Cap'n Proto, Axum HTTP adapters, and SQLx database models.
 
 Version 0.6 adds automatic database migrations from Rust models and a unified SQL API. SQLite, PostgreSQL and MySQL drivers are independent optional features. One model defines HTTP input, JSON Schema, database columns, migrations and validated CRUD operations.
 
@@ -16,16 +16,22 @@ The workspace contains the `rydantic` runtime, the `rydantic-derive` procedural 
 
 - [Project homepage](https://trotsky1997.github.io/Rydantic/)
 - [Guides and tutorials](docs/README.md) — the Mintlify source, organized by topic
-- [Rust API reference](https://docs.rs/rydantic/0.6.0/rydantic/)
+- [Stable 0.6.0 Rust API reference](https://docs.rs/rydantic/0.6.0/rydantic/)
 - [Documentation development](docs/README.md#preview-and-validate)
+
+## Release channels
+
+This branch targets **0.7.0-beta.1**, a prerelease with a breaking explicit-derive contract. The latest stable release is **0.6.0**. Check [crates.io](https://crates.io/crates/rydantic/versions) for publication status before installing a candidate; a version in this source tree does not mean it has been published.
+
+The examples below opt in to this beta exactly. For stable installations use `rydantic = "0.6.0"` and the [v0.6.0 documentation](https://github.com/trotsky1997/Rydantic/tree/v0.6.0). See [release notes](https://github.com/trotsky1997/Rydantic/blob/main/CHANGELOG.md) for breaking changes, backup and migration guidance, and promotion criteria.
 
 ## Quick start
 
-Add the crates.io dependency to your Cargo.toml:
+After the beta is published, add the opt-in crates.io dependency to your Cargo.toml:
 
 ```toml
 [dependencies]
-rydantic = "0.6.0"
+rydantic = "=0.7.0-beta.1"
 ```
 
 ```rust
@@ -263,7 +269,7 @@ Optional flattened fields become `None` when all their keys are absent; partiall
 ## Dates and Decimal
 
 ```toml
-rydantic = { version = "0.6.0", features = ["chrono", "decimal"] }
+rydantic = { version = "=0.7.0-beta.1", features = ["chrono", "decimal"] }
 ```
 
 The `chrono` feature supports `NaiveDate`, `NaiveTime`, `NaiveDateTime`, `DateTime<Utc>`, and `DateTime<FixedOffset>`, re-exported through `rydantic::chrono`. Their formats are `YYYY-MM-DD`, `HH:MM:SS[.fraction]`, an ISO date-time without a time zone, and RFC 3339 date-times. Validation checks calendar dates, four-digit years, at most nine fractional-second digits, and RFC 3339 time zones. UTC types are converted to UTC.
@@ -368,7 +374,7 @@ Schemas can describe API documentation and tool arguments. Use model parsing at 
 The optional `dynamic` feature uses `jsonschema` to compile and reuse schemas at runtime. Network and file resolution are disabled in the default dependency configuration; local `$ref` references are supported.
 
 ```toml
-rydantic = { version = "0.6.0", features = ["dynamic"] }
+rydantic = { version = "=0.7.0-beta.1", features = ["dynamic"] }
 ```
 
 ```rust
@@ -399,7 +405,7 @@ Enable the `axum` feature to use Axum 0.8 adapters:
 
 ```toml
 [dependencies]
-rydantic = { version = "0.6.0", features = ["axum"] }
+rydantic = { version = "=0.7.0-beta.1", features = ["axum"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "net"] }
 ```
 
@@ -459,7 +465,7 @@ Use SQLx 0.9 and Tokio with SQLite, PostgreSQL or MySQL. Enable `sqlite` for bun
 
 ```toml
 [dependencies]
-rydantic = { version = "0.6.0", features = ["axum", "sqlite"] }
+rydantic = { version = "=0.7.0-beta.1", features = ["axum", "sqlite"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ```
 
@@ -522,7 +528,7 @@ SQL identifiers are checked at compile time and quoted in generated statements. 
 Enable either driver or both:
 
 ```toml
-rydantic = { version = "0.6.0", features = ["axum", "postgres", "mysql"] }
+rydantic = { version = "=0.7.0-beta.1", features = ["axum", "postgres", "mysql"] }
 ```
 
 Keep the same `User` model and CRUD calls. The pool or transaction type selects the driver:
@@ -715,7 +721,7 @@ Add one dependency:
 
 ```toml
 [dependencies]
-rydantic = { version = "0.6.0", features = ["capnp"] }
+rydantic = { version = "=0.7.0-beta.1", features = ["capnp"] }
 ```
 
 Install the official `capnp` compiler when setting up the development environment: `brew install capnp` on macOS, or `sudo apt-get install capnproto` on Debian/Ubuntu. During compilation, the attribute macro invokes that compiler and uses the official `capnpc` generator for Rust bindings. Set `RYDANTIC_CAPNP_COMPILER` to use a specific compiler executable. Bare names (such as `capnp`) use `PATH`; relative paths (such as `./tools/capnp`) are resolved from the compiler process's working directory before entering the temporary schema directory.
@@ -768,7 +774,7 @@ Models must use concrete, owned types within the annotated inline module. Data e
 
 ### Breaking change: explicit Model derives
 
-The next release removes automatic `Model` derive insertion inside `capnp_models`. Existing code that relied on it will no longer compile. Add `#[derive(rydantic::Model)]` to every model struct and enum in the annotated module, including nested modules, or add `rydantic::Model` to the model's existing derive list. With a renamed dependency, use that dependency's name instead. Already-explicit derives, including aliases imported outside the annotated module, need no change. An unrelated derive named `Model` does not implement Rydantic's model traits.
+Version 0.7.0-beta.1 removes automatic `Model` derive insertion inside `capnp_models`. Existing code that relied on it will no longer compile. Add `#[derive(rydantic::Model)]` to every model struct and enum in the annotated module, including nested modules, or add `rydantic::Model` to the model's existing derive list. With a renamed dependency, use that dependency's name instead. Already-explicit derives, including aliases imported outside the annotated module, need no change. An unrelated derive named `Model` does not implement Rydantic's model traits.
 
 This is an intentional source-breaking change. Review and update your application before upgrading; the library does not maintain the old implicit-derive behavior. The derive change alone does not change the generated wire schema.
 
@@ -806,7 +812,7 @@ Existing `.capnp` protocols can use explicit bindings:
 
 ```toml
 [dependencies]
-rydantic = { version = "0.6.0", features = ["capnp"] }
+rydantic = { version = "=0.7.0-beta.1", features = ["capnp"] }
 capnp = { version = "0.27", features = ["unaligned"] }
 
 [build-dependencies]
@@ -902,7 +908,7 @@ Owned models use `JsonType`/`Model`; borrowed models use `BorrowType<'de>`/`Borr
 
 Explicit `Value` fields, `parse_value` inputs, `before` callbacks, and custom types implementing only `decode(Value, …)` use Value through their respective interfaces. Native scalar types reuse lightweight scalar adapters. Custom types can override `JsonType::decode_input` to accept `Input::Borrowed` directly. Arbitrary JSON that requires no traversal can be stored as `Box<RawValue>`, preserving its source text and numeric notation.
 
-`StringType`, `NumericType`, and `LengthType` are independent capability markers; generic helpers must explicitly declare `JsonType` or `BorrowType` bounds. Custom field types also implement `AsyncCheck` and satisfy `Sync`; existing synchronous types can provide an empty `AsyncCheck` implementation. Install with `rydantic = "0.6.0"` from crates.io or use the GitHub v0.6.0 tag. Workspace members use local path dependencies.
+`StringType`, `NumericType`, and `LengthType` are independent capability markers; generic helpers must explicitly declare `JsonType` or `BorrowType` bounds. Custom field types also implement `AsyncCheck` and satisfy `Sync`; existing synchronous types can provide an empty `AsyncCheck` implementation. Install with `rydantic = "=0.7.0-beta.1"` from crates.io after publication, or use the matching GitHub v0.7.0-beta.1 tag when available. Workspace members use local path dependencies.
 
 ## Validation
 

@@ -5,7 +5,7 @@ icon: "calendar"
 ---
 
 ```toml
-rydantic = { version = "0.6.0", features = ["chrono", "decimal"] }
+rydantic = { version = "=0.7.0-beta.1", features = ["chrono", "decimal"] }
 ```
 
 The `chrono` feature supports `NaiveDate`, `NaiveTime`, `NaiveDateTime`, `DateTime<Utc>`, and `DateTime<FixedOffset>`, re-exported through `rydantic::chrono`. Their formats are `YYYY-MM-DD`, `HH:MM:SS[.fraction]`, an ISO date-time without a time zone, and RFC 3339 date-times. Validation checks calendar dates, four-digit years, at most nine fractional-second digits, and RFC 3339 time zones. UTC types are converted to UTC.
