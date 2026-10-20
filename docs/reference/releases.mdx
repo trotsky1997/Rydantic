@@ -4,15 +4,24 @@ description: "Release history and the current migration path."
 icon: "tag"
 ---
 
-## 0.7.0-beta.2 · Source candidate
+## 0.7.0-beta.3 · Source candidate
 
-After publication, opt in with `rydantic = "=0.7.0-beta.2"`. Source version metadata is not proof of publication; check [crates.io](https://crates.io/crates/rydantic/versions). Stable remains 0.6.0.
+After publication, opt in with `rydantic = { version = "=0.7.0-beta.3", features = ["partial-json"] }`. Source metadata is not proof of publication. Stable remains 0.6.0.
+
+- Add bounded [partial JSON snapshots](/models/partial-json), separate from strict streaming and Model validation. Incomplete containers, numbers and literals may be recovered; all incomplete strings/keys are rejected.
+- Hard limits: 1 MiB input and 64 nested containers. The pinned parser's 4300-digit integer-part ceiling is reported as unsupported, never rounded; no equivalent fractional/exponent limit is claimed.
+- Preview values are not validated business data. Require the producer's final document, `Complete` and ordinary Model validation before consequential actions. Successful values can contain secrets; repeated prefix reparsing can be quadratic.
+- Preserve beta.1 breaking derives, migration guards and backup responsibilities below. No new breaking API change from beta.2. New JSON Schema-to-Rust code generation and phone/country/currency domain types are excluded.
+
+## 0.7.0-beta.2 · Published prerelease
+
+Published on 2026-10-20: [release and verification](https://github.com/trotsky1997/Rydantic/releases/tag/v0.7.0-beta.2). Opt in with `rydantic = "=0.7.0-beta.2"`. Stable remains 0.6.0.
 
 - Add opt-in [settings](/models/settings): explicit ordered JSON, environment, strict dotenv-subset and flat secrets-directory sources, existing Model validation, and redacted source errors. This is not full pydantic-settings compatibility.
 - Accept exact zero with arbitrarily large positive or negative JSON exponents during integer normalization. Nonzero overflow, fractions, malformed JSON and numeric strings remain invalid.
 - Preserve the beta.1 explicit-derive contract and SQLite migration guards. No new breaking API change from beta.1; follow the upgrade and backup guidance below when coming from 0.6.0.
 
-Partial JSON, the new JSON Schema-to-Rust code generator, and phone/country/currency domain types are not included in this candidate.
+Partial JSON, the new JSON Schema-to-Rust code generator, and phone/country/currency domain types are not included in this release.
 
 ## 0.7.0-beta.1 · Published prerelease
 

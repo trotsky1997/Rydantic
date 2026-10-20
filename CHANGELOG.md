@@ -1,10 +1,21 @@
-# Unreleased
+# Rydantic 0.7.0-beta.3
 
-- Add an opt-in, bounded `partial-json` snapshot API using jiter raw numeric bytes and serde_json arbitrary precision. Recover incomplete containers, numbers and literals; reject all incomplete strings/keys. Strict streaming and Model required-field semantics are unchanged. No publication or version bump is included.
+Source candidate, not a publication announcement. Check crates.io and GitHub Releases for published artifacts. Stable remains 0.6.0.
+
+## Added
+
+- Opt-in `partial-json` snapshots of accumulated buffers, recovering incomplete containers, numbers and literals without converting numeric lexemes through f64. The pinned jiter 0.17.0 parser handles grammar and raw numeric tokens; no new lexer is introduced. Strict streaming, NDJSON and Model required-field semantics remain unchanged.
+- Hard ceilings of 1 MiB input and 64 nested containers; callers may lower these limits. All incomplete strings and object keys are rejected. jiter's 4300-digit integer-part ceiling (excluding a minus sign, including decimal/exponent forms) is reported as `UnsupportedNumberLimit`, never silently rounded. No matching fractional/exponent digit limit is claimed.
+
+## Safety and upgrade
+
+Use `rydantic = { version = "=0.7.0-beta.3", features = ["partial-json"] }` after publication. Runtime and derive packages both use beta.3 with an exact derive pin. This opt-in API adds no breaking change from beta.2. A preview is not business-validated data: wait for the producer's final document, require `Complete`, then validate with Model before consequential actions. Successful snapshot values and Debug output may contain secrets. Calls reparse and allocate; repeated prefixes can cost quadratic total work. See [snapshot semantics and limits](docs/models/partial-json.mdx).
+
+The beta.1 breaking explicit Model derive contract and SQLite migration protections remain. Back up databases and test migrations; users remain responsible for existing deployments and data. Unsupported SQLite index layouts require reviewed manual migration, not removal of constraints. New JSON Schema-to-Rust code generation and phone/country/currency domain types are not included.
 
 # Rydantic 0.7.0-beta.2
 
-Source candidate, not a publication announcement. Check crates.io and GitHub Releases for published artifacts. Stable remains 0.6.0.
+Published on 2026-10-20 as a prerelease: [GitHub Release](https://github.com/trotsky1997/Rydantic/releases/tag/v0.7.0-beta.2). Both package archives and a fresh registry-only consumer were verified. Stable remains 0.6.0.
 
 ## Added
 
@@ -16,9 +27,9 @@ Source candidate, not a publication announcement. Check crates.io and GitHub Rel
 
 ## Upgrade and scope
 
-Use `rydantic = { version = "=0.7.0-beta.2", features = ["settings"] }` after publication. Runtime and derive packages both use 0.7.0-beta.2, with an exact derive dependency pin. Settings are opt-in; no new breaking API change from beta.1 is introduced. The breaking explicit `Model` derive requirement from beta.1 still applies when upgrading from 0.6.0. Back up databases and test migration plans; users remain responsible for existing data and deployments. Unsupported SQLite index layouts require reviewed manual migration, not removal of constraints to bypass guards.
+Use `rydantic = { version = "=0.7.0-beta.2", features = ["settings"] }`. Runtime and derive packages both use 0.7.0-beta.2, with an exact derive dependency pin. Settings are opt-in; no new breaking API change from beta.1 is introduced. The breaking explicit `Model` derive requirement from beta.1 still applies when upgrading from 0.6.0. Back up databases and test migration plans; users remain responsible for existing data and deployments. Unsupported SQLite index layouts require reviewed manual migration, not removal of constraints to bypass guards.
 
-This candidate includes settings and the zero-exponent correction only as new runtime behavior. Partial JSON, the new JSON Schema-to-Rust code generator, and phone/country/currency domain types are not included. Publication tooling and the documentation URL are maintained separately.
+This release includes settings and the zero-exponent correction only as new runtime behavior. Partial JSON, the new JSON Schema-to-Rust code generator, and phone/country/currency domain types are not included. Publication tooling and the documentation URL are maintained separately.
 
 # Rydantic 0.7.0-beta.1
 

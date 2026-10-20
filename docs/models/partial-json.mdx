@@ -4,7 +4,13 @@ description: "Opt-in bounded previews without numeric precision loss."
 icon: "layers"
 ---
 
-The `partial-json` feature adds `rydantic::partial_json::snapshot(&[u8])` for an accumulated input buffer. This is an unreleased source feature, separate from strict `JsonStream` and NDJSON APIs. It does not change existing parsing or model validation.
+The `partial-json` feature adds `rydantic::partial_json::snapshot(&[u8])` for an accumulated input buffer. This feature is introduced in the 0.7.0-beta.3 source candidate and is not in beta.2 or stable 0.6.0. Check [registry availability](https://crates.io/crates/rydantic/versions) before installing it. It is separate from strict `JsonStream` and NDJSON APIs. It does not change existing parsing or model validation.
+
+After publication, enable it explicitly:
+
+```toml
+rydantic = { version = "=0.7.0-beta.3", features = ["partial-json"] }
+```
 
 ```rust
 use rydantic::partial_json::{snapshot, Status};
