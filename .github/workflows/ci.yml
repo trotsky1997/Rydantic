@@ -65,6 +65,8 @@ jobs:
         run: cargo check -p rydantic --no-default-features --features settings --lib --locked
       - name: Check optional runtime features without derive
         run: cargo check -p rydantic --no-default-features --features chrono,decimal,capnp --lib --locked
+      - name: Check partial JSON without derive
+        run: cargo check -p rydantic --no-default-features --features partial-json --lib --locked
       - name: Check framework integrations without derive
         run: cargo check -p rydantic --no-default-features --features axum,sqlite --lib --locked
       - name: Check driver-free SQL metadata and SQLite runtime
