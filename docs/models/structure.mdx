@@ -1,0 +1,80 @@
+---
+title: "Model structure"
+description: "Use enums, tuple types, flattened models and extra fields."
+icon: "shapes"
+---
+
+Enums with unit variants encode as strings. Enums with fields can encode as objects with an explicit discriminator:
+
+```rust
+use rydantic::Model;
+
+#[derive(Model)]
+#[model(tag = "kind")]
+enum ToolCall {
+    #[model(rename = "search")]
+    Search {
+        #[model(min_length = 1)]
+        query: String,
+        #[model(default = 3, ge = 1, le = 10)]
+        limit: u8,
+    },
+    #[model(rename = "ping")]
+    Ping,
+}
+```
+
+Inputs include `{"kind":"search","query":"Rust"}` and `{"kind":"ping"}`. The generated schema uses `oneOf`, `const`, and explicit required fields.
+
+## Tuple structs and untagged enums
+
+```rust
+use rydantic::Model;
+
+#[derive(Debug, Model)]
+struct Username(#[model(trim, min_length = 2)] String);
+
+#[derive(Debug, Model)]
+struct Point(#[model(ge = 0)] i32, i32);
+
+#[derive(Debug, Model)]
+#[model(untagged)]
+enum ResultValue {
+    Count(#[model(ge = 1)] u32),
+    Named { name: String },
+    Pair(String, u8),
+    Empty,
+}
+```
+
+Newtypes encode as their inner value, multiple tuple fields encode as fixed-length arrays, unit structs encode as `null`, and empty tuple structs encode as `[]`. Tuple fields support validation and coercion. Names, defaults, flattening, and exclusion apply to named fields.
+
+Untagged enums try variants in declaration order and select the first one that passes synchronous validation. Failure returns `union_no_match` with structured errors for each branch; the schema uses `anyOf`. Asynchronous validation then checks the selected branch. Internally tagged enums use named fields or unit variants.
+
+## Flattening and extra fields
+
+```rust
+use rydantic::{Model, Value};
+use std::collections::BTreeMap;
+
+#[derive(Debug, Model)]
+struct Address { city: String }
+
+#[derive(Debug, Model)]
+#[model(extra = "allow")]
+struct Person {
+    id: u32,
+    #[model(flatten)]
+    address: Option<Address>,
+    #[model(extra)]
+    extra: BTreeMap<String, Value>,
+}
+
+let person = Person::parse_json(r#"{"id":1,"city":"Paris","score":9}"#)?;
+assert_eq!(person.extra["score"], 9);
+assert_eq!(person.dump()?["city"], "Paris");
+```
+
+Flattening supports named models, `Option`/`Box` wrappers, and string-keyed `BTreeMap`/`HashMap`. Parsing consumes declared fields first, flattened fields next, and finally sends remaining keys to a capture map. Multiple flattened fixed objects are supported, with one field per level allowed to capture unknown keys. `extra = "allow"` requires an explicit `#[model(extra)]` map, whose values are also type-checked.
+
+Optional flattened fields become `None` when all their keys are absent; partially present objects are checked for required inner fields. Empty flattened input can trigger an explicit default. Error locations follow the flattened JSON paths. Input/output names of declared fields are preserved; overlapping extra keys return `field_collision`, and serialization also checks for key collisions when merging objects.

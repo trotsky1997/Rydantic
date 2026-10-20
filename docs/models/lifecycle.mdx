@@ -1,0 +1,9 @@
+---
+title: "Model lifecycle"
+description: "Validate mutations and use read-only validated wrappers."
+icon: "refresh-cw"
+---
+
+Rust code can directly construct or modify ordinary models. Call `validate()` to check the current object; `dump()`/`dump_json()` revalidate it before serialization. These checks preserve field values. Normalization takes place during parsing.
+
+For read-only access, use `User::parse_validated_json(...)` or `Validated::new(user)` to obtain a `Validated<User>` without `DerefMut`. `into_inner()` returns the ordinary model. Custom JsonType implementations with interior mutability are responsible for their own mutation rules.

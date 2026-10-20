@@ -1,0 +1,14 @@
+{
+  "name": "rydantic-web",
+  "private": true,
+  "version": "0.6.0",
+  "type": "module",
+  "scripts": {
+    "docs:dev": "cd docs && mint dev --no-open",
+    "docs:check": "cd docs && mint validate && mint broken-links",
+    "site:build": "node scripts/build-site.mjs",
+    "site:dev": "npm run site:build && python3 -m http.server 4173 --directory .site",
+    "check": "node scripts/check-web.mjs"
+  },
+  "devDependencies": { "mint": "4.2.1072" }
+}

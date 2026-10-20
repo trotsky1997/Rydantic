@@ -1,0 +1,70 @@
+---
+title: "Database models"
+description: "Add validated CRUD and SQLx row decoding to your model."
+icon: "database"
+---
+
+Use SQLx 0.9 and Tokio with SQLite, PostgreSQL or MySQL. Enable `sqlite` for bundled SQLite, `postgres` for PostgreSQL, or `mysql` for MySQL. Each driver enables the shared `sqlx` integration. Server drivers enable Rustls TLS support and have no SQLite dependency:
+
+```toml
+[dependencies]
+rydantic = { version = "0.6.0", features = ["axum", "sqlite"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+```
+
+```rust
+use rydantic::{Model, SqlModel, sqlx::sqlite::SqlitePoolOptions};
+
+#[derive(Debug, PartialEq, Model, SqlModel)]
+#[sql(table = "users")]
+struct User {
+    #[sql(primary_key, auto_increment)]
+    id: Option<i64>,
+    #[model(trim, min_length = 2)]
+    #[sql(unique)]
+    name: String,
+    #[model(ge = 18)]
+    #[sql(index)]
+    age: u8,
+}
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let pool = SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect("sqlite::memory:")
+        .await?;
+    User::migrate(&pool).await?;
+
+    let user = User::parse_json(r#"{"name":" Alice ","age":25}"#)?;
+    let mut stored = user.insert(&pool).await?;
+    let id = stored.id.expect("generated primary key");
+    assert_eq!(User::get(&pool, &id).await?.as_ref(), Some(&stored));
+    stored.age = 30;
+    let updated = stored.update(&pool).await?;
+    assert_eq!(updated.age, 30);
+    assert!(User::delete(&pool, &id).await?);
+    Ok(())
+}
+```
+
+Derive `Model` and `SqlModel` together. `Model` supplies JSON/Serde/schema/validation behavior; `SqlModel` adds table metadata, a validated SQLx `FromRow` implementation, and asynchronous persistence operations. Each table has one primary key and uses a concrete owned struct with named fields. SQLx is re-exported through `rydantic::sqlx`.
+
+| SQL attribute | Behavior |
+| --- | --- |
+| `#[sql(table = "users")]` | Set the table name; the default is the struct name in snake_case |
+| `#[sql(primary_key)]` | Declare the single primary-key field |
+| `#[sql(auto_increment)]` | Generate an `i64` or `Option<i64>` primary key when its value is zero or None |
+| `#[sql(rename = "display_name")]` | Set the database column name independently of JSON aliases |
+| `#[sql(rename_from = "name")]` | Rename a previous database column while preserving its data |
+| `#[sql(default = "pending")]` | Set a constant SQL default and backfill a new required column |
+| `#[sql(unique)]` | Generate a database uniqueness constraint |
+| `#[sql(index)]` | Generate an index together with the table |
+| `#[sql(length = 256)]` | Set a MySQL VARCHAR/VARBINARY bound; otherwise use model `max_length`, or 191 for indexed text/binary columns |
+| `#[sql(references = "users.id", on_delete = "cascade")]` | Add a foreign key; deletion policies include `no_action`, `restrict`, `cascade`, and `set_null` (requires a nullable non-key column) |
+| `#[sql(skip)]` | Keep a local field outside the table; provide a model default or optional field for row decoding |
+
+SQL identifiers are checked at compile time and quoted in generated statements. CRUD and filter values use bound parameters. Column metadata is exposed as `User::COLUMNS`; `create_table_sql::<DB>()` and `create_index_sql::<DB>()` expose generated DDL for an explicit driver.
+
+
+Continue with [PostgreSQL and MySQL](/integrations/databases), [queries and transactions](/integrations/queries), or [automatic migrations](/integrations/migrations).

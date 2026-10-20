@@ -1,0 +1,23 @@
+---
+title: "HTTP + database example"
+description: "Run the same validated Axum API against three database backends."
+icon: "route"
+---
+
+The [database_api example](https://github.com/trotsky1997/Rydantic/blob/main/crates/rydantic/examples/database_api.rs) selects SQLite, PostgreSQL or MySQL from `DATABASE_URL` and uses the same model for validated HTTP input, JSON responses, table creation and CRUD:
+
+```sh
+cargo run -p rydantic --example database_api --features axum,sqlite
+# Connect the same API to a server database:
+DATABASE_URL="$POSTGRES_URL" cargo run -p rydantic --example database_api --features axum,postgres
+DATABASE_URL="$MYSQL_URL" cargo run -p rydantic --example database_api --features axum,mysql
+# POST /users, GET /users, GET/PUT/DELETE /users/{id}
+curl -X POST http://127.0.0.1:3000/users \
+  -H 'Content-Type: application/json' \
+  -d '{"name":" Alice ","age":25}'
+
+# Run the example without starting a persistent server:
+cargo run -p rydantic --example database_api --features axum,sqlite -- --smoke
+```
+
+The `sqlite_api` example provides a smaller SQLite-only server. The multi-database example defaults to an in-memory database and only accepts loopback bind addresses. Set `DATABASE_URL='sqlite://app.db?mode=rwc'` for a local database file and `LISTEN_ADDR` for another loopback address or port. With both integrations enabled, `SqlError` implements Axum responses: validation errors return 422, missing rows return 404, database constraint violations return 409, and other driver errors return a generic 500 response.

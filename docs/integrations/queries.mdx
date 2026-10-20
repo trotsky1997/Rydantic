@@ -1,0 +1,47 @@
+---
+title: "Queries and transactions"
+description: "Filter, paginate and persist validated rows with SQLx."
+icon: "list-filter"
+---
+
+```rust
+use rydantic::sql::{Compare, Order};
+
+let users = User::select()
+    .filter("age", Compare::GreaterOrEqual, &18u8)?
+    .order_by("name", Order::Ascending)?
+    .limit(20)
+    .offset(0)
+    .fetch_all(&pool)
+    .await?;
+
+let mut transaction = pool.begin().await?;
+let stored = user.insert(&mut transaction).await?;
+assert!(User::get(&mut transaction, &stored.id.unwrap()).await?.is_some());
+transaction.rollback().await?;
+```
+
+`where_eq`, comparison filters, ordering, limits, and offsets use checked column names. NULL equality/inequality becomes `IS NULL`/`IS NOT NULL`. Operations accept a pool, mutable connection, or SQLx transaction. Insert/update operations use a transaction or nested savepoint; failed constraints or returned-row validation roll back the write. Missing rows return `None` from `get`, `false` from `delete`, or `SqlError::NotFound` from `update`.
+
+Writes await synchronous and asynchronous model validation before acquiring a connection, then recheck returned rows synchronously before committing. Reads validate stored typed values and release acquired pooled connections before awaiting asynchronous callbacks. Models with asynchronous rules require a pool: insert, update, get and select return `sql_async_connection` immediately for borrowed connections and transactions, which can otherwise hold the only pool slot needed by a callback. Synchronous models support all three connection forms. Normalization runs during JSON/model parsing; persistence checks preserve stored typed values. Skipped fields use the same default preparation, `before` callbacks, and normalization as a missing JSON field. Synchronous SQLx `query_as` uses the generated `FromRow` validator; models with asynchronous rules use the awaiting `SqlModel` entry points.
+
+Portable fields use these native storage declarations:
+
+| Rust field | SQLite | PostgreSQL | MySQL |
+| --- | --- | --- | --- |
+| Integer types through 64 bits | INTEGER | BIGINT | BIGINT |
+| `bool` | INTEGER | BOOLEAN | BOOLEAN |
+| `f32`, `f64` | REAL | DOUBLE PRECISION | DOUBLE |
+| `String` | TEXT | TEXT | LONGTEXT or bounded VARCHAR |
+| `Vec<u8>` | BLOB | BYTEA | LONGBLOB or bounded VARBINARY |
+| Dates, Decimal, `i128`, `u128` | TEXT | TEXT | LONGTEXT or bounded VARCHAR |
+
+Unsigned 64-bit values use the common signed 64-bit SQL range; conversions reject overflow. Decimal and 128-bit text storage preserves precision. Comparisons and ordering for these text fields follow the database's text semantics. `Option<T>` uses correctly typed SQL NULL parameters, and `Box<T>` uses its inner representation. Enable `chrono`/`decimal` for the corresponding field types. Identity sequences follow each database's native behavior, including gaps after rolled-back writes.
+
+Custom SQL field representations implement the required `SqlValue::to_parameter` and `from_parameter` conversions through `SqlParameter`. The same codec handles all enabled drivers and filters. `SqlModel` owns table metadata and CRUD; `SqlRow<DB>` owns typed row decoding and column binding. The derive generates both traits without driver-specific compatibility hooks.
+
+`create_table` creates missing tables with their declared indexes. `migrate` also upgrades existing tables from the current model definition. Foreign keys describe database references; application queries load related models. The table layer covers single-column keys and the portable scalar mappings above.
+
+## SQL architecture
+
+The SQL API uses one portable codec and explicit driver features. Select `sqlite`, `postgres` or `mysql` in Cargo.toml. The shared `sqlx` feature provides metadata and generic APIs without a database driver. DDL previews require a database type parameter: `create_table_sql::<DB>()` and `create_index_sql::<DB>()`. Custom codecs implement both portable conversions; row decoding and binding use `SqlRow<DB>`.

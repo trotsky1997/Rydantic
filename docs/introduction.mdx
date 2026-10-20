@@ -1,0 +1,44 @@
+---
+title: "One model. Every boundary."
+description: "Define, validate, serialize and persist your data with Rust types."
+icon: "book-open"
+---
+
+Rydantic brings Pydantic-style data modeling to Rust. Define a model once, then use it to parse JSON, normalize values, collect validation errors, generate JSON Schema, work with native Cap’n Proto messages, serve HTTP requests and persist validated database rows.
+
+<CardGroup cols={2}>
+  <Card title="Start in five minutes" icon="rocket" href="/quickstart">Install Rydantic and parse your first model.</Card>
+  <Card title="Build an HTTP API" icon="globe" href="/integrations/axum">Use validated JSON extractors and responses with Axum.</Card>
+  <Card title="Model your database" icon="database" href="/integrations/sql">Use the same types with SQLite, PostgreSQL and MySQL.</Card>
+  <Card title="Generate a binary protocol" icon="binary" href="/integrations/capnp">Derive Cap’n Proto schemas and Rust bindings.</Card>
+</CardGroup>
+
+## The model is the contract
+
+```rust
+use rydantic::Model;
+
+#[derive(Debug, Model)]
+struct User {
+    #[model(trim, min_length = 2)]
+    name: String,
+    #[model(coerce, ge = 18)]
+    age: u8,
+}
+
+let user = User::parse_json(r#"{"name":" Alice ","age":"25"}"#)?;
+assert_eq!(user.name, "Alice");
+assert_eq!(user.age, 25);
+```
+
+Parsing is strict by default. Enable coercion per field, make normalization explicit and receive structured errors with field paths. Native JSON parsing reads field slices directly; it does not construct a full JSON value tree before decoding a typed model.
+
+## Choose the pieces you need
+
+The default dependency includes the model derive. HTTP, SQL drivers, Cap’n Proto, dates, decimals and runtime JSON Schema validation are optional features. PostgreSQL and MySQL can each be enabled without SQLite.
+
+<Note>
+These guides describe **Rydantic 0.6.0**. The SQL API changed in this release. See the [release notes](/reference/releases) when upgrading.
+</Note>
+
+Visit the [Rust API reference](https://docs.rs/rydantic/0.6.0/rydantic/) for complete signatures, or explore the [examples](https://github.com/trotsky1997/Rydantic/tree/main/crates/rydantic/examples).

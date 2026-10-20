@@ -1,0 +1,94 @@
+---
+title: "Native Cap’n Proto"
+description: "Generate .capnp schemas, official Rust bindings and validated codecs from models."
+icon: "binary"
+---
+
+Add one dependency:
+
+```toml
+[dependencies]
+rydantic = { version = "0.6.0", features = ["capnp"] }
+```
+
+Install the official `capnp` compiler when setting up the development environment: `brew install capnp` on macOS, or `sudo apt-get install capnproto` on Debian/Ubuntu. During compilation, the attribute macro invokes that compiler and uses the official `capnpc` generator for Rust bindings. Set `RYDANTIC_CAPNP_COMPILER` to use a specific compiler executable. Bare names (such as `capnp`) use `PATH`; relative paths (such as `./tools/capnp`) are resolved from the compiler process's working directory before entering the temporary schema directory.
+
+```rust
+use rydantic::{CapnpModel, CapnpSchema, Model};
+
+#[rydantic::capnp_models(namespace = "my_app.users")]
+pub mod models {
+    #[derive(rydantic::Model, Debug, PartialEq)]
+    pub struct User {
+        #[model(trim, min_length = 1)]
+        pub name: String,
+        #[model(ge = 18)]
+        pub age: u8,
+        pub role: Role,
+        pub nickname: Option<String>,
+        pub avatar: Vec<u8>,
+    }
+
+    #[derive(rydantic::Model, Debug, PartialEq)]
+    pub enum Role { Guest, Admin }
+}
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    use models::User;
+    let user = User::parse_json(
+        r#"{"name":" Alice ","age":25,"role":"Admin","avatar":[0,255]}"#,
+    )?;
+    let bytes = user.dump_capnp()?;
+    assert_eq!(User::parse_capnp(&bytes)?, user);
+    let packed = user.dump_capnp_packed()?;
+    assert_eq!(User::parse_capnp_packed(&packed)?, user);
+
+    // Export the complete protocol for official generators in other languages.
+    User::write_capnp_schema("users.capnp")?;
+    Ok(())
+}
+```
+
+Derive `rydantic::Model` explicitly on each model (an imported alias also works). `capnp_models` generates the schema and binding attributes; Rust resolves and runs the derives you write. Other derives such as `Debug` and `PartialEq` are preserved. The module exposes:
+
+- `models::wire`: public Rust Reader, Builder, and Enum bindings from the official generator.
+- `models::CAPNP_SCHEMA` and `CAPNP_SCHEMA_ID`: the complete schema text and file ID.
+- `CapnpSchema` for each model: `capnp_schema()`, `write_capnp_schema(path)`, and the root type name `CAPNP_TYPE`. Unit enums also support binary roundtrips as root messages through automatically generated root wrapper types.
+
+Default mappings cover nested and recursive models, `Box`, `Option`, `Vec`, fixed arrays, String-keyed `BTreeMap`/`HashMap`, unit enums, and data enums. `Vec<u8>` becomes `Data`; full-range `i128`/`u128`, dates, and Decimal become `Text`, including inside containers. Module-local type aliases, container aliases with concrete type arguments, explicit `use` aliases, and inline submodules work together. Dates and Decimal require the `chrono` and `decimal` features respectively.
+
+Models must use concrete, owned types within the annotated inline module. Data enums still declare their JSON representation: named fields can use `#[model(tag = "kind")]`, while tuple variants use `#[model(untagged)]`. `capnp_name` controls the protocol name independently. `capnp_skip` with a default preserves a local field. JSON aliases, flattening, extra fields, and exclusion continue to control the JSON representation. Unsupported external types can use a default with `capnp_skip`, or the [existing-schema integration](/integrations/existing-capnp).
+
+## Upcoming change: explicit Model derives
+
+The next release removes automatic `Model` derive insertion inside `capnp_models`. Existing code that relied on it will no longer compile. Add `#[derive(rydantic::Model)]` to every model struct and enum in the annotated module, including nested modules, or add `rydantic::Model` to the model's existing derive list. With a renamed dependency, use that dependency's name instead. Already-explicit derives, including aliases imported outside the annotated module, need no change. An unrelated derive named `Model` does not implement Rydantic's model traits.
+
+This is an intentional source-breaking change. Review and update your application before upgrading; the library does not maintain the old implicit-derive behavior. The derive change alone does not change the generated wire schema.
+
+## Protocol IDs and compatible evolution
+
+The default file ID is derived deterministically from the Cargo package name and the current model module name. For production protocols, set a fixed `namespace = "my_app.users"` or `id = 0x...`. Give distinct namespaces to multiple model modules with the same name in one package. Keep the namespace/ID, model names, and submodule paths stable after publication.
+
+Fields and enum members are numbered from `@0` in declaration order by default. Appending fields preserves existing ordinals. To reorder declarations, pin each wire field or enum member with `#[model(capnp_ordinal = N)]`; ordinals must be unique, contiguous, and start at zero. For example:
+
+```rust
+#[rydantic::capnp_models(namespace = "my_app.counters")]
+mod models {
+    #[derive(rydantic::Model)]
+    pub struct Counter {
+        #[model(capnp_ordinal = 1)]
+        pub count: u64,
+        #[model(capnp_ordinal = 0)]
+        pub name: String,
+    }
+}
+```
+
+Named and tuple group fields in data enums share the protocol's ordinal space. A variant's `capnp_ordinal` specifies its first field ordinal; fields can also have explicit ordinals. Type changes, field removal, renaming, and union regrouping must follow the [official compatibility rules](https://capnproto.org/language.html#evolving-your-protocol). Export schemas for code review; Rust bindings update automatically with the models.
+
+See [fixtures/auto-capnp](https://github.com/trotsky1997/Rydantic/tree/main/fixtures/auto-capnp) for complete examples and interoperability tests:
+
+```sh
+cargo run -p rydantic-auto-capnp-fixture
+cargo test -p rydantic-auto-capnp-fixture
+```

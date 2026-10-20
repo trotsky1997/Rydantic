@@ -1,0 +1,65 @@
+---
+title: "Quickstart"
+description: "Install the crate and parse, validate and serialize your first Rust model."
+icon: "rocket"
+---
+
+Add the crates.io dependency to your Cargo.toml:
+
+```toml
+[dependencies]
+rydantic = "0.6.0"
+```
+
+```rust
+use rydantic::{Model, SchemaMode};
+
+#[derive(Debug, Model)]
+#[model(extra = "forbid")]
+struct User {
+    #[model(trim, min_length = 3, max_length = 30)]
+    name: String,
+
+    #[model(coerce, ge = 18, le = 120)]
+    age: u8,
+
+    #[model(trim, lowercase, email)]
+    email: String,
+
+    #[model(default)]
+    tags: Vec<String>,
+
+    note: Option<String>,
+}
+
+fn main() -> Result<(), rydantic::ValidationErrors> {
+    let user = User::parse_json(
+        r#"{"name":" Alice ","age":"25","email":" ALICE@EXAMPLE.COM "}"#,
+    )?;
+
+    assert_eq!(user.name, "Alice");
+    assert_eq!(user.age, 25);
+    assert_eq!(user.email, "alice@example.com");
+    println!("{}", user.dump_json()?);
+
+    let schema = User::json_schema(SchemaMode::Output);
+    assert!(schema.is_object());
+    Ok(())
+}
+```
+
+`Model` also generates Serde's `Serialize` and `Deserialize` implementations. Derive `Model` once per model. Deserialization runs full validation, and serialization revalidates the current object.
+
+```sh
+cargo run -p rydantic --example user
+cargo run -p rydantic --example tool_call
+cargo run -p rydantic --example tool_call -- --schema
+cargo run -p rydantic --example tool_call -- '{"kind":"ping"}'
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+<Card title="Validation rules" icon="check" href="/models/validation">Explore constraints, defaults and normalization.</Card>
+<Card title="Optional integrations" icon="puzzle-piece" href="/reference/features">Enable HTTP, SQL, Cap’n Proto and other features.</Card>
+</CardGroup>

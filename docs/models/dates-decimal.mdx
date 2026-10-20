@@ -1,0 +1,25 @@
+---
+title: "Dates and decimals"
+description: "Validate chrono date/time values and exact decimal numbers."
+icon: "calendar"
+---
+
+```toml
+rydantic = { version = "0.6.0", features = ["chrono", "decimal"] }
+```
+
+The `chrono` feature supports `NaiveDate`, `NaiveTime`, `NaiveDateTime`, `DateTime<Utc>`, and `DateTime<FixedOffset>`, re-exported through `rydantic::chrono`. Their formats are `YYYY-MM-DD`, `HH:MM:SS[.fraction]`, an ISO date-time without a time zone, and RFC 3339 date-times. Validation checks calendar dates, four-digit years, at most nine fractional-second digits, and RFC 3339 time zones. UTC types are converted to UTC.
+
+The `decimal` feature provides `rydantic::rust_decimal::Decimal`, preserving a 96-bit coefficient and up to 28 fractional digits. Input and output use decimal strings by default and preserve scale; explicit `coerce` also accepts JSON numbers. Loss of precision fails validation, and range constraints use exact decimal comparisons.
+
+```rust
+use rydantic::{Model, rust_decimal::Decimal};
+
+#[derive(Debug, Model)]
+struct Price {
+    #[model(ge = "0.1000000000000000000000000001")]
+    amount: Decimal,
+}
+```
+
+Date semantics, Decimal precision, and numeric bounds on string representations are marked as schema-local rules. Run `cargo run -p rydantic --example dates_decimal --features chrono,decimal` for a complete example.

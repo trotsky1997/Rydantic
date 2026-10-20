@@ -1,0 +1,63 @@
+---
+title: "Axum and Tokio"
+description: "Validated JSON requests and responses for asynchronous Rust APIs."
+icon: "globe"
+---
+
+Enable the `axum` feature to use Axum 0.8 adapters:
+
+```toml
+[dependencies]
+rydantic = { version = "0.6.0", features = ["axum"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net"] }
+```
+
+```rust
+use rydantic::{Model, axum::{Json, Router, routing::post}};
+
+#[derive(Model)]
+struct User {
+    #[model(trim, min_length = 2)]
+    name: String,
+    #[model(ge = 18)]
+    age: u8,
+}
+
+async fn create_user(Json(user): Json<User>) -> Json<User> {
+    Json(user)
+}
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let app = Router::new().route("/users", post(create_user));
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:3000").await?;
+    rydantic::axum::framework::serve(listener, app).await?;
+    Ok(())
+}
+```
+
+`rydantic::axum::Json<T>` reads raw JSON and applies model normalization and validation. It also supports collections such as `Json<Vec<User>>`. Responses revalidate the model, apply output aliases and exclusions, and set `Content-Type: application/json`. The complete Axum API is re-exported through `rydantic::axum::framework`; `Router` and `routing` are also available directly.
+
+| Failure | HTTP status |
+| --- | --- |
+| Invalid JSON syntax | 400 |
+| Missing or unsupported JSON content type | 415 |
+| Request body over Axum's configured limit | 413 |
+| Input type or model constraint errors | 422 |
+| Invalid model returned by a handler | 500 |
+
+Error bodies use `{"detail": [ValidationError, ...]}` and preserve field paths, codes, stages, and constraint parameters. Axum's `DefaultBodyLimit` applies, and `application/*+json` content types are supported.
+
+For asynchronous validators, extract `AsyncJson<T>` and await output validation explicitly:
+
+```rust
+use rydantic::axum::{AsyncJson, Rejection, framework::response::Response};
+
+async fn create_account(
+    AsyncJson(account): AsyncJson<Account>,
+) -> Result<Response, Rejection> {
+    AsyncJson(account).response().await
+}
+```
+
+Here `Account` is a model with asynchronous validators, as shown in the [asynchronous validation guide](/models/async). Tokio provides the asynchronous runtime; Axum supplies the HTTP routing and extraction layer.

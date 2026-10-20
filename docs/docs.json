@@ -1,0 +1,117 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "Rydantic",
+  "description": "One Rust model for validation, JSON, Cap\u2019n Proto, HTTP and SQL.",
+  "colors": {
+    "primary": "#31A879",
+    "light": "#72E3B4",
+    "dark": "#21845F"
+  },
+  "favicon": "/assets/favicon.svg",
+  "logo": {
+    "light": "/assets/logo-light.svg",
+    "dark": "/assets/logo-dark.svg",
+    "href": "https://trotsky1997.github.io/Rydantic/"
+  },
+  "appearance": {
+    "default": "system"
+  },
+  "icons": {
+    "library": "lucide"
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Home",
+        "href": "https://trotsky1997.github.io/Rydantic/"
+      },
+      {
+        "label": "API reference",
+        "href": "https://docs.rs/rydantic/0.6.0/rydantic/"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "GitHub",
+      "href": "https://github.com/trotsky1997/Rydantic"
+    }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Guides",
+        "groups": [
+          {
+            "group": "Get started",
+            "pages": [
+              "introduction",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Models",
+            "pages": [
+              "models/validation",
+              "models/structure",
+              "models/borrowed",
+              "models/lifecycle",
+              "models/async",
+              "models/streaming",
+              "models/schema",
+              "models/dates-decimal"
+            ]
+          },
+          {
+            "group": "HTTP",
+            "pages": [
+              "integrations/axum",
+              "integrations/http-database"
+            ]
+          },
+          {
+            "group": "Databases",
+            "pages": [
+              "integrations/sql",
+              "integrations/databases",
+              "integrations/queries",
+              "integrations/migrations"
+            ]
+          },
+          {
+            "group": "Binary protocols",
+            "pages": [
+              "integrations/capnp",
+              "integrations/existing-capnp"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Reference",
+        "groups": [
+          {
+            "group": "Project",
+            "pages": [
+              "reference/features",
+              "reference/releases"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/trotsky1997/Rydantic"
+    }
+  },
+  "contextual": {
+    "options": [
+      "copy",
+      "view",
+      "chatgpt",
+      "claude"
+    ]
+  }
+}

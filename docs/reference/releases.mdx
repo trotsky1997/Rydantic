@@ -1,0 +1,20 @@
+---
+title: "Release notes"
+description: "Release history and the current migration path."
+icon: "tag"
+---
+
+## 0.6.0 · Model-driven database migrations
+
+- Automatic migration plans for SQLite, PostgreSQL and MySQL.
+- Column renames, SQL defaults, indexes, foreign keys and explicit destructive changes.
+- Migration history, stale-plan checks and database-specific concurrency locks.
+- Unified SQL API with independent database drivers.
+
+The old SQLite-specific codec hooks and duplicate DDL entry points were removed. Enable the driver you use, derive `Model` and `SqlModel`, and call `YourModel::migrate(&pool).await?` to create or upgrade a table.
+
+See the [0.6.0 release](https://github.com/trotsky1997/Rydantic/releases/tag/v0.6.0) and the [automatic migration guide](/integrations/migrations).
+
+## Earlier releases
+
+The project added native Cap’n Proto support, automatic schema and binding generation, and Axum/SQL integrations across earlier releases. Find the complete history on [GitHub Releases](https://github.com/trotsky1997/Rydantic/releases).

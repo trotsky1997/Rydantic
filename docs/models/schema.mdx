@@ -1,0 +1,42 @@
+---
+title: "JSON Schema"
+description: "Generate separate input and output contracts with Draft 2020-12."
+icon: "braces"
+---
+
+`SchemaMode::Input` uses input aliases, input requirements, and the extra-field policy. `SchemaMode::Output` uses output aliases, removes excluded fields, and requires every field that is actually emitted. Recursive models use `$defs`/`$ref`, with definition names containing the full Rust type path.
+
+Trimming, coercion, custom functions, and the specific regex/email implementations require Rydantic's runtime. Exported schemas mark these behaviors with `x-rydantic-local-rules`; `schema_report(mode)` returns their locations and rules. Input constraints affected by transformations use a permissive structural description, while output schemas describe the processed data. Literal defaults appear as annotations only in input schemas. Schema generation never executes default factories.
+
+```rust
+let report = User::schema_report(rydantic::SchemaMode::Input);
+for local in &report.local_rules {
+    println!("{}: {}", local.schema_path, local.rule);
+}
+```
+
+Schemas can describe API documentation and tool arguments. Use model parsing at execution boundaries to run the local rules.
+
+## Runtime dynamic schemas
+
+The optional `dynamic` feature uses `jsonschema` to compile and reuse schemas at runtime. Network and file resolution are disabled in the default dependency configuration; local `$ref` references are supported.
+
+```toml
+rydantic = { version = "0.6.0", features = ["dynamic"] }
+```
+
+```rust
+use rydantic::{json, DynamicModel};
+
+let model = DynamicModel::compile(json!({
+    "type":"object",
+    "properties":{"age":{"type":"integer","minimum":18}},
+    "required":["age"],
+    "additionalProperties":false
+}))?;
+
+assert!(model.is_valid(&json!({"age":25})));
+assert!(model.validate(&json!({"age":17})).is_err());
+```
+
+`DynamicModel::compile` rejects schemas containing `x-rydantic-local-rules`. `compile_structural` explicitly opts into standard JSON Schema assertions only. Dynamic validation follows the backend's default format-annotation semantics and preserves the input. Typed models handle default filling and coercion.
