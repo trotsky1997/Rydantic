@@ -8,7 +8,7 @@
 [![crates.io](https://img.shields.io/crates/v/rydantic.svg)](https://crates.io/crates/rydantic)
 [![License: MIT](https://img.shields.io/badge/license-MIT-31A879.svg)](https://github.com/trotsky1997/Rydantic/blob/main/LICENSE)
 
-[Documentation](https://qq-261ce204.mintlify.site/introduction) · [Quick start](https://qq-261ce204.mintlify.site/quickstart) · [Stable API](https://docs.rs/rydantic/0.6.0/rydantic/) · [Homepage](https://trotsky1997.github.io/Rydantic/)
+[Documentation](https://rydantic.mintlify.site/introduction) · [Quick start](https://rydantic.mintlify.site/quickstart) · [Stable API](https://docs.rs/rydantic/0.6.0/rydantic/) · [Homepage](https://trotsky1997.github.io/Rydantic/)
 
 </div>
 
@@ -73,7 +73,7 @@ fn main() -> Result<(), rydantic::ValidationErrors> {
 
 `coerce` makes conversion explicit. Invalid fields produce structured errors with locations and codes. `Model` also generates Serde implementations: deserialization validates input, and serialization revalidates the current object.
 
-Continue with [validation rules](https://qq-261ce204.mintlify.site/models/validation), [model shapes](https://qq-261ce204.mintlify.site/models/structure), or [JSON Schema](https://qq-261ce204.mintlify.site/models/schema).
+Continue with [validation rules](https://rydantic.mintlify.site/models/validation), [model shapes](https://rydantic.mintlify.site/models/structure), or [JSON Schema](https://rydantic.mintlify.site/models/schema).
 
 ## Choose your integrations
 
@@ -86,13 +86,13 @@ rydantic = { version = "0.6.0", features = ["axum", "postgres"] }
 
 | Build with | Features | Guide |
 | --- | --- | --- |
-| HTTP APIs | `axum` | [Axum](https://qq-261ce204.mintlify.site/integrations/axum) |
-| Relational data | `sqlite`, `postgres`, or `mysql` | [SQL models](https://qq-261ce204.mintlify.site/integrations/sql) · [Migrations](https://qq-261ce204.mintlify.site/integrations/migrations) |
-| Binary protocols | `capnp` | [Generated schemas](https://qq-261ce204.mintlify.site/integrations/capnp) · [Existing schemas](https://qq-261ce204.mintlify.site/integrations/existing-capnp) |
-| Dates and exact decimals | `chrono`, `decimal` | [Dates and Decimal](https://qq-261ce204.mintlify.site/models/dates-decimal) |
-| Runtime JSON Schema | `dynamic` | [JSON Schema](https://qq-261ce204.mintlify.site/models/schema) |
+| HTTP APIs | `axum` | [Axum](https://rydantic.mintlify.site/integrations/axum) |
+| Relational data | `sqlite`, `postgres`, or `mysql` | [SQL models](https://rydantic.mintlify.site/integrations/sql) · [Migrations](https://rydantic.mintlify.site/integrations/migrations) |
+| Binary protocols | `capnp` | [Generated schemas](https://rydantic.mintlify.site/integrations/capnp) · [Existing schemas](https://rydantic.mintlify.site/integrations/existing-capnp) |
+| Dates and exact decimals | `chrono`, `decimal` | [Dates and Decimal](https://rydantic.mintlify.site/models/dates-decimal) |
+| Runtime JSON Schema | `dynamic` | [JSON Schema](https://rydantic.mintlify.site/models/schema) |
 
-See the [complete feature reference](https://qq-261ce204.mintlify.site/reference/features). Automatic Cap'n Proto binding generation also requires the official `capnp` compiler on `PATH`.
+See the [complete feature reference](https://rydantic.mintlify.site/reference/features). Automatic Cap'n Proto binding generation also requires the official `capnp` compiler on `PATH`.
 
 ## Stable and beta
 
