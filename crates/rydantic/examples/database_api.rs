@@ -9,7 +9,7 @@ use rydantic::{
         Json, Router,
     },
     sql::SqlBackend,
-    sqlx::{sqlite::SqlitePoolOptions, Pool},
+    sqlx::Pool,
     Model, SqlError, SqlModel,
 };
 
@@ -72,7 +72,7 @@ async fn remove<DB: SqlBackend>(
 }
 
 async fn run<DB: SqlBackend>(pool: Pool<DB>) -> Result<(), Box<dyn std::error::Error>> {
-    User::create_table(&pool).await?;
+    User::migrate(&pool).await?;
     if std::env::args().any(|arg| arg == "--smoke") {
         use rydantic::axum::framework::{body::Body, http::Request};
         use tower::ServiceExt;
@@ -142,9 +142,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             return Err("enable the mysql feature for a MySQL DATABASE_URL".into());
         }
     }
-    run(SqlitePoolOptions::new()
-        .max_connections(1)
-        .connect(&url)
-        .await?)
-    .await
+    #[cfg(feature = "sqlite")]
+    {
+        run(rydantic::sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect(&url)
+            .await?)
+        .await
+    }
+    #[cfg(not(feature = "sqlite"))]
+    {
+        Err("enable sqlite, postgres or mysql and set DATABASE_URL for the selected driver".into())
+    }
 }

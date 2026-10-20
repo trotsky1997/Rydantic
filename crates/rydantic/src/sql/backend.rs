@@ -1,6 +1,8 @@
 use super::{field_error, SqlError, SqlParameter, SqlType, SqlValue};
 use crate::BoxFuture;
-use sqlx::{Database, QueryBuilder, Row, ValueRef};
+use sqlx::{Database, QueryBuilder};
+#[cfg(any(feature = "sqlite", feature = "postgres", feature = "mysql"))]
+use sqlx::{Row, ValueRef};
 
 /// SQL syntax and schema conventions for each supported driver.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -56,6 +58,7 @@ pub trait SqlBackend: Database + Sync {
     }
 }
 
+#[cfg(any(feature = "sqlite", feature = "postgres", feature = "mysql"))]
 macro_rules! backend {
     ($db:ty, $dialect:ident, {$($extra:item)*}) => {
         impl SqlBackend for $db {
@@ -103,14 +106,8 @@ macro_rules! backend {
         }
     };
 }
-backend!(sqlx::Sqlite, Sqlite, {
-    fn bind<V: SqlValue>(value: &V, query: &mut QueryBuilder<Self>) -> Result<(), SqlError> {
-        value.bind(query)
-    }
-    fn read<V: SqlValue>(row: &Self::Row, column: &str) -> Result<V, sqlx::Error> {
-        V::read(row, column)
-    }
-});
+#[cfg(feature = "sqlite")]
+backend!(sqlx::Sqlite, Sqlite, {});
 #[cfg(feature = "postgres")]
 backend!(sqlx::Postgres, Postgres, {});
 #[cfg(feature = "mysql")]

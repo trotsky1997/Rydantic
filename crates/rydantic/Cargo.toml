@@ -22,7 +22,8 @@ chrono = ["dep:chrono"]
 decimal = ["dep:rust_decimal"]
 capnp = ["dep:capnp", "rydantic-derive?/capnp"]
 axum = ["dep:axum"]
-sqlx = ["dep:sqlx"]
+sqlx = ["dep:sqlx", "dep:sha2"]
+sqlite = ["sqlx", "sqlx/sqlite-bundled"]
 postgres = ["sqlx", "sqlx/postgres", "sqlx/tls-rustls-ring"]
 mysql = ["sqlx", "sqlx/mysql-rsa", "sqlx/tls-rustls-ring"]
 
@@ -31,7 +32,7 @@ serde.workspace = true
 serde_json.workspace = true
 regex.workspace = true
 email_address = "0.2"
-rydantic-derive = { version = "0.5.0", path = "../rydantic-derive", optional = true }
+rydantic-derive = { version = "0.6.0", path = "../rydantic-derive", optional = true }
 jsonschema = { workspace = true, optional = true }
 
 chrono = { version = "0.4", default-features = false, features = ["std"], optional = true }
@@ -39,7 +40,8 @@ rust_decimal = { version = "1", default-features = false, features = ["std"], op
 
 capnp = { version = "0.27", features = ["unaligned"], optional = true }
 axum = { version = "0.8.9", default-features = false, features = ["json", "tokio", "http1"], optional = true }
-sqlx = { version = "0.9", default-features = false, features = ["sqlite-bundled", "runtime-tokio"], optional = true }
+sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio"], optional = true }
+sha2 = { version = "0.10", optional = true }
 
 [dev-dependencies]
 jsonschema.workspace = true
@@ -60,8 +62,12 @@ required-features = ["derive", "capnp"]
 
 [[example]]
 name = "sqlite_api"
-required-features = ["derive", "axum", "sqlx"]
+required-features = ["derive", "axum", "sqlite"]
 
 [[example]]
 name = "database_api"
 required-features = ["derive", "axum", "sqlx"]
+
+[[example]]
+name = "automatic_migrations"
+required-features = ["derive", "sqlite"]

@@ -1565,7 +1565,7 @@ checksum = "cf54715a573b99ac80df0bc206da022bcd442c974952c7b9720069370852e21f"
 
 [[package]]
 name = "rydantic"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "axum",
  "capnp",
@@ -1577,6 +1577,7 @@ dependencies = [
  "rydantic-derive",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "sqlx",
  "tokio",
  "tower",
@@ -1585,7 +1586,7 @@ dependencies = [
 
 [[package]]
 name = "rydantic-auto-capnp-fixture"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "rydantic",
  "tempfile",
@@ -1594,7 +1595,7 @@ dependencies = [
 
 [[package]]
 name = "rydantic-capnp-fixture"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "capnp",
  "capnpc",
@@ -1604,7 +1605,7 @@ dependencies = [
 
 [[package]]
 name = "rydantic-derive"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "capnpc",
  "heck",
@@ -1620,7 +1621,7 @@ dependencies = [
 
 [[package]]
 name = "rydantic-renamed-fixture"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "rydantic",
 ]

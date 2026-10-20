@@ -1,5 +1,4 @@
-use super::{field_error, SqlBackend, SqlError};
-use sqlx::{sqlite::SqliteRow, QueryBuilder, Sqlite};
+use super::{field_error, SqlError};
 
 /// Portable storage types mapped to native declarations by each SQL dialect.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -9,17 +8,6 @@ pub enum SqlType {
     Boolean,
     Text,
     Blob,
-}
-impl SqlType {
-    /// SQLite declaration retained for compatibility with the original API.
-    pub const fn declaration(self) -> &'static str {
-        match self {
-            Self::Integer | Self::Boolean => "INTEGER",
-            Self::Real => "REAL",
-            Self::Text => "TEXT",
-            Self::Blob => "BLOB",
-        }
-    }
 }
 /// Owned parameters let a query choose its driver at execution time.
 #[derive(Debug, Clone, PartialEq)]
@@ -37,33 +25,13 @@ impl SqlParameter {
     }
 }
 
-/// Custom SQLite codecs retain `bind`/`read`; portable conversion methods also
-/// enable PostgreSQL, MySQL, and deferred query filters.
+/// Portable codecs shared by all SQL drivers and deferred query filters.
+/// Implement both conversions for custom field types.
 pub trait SqlValue: Sized + Send + Sync {
     const SQL_TYPE: SqlType;
     const NULLABLE: bool = false;
-    fn bind(&self, query: &mut QueryBuilder<Sqlite>) -> Result<(), SqlError> {
-        Sqlite::bind_parameter(self.to_parameter()?, query);
-        Ok(())
-    }
-    fn read(row: &SqliteRow, column: &str) -> Result<Self, sqlx::Error> {
-        Self::from_parameter(Sqlite::read_parameter(row, column, Self::SQL_TYPE)?)
-    }
-    fn to_parameter(&self) -> Result<SqlParameter, SqlError> {
-        Err(field_error(
-            "sql_backend_type",
-            "custom SQL field requires portable parameter encoding",
-        ))
-    }
-    fn from_parameter(_value: SqlParameter) -> Result<Self, sqlx::Error> {
-        Err(decode_error(std::io::Error::new(
-            std::io::ErrorKind::InvalidData,
-            "custom SQL field requires portable row decoding",
-        )))
-    }
-    fn is_null(&self) -> bool {
-        false
-    }
+    fn to_parameter(&self) -> Result<SqlParameter, SqlError>;
+    fn from_parameter(value: SqlParameter) -> Result<Self, sqlx::Error>;
 }
 pub(crate) fn decode_error(error: impl std::error::Error + Send + Sync + 'static) -> sqlx::Error {
     sqlx::Error::Decode(Box::new(error))
@@ -147,44 +115,15 @@ impl<T: SqlValue> SqlValue for Option<T> {
             value => T::from_parameter(value).map(Some),
         }
     }
-    fn bind(&self, query: &mut QueryBuilder<Sqlite>) -> Result<(), SqlError> {
-        match self {
-            Some(value) => value.bind(query),
-            None => {
-                Sqlite::bind_parameter(SqlParameter::Null(T::SQL_TYPE), query);
-                Ok(())
-            }
-        }
-    }
-    fn read(row: &SqliteRow, column: &str) -> Result<Self, sqlx::Error> {
-        use sqlx::{Row, ValueRef};
-        if row.try_get_raw(column)?.is_null() {
-            Ok(None)
-        } else {
-            T::read(row, column).map(Some)
-        }
-    }
-    fn is_null(&self) -> bool {
-        self.is_none()
-    }
 }
 impl<T: SqlValue> SqlValue for Box<T> {
     const SQL_TYPE: SqlType = T::SQL_TYPE;
     const NULLABLE: bool = T::NULLABLE;
-    fn bind(&self, query: &mut QueryBuilder<Sqlite>) -> Result<(), SqlError> {
-        (**self).bind(query)
-    }
-    fn read(row: &SqliteRow, column: &str) -> Result<Self, sqlx::Error> {
-        T::read(row, column).map(Box::new)
-    }
     fn to_parameter(&self) -> Result<SqlParameter, SqlError> {
         (**self).to_parameter()
     }
     fn from_parameter(value: SqlParameter) -> Result<Self, sqlx::Error> {
         T::from_parameter(value).map(Box::new)
-    }
-    fn is_null(&self) -> bool {
-        (**self).is_null()
     }
 }
 /// Supported primary keys, including optional generated keys.
