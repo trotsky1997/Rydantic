@@ -1,0 +1,97 @@
+---
+title: "RydanticAI"
+description: "Build typed agents, resumable graphs and a Responses gateway with the independent rydantic-ai crate."
+---
+
+`rydantic-ai` lives in the same workspace with its own `0.1.0` version and publishing lifecycle. The core Rydantic model crate remains independent of AI transport dependencies.
+
+```toml
+[dependencies]
+rydantic = "0.7.0-beta.1"
+rydantic-ai = "0.1.0"
+```
+
+## Authorize pi Codex
+
+The included Node sidecar uses pi's public SDK for Codex OAuth, credential persistence, refresh and inference. Run these commands inside `crates/rydantic-ai/bridge` in a checkout, or the `bridge` directory of the downloaded crate source:
+
+```sh
+npm ci
+npm run login
+npm start
+```
+
+Complete the browser authorization yourself. Credentials stay in pi's local authentication storage. The sidecar binds to `127.0.0.1:8787` and exposes `/health`, `/v1/models` and `/v1/responses`. It forwards native Responses SSE events, including text deltas, tool calls, terminal status and token usage. Requests from browser origins are rejected. This is a local single-user bridge; use the authenticated Rust gateway for network clients.
+
+The bridge accepts its documented Responses fields and rejects unsupported parameters. Requests use `store=false`. Codex subscription access and model availability depend on the authenticated account; inspect `/v1/models` and complete an inference call to verify a selected model.
+
+## Return a validated Rust type
+
+```rust
+use rydantic::Model;
+use rydantic_ai::{Agent, ResponsesProvider, RunContext};
+use std::sync::Arc;
+
+#[derive(Model)]
+struct Answer {
+    answer: String,
+}
+
+// Inside an async function:
+let provider = Arc::new(ResponsesProvider::pi_codex(
+    "http://127.0.0.1:8787/v1",
+)?);
+let agent = Agent::<(), Answer>::new(provider, "gpt-6-luna");
+let result = agent.run("What is 19 + 23?", Arc::new(()), RunContext::default()).await?;
+println!("{}", result.output.answer);
+```
+
+Select an account-available model instead of relying on the example ID. The pi Codex transport uses schema instructions followed by Rydantic runtime validation and supports bounded correction attempts. It has no output-token request parameter. Native Responses endpoints use `ResponsesProvider::new` and can request provider JSON Schema and output limits.
+
+## Tools and execution limits
+
+`TypedTool<Dependencies, Arguments, Output, Handler>` derives its argument schema from a Rydantic model. Arguments are validated before execution. The handler receives typed arguments, `Arc<Dependencies>` and a `RunContext`; its output is validated before returning to the model. Async validators are supported for arguments and final outputs.
+
+Agent limits cover model calls, tool calls, correction retries and observed token usage. A shared cancellation token and absolute deadline cover provider requests, validation and handlers. Tool execution errors stop the run; executed handlers are never automatically replayed. Retain transactional or idempotency controls for external side effects in the handler.
+
+Provider schemas resolve root references and normalize definition names. Numeric constraints beyond JavaScript's safe integer range become textual descriptions and are recorded in `schema::prepare_model_schema::<T>().runtime_constraints`; Rydantic still enforces the original numeric constraints at runtime. This keeps pi's JSON transport and Codex tools compatible with Rust integer models.
+
+```sh
+cargo run -p rydantic-ai --example pi_codex
+```
+
+## Typed graphs and checkpoints
+
+`Graph<State, Dependencies, NodeKey, Output>` uses typed state, dependencies and node keys, including application enums. Implement `Node` and declare allowed outgoing edges while building the graph. Each node returns `Transition::Next`, `Transition::Pause` or `Transition::End`.
+
+A pause returns `Checkpoint { state, next, steps }`. Serialize the checkpoint with Serde, persist it in application storage, and pass it to `Graph::resume` with fresh dependencies and context. Step limits apply across resumes. Unknown nodes and undeclared transitions fail explicitly.
+
+```sh
+cargo run -p rydantic-ai --example graph
+```
+
+Checkpoints are boundaries between nodes. Applications own durable storage, checkpoint authenticity and external side-effect recovery.
+
+## Authenticated model gateway
+
+The gateway exposes `GET /v1/models` and `POST /v1/responses`, including SSE. Each client has a bearer key and an explicit model allowlist. Configuration files contain environment-variable names for keys, and route definitions identify upstream URLs and models.
+
+```sh
+cargo run -p rydantic-ai --bin rydantic-ai-gateway -- crates/rydantic-ai/examples/gateway.json
+```
+
+Set `RYDANTIC_GATEWAY_KEY` to a private random value of at least 16 bytes before running the example configuration. Keys supplied by gateway clients remain separate from upstream provider credentials. SSE disconnects cancel the upstream request. Ordered failover applies to HTTP 429/502/503/504 before any stream events; partially delivered responses and transport/protocol failures are not replayed.
+
+Per-client and global ledgers atomically reserve capacity before each attempt. They track attempts, tokens and optional operator-maintained prices using integer micro-USD. Actual completion reconciles usage; unknown or cancelled outcomes consume reservations conservatively. Usage exceeding a reservation can overdraw the ledger and block subsequent admission. These controls govern admission and observed accounting; an upstream billing ceiling requires provider-side enforcement. Dollar limits require prices on every allowed route. Codex subscriptions can use request and token controls without assigning a dollar cost. Ledgers are in memory and reset on restart.
+
+## Tracing and tests
+
+Agent runs, tools, graph nodes and gateway attempts emit standard Rust `tracing` spans. Usage and retry counts are recorded without logging prompts or credential values. Configure a subscriber and an OpenTelemetry exporter in your application as needed.
+
+```sh
+cargo test -p rydantic-ai --all-features
+cargo check -p rydantic-ai --no-default-features
+cd crates/rydantic-ai/bridge && npm ci && npm test
+```
+
+Normal tests use local fake providers. Live Codex tests are ignored by default and require explicit authorization and `RYDANTIC_PI_URL`.
