@@ -375,7 +375,12 @@ async fn apply_locked<DB: SqlBackend>(
 }
 
 async fn history_table<DB: SqlBackend>(connection: &mut DB::Connection) -> Result<(), SqlError> {
-    execute::<DB>(connection, "CREATE TABLE IF NOT EXISTS _rydantic_migrations (table_name VARCHAR(255) NOT NULL, revision BIGINT NOT NULL, checksum VARCHAR(64) NOT NULL, status VARCHAR(16) NOT NULL, before_schema TEXT NOT NULL, after_schema TEXT NOT NULL, changes TEXT NOT NULL, applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (table_name, revision))").await
+    let text = if DB::DIALECT == Dialect::MySql {
+        "LONGTEXT"
+    } else {
+        "TEXT"
+    };
+    execute::<DB>(connection, &format!("CREATE TABLE IF NOT EXISTS _rydantic_migrations (table_name VARCHAR(255) NOT NULL, revision BIGINT NOT NULL, checksum VARCHAR(64) NOT NULL, status VARCHAR(16) NOT NULL, before_schema {text} NOT NULL, after_schema {text} NOT NULL, changes {text} NOT NULL, applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (table_name, revision))")).await
 }
 async fn record<DB: SqlBackend>(
     connection: &mut DB::Connection,

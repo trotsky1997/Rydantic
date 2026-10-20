@@ -505,16 +505,32 @@ fn server_alter<T: SqlModel, DB: SqlBackend>(
                 .map(|s| s.strip_prefix(&prefix).expect("native rename").to_owned()),
         );
     }
-    for fk in removed_fks {
-        clauses.push(format!(
-            "DROP {} {}",
-            if dialect == Dialect::MySql {
-                "FOREIGN KEY"
-            } else {
-                "CONSTRAINT"
-            },
-            q(&fk.name)
-        ));
+    let drops = removed_fks
+        .iter()
+        .map(|fk| {
+            format!(
+                "DROP {} {}",
+                if dialect == Dialect::MySql {
+                    "FOREIGN KEY"
+                } else {
+                    "CONSTRAINT"
+                },
+                q(&fk.name)
+            )
+        })
+        .collect::<Vec<_>>();
+    let self_reference_index = removed_indexes.iter().any(|index| {
+        removed_fks
+            .iter()
+            .any(|fk| fk.table == T::TABLE && index.columns == [fk.target.clone()])
+    });
+    if !drops.is_empty() && (dialect == Dialect::Postgres || self_reference_index) {
+        // Referencing constraints must go before their supporting unique indexes.
+        // MySQL also requires a separate ALTER for a self-referenced key.
+        plan.statements
+            .push(format!("ALTER TABLE {table} {}", drops.join(", ")));
+    } else {
+        clauses.extend(drops);
     }
     if dialect == Dialect::MySql {
         for index in removed_indexes {

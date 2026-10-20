@@ -125,6 +125,24 @@ struct Text {
     id: i64,
     number: String,
 }
+#[derive(Debug, Model, SqlModel)]
+#[sql(table = "rd06_self")]
+struct SelfReference {
+    #[sql(primary_key)]
+    id: i64,
+    #[sql(unique)]
+    code: i64,
+    #[sql(references = "rd06_self.code")]
+    parent: Option<i64>,
+}
+#[derive(Debug, Model, SqlModel)]
+#[sql(table = "rd06_self")]
+struct WithoutReference {
+    #[sql(primary_key)]
+    id: i64,
+    code: i64,
+    parent: Option<i64>,
+}
 async fn execute<DB: SqlBackend>(pool: &Pool<DB>, sql: &str) {
     let mut c = pool.acquire().await.unwrap();
     DB::execute(&mut QueryBuilder::new(sql), &mut c)
@@ -140,6 +158,7 @@ fn code(error: SqlError, expected: &str) {
 async fn evolution<DB: SqlBackend>(pool: &Pool<DB>) {
     for table in [
         "rd06_child",
+        "rd06_self",
         "rd06_parent",
         "rd06_accounts",
         "rd06_values",
@@ -269,6 +288,38 @@ async fn evolution<DB: SqlBackend>(pool: &Pool<DB>) {
     assert!(ParentV2::delete(pool, &parent.id.unwrap()).await.is_err());
     ChildV2::delete(pool, &1).await.unwrap();
     assert!(ParentV2::delete(pool, &parent.id.unwrap()).await.unwrap());
+    SelfReference::migrate(pool).await.unwrap();
+    SelfReference {
+        id: 1,
+        code: 1,
+        parent: None,
+    }
+    .insert(pool)
+    .await
+    .unwrap();
+    SelfReference {
+        id: 2,
+        code: 2,
+        parent: Some(1),
+    }
+    .insert(pool)
+    .await
+    .unwrap();
+    WithoutReference::migrate(pool).await.unwrap();
+    assert_eq!(
+        WithoutReference::get(pool, &2)
+            .await
+            .unwrap()
+            .unwrap()
+            .parent,
+        Some(1)
+    );
+    assert!(WithoutReference::migrate(pool)
+        .await
+        .unwrap()
+        .plan
+        .is_empty());
+
     let (first, second) = tokio::join!(Nullable::migrate(pool), Nullable::migrate(pool));
     assert_eq!(
         usize::from(first.unwrap().revision.is_some())
@@ -338,7 +389,7 @@ async fn sqlite_model_evolution() {
             .fetch_one(&pool)
             .await
             .unwrap();
-    assert_eq!(applied, 11);
+    assert_eq!(applied, 13);
 }
 #[cfg(feature = "postgres")]
 #[tokio::test]
