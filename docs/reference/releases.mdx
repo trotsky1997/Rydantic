@@ -4,6 +4,12 @@ description: "Release history and the current migration path."
 icon: "tag"
 ---
 
+## RydanticAI 0.4.0
+
+The independently versioned [rydantic-ai crate](https://crates.io/crates/rydantic-ai/0.4.0) supports Responses, Chat Completions and Anthropic Messages upstreams through BASEURL and APIKEY. [API providers](/integrations/api-providers) share typed tools, validation correction, Partial and Iterable streams, usage accounting and gateway routing. Native message history survives same-protocol tool continuations, including through the gateway HTTP interface.
+
+Provider setup uses standard protocol constructors and explicit capabilities. The published crate contains the Rust SDK, gateway and generic examples. Core release versions remain independent.
+
 ## RydanticAI 0.3.0
 
 The independently versioned [rydantic-ai crate](https://crates.io/crates/rydantic-ai/0.3.0) adds [structured output streaming](/integrations/structured-output). Core release versions remain independent.

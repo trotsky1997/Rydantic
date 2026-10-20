@@ -1,6 +1,6 @@
 use rydantic_ai::{
     gateway::{self, Budget, ClientPolicy, Gateway, Price, Route},
-    ModelProvider, ResponsesProvider,
+    Api, Capabilities, HttpProvider, ModelProvider,
 };
 use serde::Deserialize;
 use std::{
@@ -24,7 +24,8 @@ struct Upstream {
     base_url: String,
     model: String,
     #[serde(default)]
-    pi_codex: bool,
+    api: Api,
+    capabilities: Option<Capabilities>,
     api_key_env: Option<String>,
     price: Option<Price>,
 }
@@ -51,22 +52,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     for (alias, upstreams) in config.routes {
         let mut targets = Vec::new();
         for upstream in upstreams {
-            let provider: Arc<dyn ModelProvider> = if upstream.pi_codex {
-                if upstream.api_key_env.is_some() {
-                    return Err("pi_codex uses the local bridge authentication".into());
-                }
-                Arc::new(ResponsesProvider::pi_codex(&upstream.base_url)?)
-            } else {
-                let key = upstream
-                    .api_key_env
-                    .map(|name| {
-                        std::env::var(&name).map_err(|_| {
-                            format!("missing provider credential environment variable {name}")
-                        })
+            let key = upstream
+                .api_key_env
+                .map(|name| {
+                    std::env::var(&name).map_err(|_| {
+                        format!("missing provider credential environment variable {name}")
                     })
-                    .transpose()?;
-                Arc::new(ResponsesProvider::new(&upstream.base_url, key)?)
-            };
+                })
+                .transpose()?;
+            let mut provider = HttpProvider::new(upstream.api, &upstream.base_url, key)?;
+            if let Some(capabilities) = upstream.capabilities {
+                provider = provider.with_capabilities(capabilities);
+            }
+            let provider: Arc<dyn ModelProvider> = Arc::new(provider);
             targets.push(Route {
                 provider,
                 model: upstream.model,

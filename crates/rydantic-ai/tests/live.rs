@@ -75,12 +75,22 @@ impl Node<State, Agent<(), Answer>, Key, String> for Finish {
 }
 
 #[tokio::test]
-#[ignore = "requires a user-authorized pi Codex bridge and RYDANTIC_PI_URL"]
-async fn pi_codex_agent_tool_gateway_and_graph_checkpoint() {
-    let base =
-        std::env::var("RYDANTIC_PI_URL").expect("set RYDANTIC_PI_URL after OAuth authorization");
-    let model = std::env::var("RYDANTIC_AI_MODEL").unwrap_or_else(|_| "gpt-6-luna".into());
-    let provider = Arc::new(ResponsesProvider::pi_codex(&base).unwrap());
+#[ignore = "requires BASEURL and MODEL for a live Responses endpoint"]
+async fn responses_agent_tool_gateway_and_graph_checkpoint() {
+    let base = std::env::var("BASEURL").expect("set BASEURL for the live endpoint");
+    let model = std::env::var("MODEL").expect("set MODEL");
+    let provider = Arc::new(
+        ResponsesProvider::new(&base, std::env::var("APIKEY").ok())
+            .unwrap()
+            .with_capabilities(rydantic_ai::Capabilities {
+                native_json_schema: std::env::var("NATIVE_JSON_SCHEMA")
+                    .map(|v| v == "true")
+                    .unwrap_or(true),
+                output_token_limit: std::env::var("OUTPUT_TOKEN_LIMIT")
+                    .map(|v| v == "true")
+                    .unwrap_or(true),
+            }),
+    );
     let budget = Budget {
         max_requests: 8,
         max_tokens: 100_000,
@@ -90,7 +100,7 @@ async fn pi_codex_agent_tool_gateway_and_graph_checkpoint() {
     let key = "live-test-gateway-key-12345";
     let gateway = Gateway::new(
         BTreeMap::from([(
-            "codex".into(),
+            "model".into(),
             vec![Route {
                 provider,
                 model,
@@ -100,7 +110,7 @@ async fn pi_codex_agent_tool_gateway_and_graph_checkpoint() {
         vec![ClientPolicy {
             id: "live".into(),
             key: key.into(),
-            models: HashSet::from(["codex".into()]),
+            models: HashSet::from(["model".into()]),
             budget: budget.clone(),
         }],
         budget,
@@ -112,7 +122,14 @@ async fn pi_codex_agent_tool_gateway_and_graph_checkpoint() {
     let server = tokio::spawn(async move {
         axum::serve(listener, app).await.unwrap();
     });
-    let http = Arc::new(ResponsesProvider::pi_codex(&url).unwrap().with_bearer(key));
+    let http = Arc::new(
+        ResponsesProvider::gateway(&url, Some(key.into()))
+            .unwrap()
+            .with_capabilities(rydantic_ai::Capabilities {
+                native_json_schema: false,
+                output_token_limit: false,
+            }),
+    );
     let tool = TypedTool::<(), Add, Sum, _>::new(
         "add",
         "Add two integers",
@@ -123,7 +140,7 @@ async fn pi_codex_agent_tool_gateway_and_graph_checkpoint() {
         },
     )
     .unwrap();
-    let agent = Agent::<(), Answer>::new(http, "codex")
+    let agent = Agent::<(), Answer>::new(http, "model")
         .instructions("Use add for arithmetic and return the exact numeric result in answer.")
         .tool(tool)
         .unwrap();

@@ -269,9 +269,8 @@ async fn gateway_http_enforces_keys_routes_budget_and_sse_completion() {
         .unwrap();
     assert_eq!(models["data"][0]["id"], "chat");
     assert!(!models.to_string().contains("private-upstream"));
-    let provider = ResponsesProvider::pi_codex(&format!("{}/v1", server.base))
-        .unwrap()
-        .with_bearer(key);
+    let provider =
+        ResponsesProvider::gateway(&format!("{}/v1", server.base), Some(key.into())).unwrap();
     for expected in ["first", "second"] {
         assert_eq!(
             provider

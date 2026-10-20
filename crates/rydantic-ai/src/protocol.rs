@@ -25,7 +25,8 @@ impl Usage {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Capabilities {
     pub native_json_schema: bool,
     pub output_token_limit: bool,

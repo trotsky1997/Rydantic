@@ -1,4 +1,4 @@
-use rydantic_ai::{rydantic::Model, Agent, Error, ResponsesProvider, RunContext, TypedTool};
+use rydantic_ai::{rydantic::Model, Agent, Api, Error, HttpProvider, RunContext, TypedTool};
 use std::sync::Arc;
 
 #[derive(Debug, Model)]
@@ -17,10 +17,11 @@ struct Sum {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let base =
-        std::env::var("RYDANTIC_PI_URL").unwrap_or_else(|_| "http://127.0.0.1:8787/v1".into());
-    let model = std::env::var("RYDANTIC_AI_MODEL").unwrap_or_else(|_| "gpt-6-luna".into());
-    let provider = Arc::new(ResponsesProvider::pi_codex(&base)?);
+    let api: Api = std::env::var("API")
+        .unwrap_or_else(|_| "responses".into())
+        .parse()?;
+    let model = std::env::var("MODEL").map_err(|_| "set MODEL locally")?;
+    let provider = Arc::new(HttpProvider::from_env(api)?);
     let add = TypedTool::<(), Add, Sum, _>::new(
         "add",
         "Add two integers exactly",
