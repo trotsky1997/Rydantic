@@ -61,6 +61,8 @@ jobs:
         run: cargo test --locked -p rydantic-capnp-fixture --test native -- --ignored
       - name: Check runtime without derive or dynamic features
         run: cargo check -p rydantic --no-default-features --lib --locked
+      - name: Check settings without derive
+        run: cargo check -p rydantic --no-default-features --features settings --lib --locked
       - name: Check optional runtime features without derive
         run: cargo check -p rydantic --no-default-features --features chrono,decimal,capnp --lib --locked
       - name: Check framework integrations without derive

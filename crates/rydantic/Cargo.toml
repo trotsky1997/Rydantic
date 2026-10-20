@@ -17,6 +17,7 @@ all-features = true
 [features]
 default = ["derive"]
 derive = ["dep:rydantic-derive"]
+settings = []
 dynamic = ["dep:jsonschema"]
 chrono = ["dep:chrono"]
 decimal = ["dep:rust_decimal"]
