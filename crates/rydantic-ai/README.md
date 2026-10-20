@@ -4,10 +4,13 @@ Typed Rust agents, explicit workflow graphs and a Responses HTTP gateway, built 
 
 ```toml
 [dependencies]
+rydantic = "0.7.0-beta.1"
 rydantic-ai = "0.1.0"
 ```
 
 `rydantic-ai` has its own version and release lifecycle inside the Rydantic workspace. The core `rydantic` crate does not depend on it. Disable default features for graphs and custom providers without HTTP dependencies.
+
+Declare `rydantic` directly when deriving application models so its derive macro can resolve the model dependency, including renamed dependencies. The requirement above permits compatible published 0.7.0 prereleases.
 
 ## pi Codex login and Responses bridge
 
@@ -34,7 +37,8 @@ The provider schema adapter resolves document-root references and gives definiti
 Unsafe numeric literals in `const`, `enum`, `default` or `examples` fail preparation explicitly. Tool argument schemas and native structured-output schemas require an object root; instruction-based final outputs can use other model shapes.
 
 ```rust,no_run
-use rydantic_ai::{rydantic::Model, Agent, ResponsesProvider, RunContext};
+use rydantic::Model;
+use rydantic_ai::{Agent, ResponsesProvider, RunContext};
 use std::sync::Arc;
 
 #[derive(Model)]

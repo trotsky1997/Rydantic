@@ -7,6 +7,7 @@ description: "Build typed agents, resumable graphs and a Responses gateway with 
 
 ```toml
 [dependencies]
+rydantic = "0.7.0-beta.1"
 rydantic-ai = "0.1.0"
 ```
 
@@ -27,7 +28,8 @@ The bridge accepts its documented Responses fields and rejects unsupported param
 ## Return a validated Rust type
 
 ```rust
-use rydantic_ai::{rydantic::Model, Agent, ResponsesProvider, RunContext};
+use rydantic::Model;
+use rydantic_ai::{Agent, ResponsesProvider, RunContext};
 use std::sync::Arc;
 
 #[derive(Model)]
