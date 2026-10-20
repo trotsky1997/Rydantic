@@ -79,12 +79,12 @@ def audit_package(root, version):
 
 def publish(root, tag):
     version, sha = preflight(root, tag)
-    subprocess.run(["cargo", "publish", "--locked", "--dry-run", "-p", CRATE], cwd=root, check=True)
+    subprocess.run(["cargo", "publish", "--locked", "--registry", "crates-io", "--dry-run", "-p", CRATE], cwd=root, check=True)
     checksum = package_checksum(root, CRATE, version)
     audit_package(root, version)
     # A nonzero exit can still follow an accepted upload. Observe the outcome;
     # never send a second upload from this invocation.
-    outcome = subprocess.run(["cargo", "publish", "--locked", "-p", CRATE], cwd=root)
+    outcome = subprocess.run(["cargo", "publish", "--locked", "--registry", "crates-io", "-p", CRATE], cwd=root)
     print(f"AI upload exit status: {outcome.returncode}; verifying registry outcome")
     wait_for_publication(CRATE, version, checksum)
     print(json.dumps({"crate": CRATE, "version": version, "sha": sha, "checksum": checksum}))

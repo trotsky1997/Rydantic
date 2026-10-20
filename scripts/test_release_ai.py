@@ -1,6 +1,7 @@
 """Offline independent-version and single-upload regression tests."""
 import io
 import json
+import os
 from pathlib import Path
 import subprocess
 import tarfile
@@ -43,6 +44,17 @@ class ReleaseAI(unittest.TestCase):
             self.assertIn("--dry-run", run.call_args_list[0].args[0])
             self.assertNotIn("--dry-run", run.call_args_list[1].args[0])
             self.assertEqual(run.call_args_list[1].args[0][-1], "rydantic-ai")
+            observe.assert_called_once_with("rydantic-ai", "0.1.1", "checksum")
+
+    def test_alternate_default_cannot_redirect_publish(self):
+        with patch.dict(os.environ, {"CARGO_REGISTRY_DEFAULT": "private-registry"}), patch.object(release_ai, "preflight", return_value=("0.1.1", "sha")), patch.object(release_ai, "package_checksum", return_value="checksum"), patch.object(release_ai, "audit_package"), patch.object(release_ai, "wait_for_publication") as observe, patch.object(release_ai.subprocess, "run", return_value=subprocess.CompletedProcess([], 0)) as run:
+            release_ai.publish(Path("."), "rydantic-ai-v0.1.1")
+            self.assertEqual(run.call_count, 2)
+            for call in run.call_args_list:
+                args = call.args[0]
+                self.assertEqual(args[args.index("--registry") + 1], "crates-io")
+            self.assertIn("--dry-run", run.call_args_list[0].args[0])
+            self.assertNotIn("--dry-run", run.call_args_list[1].args[0])
             observe.assert_called_once_with("rydantic-ai", "0.1.1", "checksum")
 
     def test_package_audit_rejects_installed_dependencies_and_credentials(self):
