@@ -15,7 +15,7 @@ The workspace contains the `rydantic` runtime, the `rydantic-derive` procedural 
 ## Documentation
 
 - [Project homepage](https://trotsky1997.github.io/Rydantic/)
-- [Guides and tutorials](docs/README.md) — the Mintlify source, organized by topic
+- [Guides and tutorials](https://qq-261ce204.mintlify.site/introduction) — the full Mintlify documentation
 - [Rust API reference](https://docs.rs/rydantic/0.6.0/rydantic/)
 - [Documentation development](docs/README.md#preview-and-validate)
 

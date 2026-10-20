@@ -1,6 +1,6 @@
 # Rydantic documentation
 
-This directory is a [Mintlify](https://www.mintlify.com/) documentation project. The guides describe the published 0.6.0 API, with upcoming source changes called out explicitly.
+Read the published guides at [Rydantic Docs](https://qq-261ce204.mintlify.site/introduction). This directory is the [Mintlify](https://www.mintlify.com/) source project. The guides describe the published 0.6.0 API, with upcoming source changes called out explicitly.
 
 ## Read the guides
 
@@ -28,7 +28,7 @@ npm run docs:check
 
 Connect the existing `trotsky1997/Rydantic` repository in the Mintlify dashboard. Set the production branch to `main` and the documentation directory to `docs`. Keep the GitHub App installation limited to the intended repository. Pushes to `main` then publish the docs through Mintlify.
 
-After Mintlify assigns the public documentation URL, set `docs` in `website/site.json` to that exact HTTPS origin. The homepage build uses it for every documentation link. Until then, those links open the corresponding guides on GitHub.
+The public documentation origin is configured as `docs` in `website/site.json`. The homepage build uses it for every documentation link. Update that one value when changing the documentation hostname.
 
 ## Homepage
 
