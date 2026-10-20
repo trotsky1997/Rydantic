@@ -20,6 +20,8 @@ pub fn derive_sql_model(input: TokenStream) -> TokenStream {
 }
 
 /// Derive a complete Cap'n Proto protocol and its bindings from an inline model module.
+/// Every model must explicitly derive `Model` (an imported alias also works).
+/// This attribute does not insert or resolve derive macros.
 #[cfg(feature = "capnp")]
 #[proc_macro_attribute]
 pub fn capnp_models(args: TokenStream, input: TokenStream) -> TokenStream {

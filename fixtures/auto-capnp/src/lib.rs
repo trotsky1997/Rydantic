@@ -7,14 +7,14 @@ pub mod models {
     pub type Items<T> = Vec<T>;
     pub type Maybe<T> = Option<T>;
 
-    #[derive(Debug, PartialEq)]
+    #[derive(rd::Model, Debug, PartialEq)]
     pub enum Role {
         Guest,
         #[model(rename = "administrator", capnp_name = "admin")]
         Admin,
     }
 
-    #[derive(Debug, PartialEq)]
+    #[derive(rd::Model, Debug, PartialEq)]
     pub struct User {
         #[model(trim, min_length = 1, capnp_name = "full_name")]
         pub name: Name,
@@ -41,7 +41,7 @@ pub mod models {
     }
 
     pub mod nested {
-        #[derive(Debug, PartialEq)]
+        #[derive(rd::Model, Debug, PartialEq)]
         pub struct Address {
             #[model(trim)]
             pub city: String,
@@ -49,13 +49,13 @@ pub mod models {
         }
 
         use super::Items as Collection;
-        #[derive(Debug, PartialEq)]
+        #[derive(rd::Model, Debug, PartialEq)]
         pub struct Addresses {
             pub values: Collection<Address>,
         }
     }
 
-    #[derive(Debug, PartialEq)]
+    #[derive(rd::Model, Debug, PartialEq)]
     #[model(untagged)]
     pub enum Event {
         Ping,
@@ -74,19 +74,19 @@ pub mod models {
         },
     }
 
-    #[derive(Debug, PartialEq)]
+    #[derive(rd::Model, Debug, PartialEq)]
     #[model(untagged)]
     pub enum Single {
         Only(u64),
     }
 
-    #[derive(Debug, PartialEq)]
+    #[derive(rd::Model, Debug, PartialEq)]
     pub struct Empty;
 
-    #[derive(Debug, PartialEq)]
+    #[derive(rd::Model, Debug, PartialEq)]
     pub struct Number(pub u128);
 
-    #[derive(Debug, PartialEq)]
+    #[derive(rd::Model, Debug, PartialEq)]
     pub struct Pair(pub String, pub i64);
 }
 
