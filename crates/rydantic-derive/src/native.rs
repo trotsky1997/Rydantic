@@ -303,7 +303,7 @@ fn read_fields(
     let mut parses = vec![];
     let mut native_names = std::collections::HashSet::new();
     let locals = (0..fields.len())
-        .map(|i| format_ident!("__rydantic_field_{i}"))
+        .map(super::field_ident)
         .collect::<Vec<_>>();
     for (i, field) in fields.iter().enumerate() {
         let local = &locals[i];

@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as Tokens;
-use quote::{format_ident, quote};
+use quote::format_ident;
 use syn::{
     parse_macro_input, parse_quote, spanned::Spanned, Data, DeriveInput, Expr, Fields, Ident,
     Member, Type,
@@ -10,6 +10,24 @@ mod attrs;
 mod auto_protocol;
 mod native;
 mod sql_model;
+
+// Generated locals must not shadow callback paths (or default expressions) from
+// the input. Mixed-site hygiene applies only to tokens written by the macro;
+// interpolated user tokens retain their original spans and name resolution.
+// Keep this after the module declarations: it scopes the policy to Model's
+// expansion here, rather than changing the other derives' quote invocations.
+macro_rules! quote {
+    ($($tokens:tt)*) => {
+        ::quote::quote_spanned!(::proc_macro2::Span::mixed_site()=> $($tokens)*)
+    };
+}
+
+fn field_ident(index: usize) -> Ident {
+    format_ident!(
+        "__rydantic_field_{index}",
+        span = proc_macro2::Span::mixed_site()
+    )
+}
 
 /// Derive SQL schema metadata, SQLx row decoding and validated CRUD operations.
 #[proc_macro_derive(SqlModel, attributes(sql, model))]
@@ -283,9 +301,7 @@ fn parse_shape(
     let count = fields.len();
     let newtype = shape == Shape::Tuple && count == 1;
     let mut parses = vec![];
-    let locals = (0..count)
-        .map(|i| format_ident!("__rydantic_field_{i}"))
-        .collect::<Vec<_>>();
+    let locals = (0..count).map(field_ident).collect::<Vec<_>>();
     // Declared fields are consumed before flattened maps, independently of Rust field order.
     let mut order = (0..count).collect::<Vec<_>>();
     order.sort_by_key(|i| fields[*i].attr.flatten || fields[*i].attr.extra);
@@ -519,9 +535,7 @@ fn schema_shape(
     if schema["allOf"].as_array().is_some_and(|v|v.is_empty()){schema.as_object_mut().expect("schema").remove("allOf");}schema}}
 }
 fn constructor(fields: &[Field], shape: Shape, path: Tokens) -> Tokens {
-    let locals = (0..fields.len())
-        .map(|i| format_ident!("__rydantic_field_{i}"))
-        .collect::<Vec<_>>();
+    let locals = (0..fields.len()).map(field_ident).collect::<Vec<_>>();
     let names = fields.iter().map(|f| &f.ident);
     match shape {
         Shape::Named => quote!(#path{#(#names:#locals,)*}),
@@ -530,9 +544,7 @@ fn constructor(fields: &[Field], shape: Shape, path: Tokens) -> Tokens {
     }
 }
 fn pattern(fields: &[Field], shape: Shape, path: Tokens) -> (Tokens, Vec<Tokens>) {
-    let locals = (0..fields.len())
-        .map(|i| format_ident!("__rydantic_field_{i}"))
-        .collect::<Vec<_>>();
+    let locals = (0..fields.len()).map(field_ident).collect::<Vec<_>>();
     let names = fields.iter().map(|f| &f.ident);
     let values = locals.iter().map(|l| quote!(#l)).collect();
     let pat = match shape {
@@ -547,9 +559,7 @@ fn prepare_fields(fields: &[Field], shape: Shape, mode: &Mode, path: Tokens) -> 
     let tr = mode.tr();
     let (pat, _) = pattern(fields, shape, path.clone());
     let constructor = constructor(fields, shape, path);
-    let locals = (0..fields.len())
-        .map(|i| format_ident!("__rydantic_field_{i}"))
-        .collect::<Vec<_>>();
+    let locals = (0..fields.len()).map(field_ident).collect::<Vec<_>>();
     let prepare=fields.iter().enumerate().map(|(i,f)|{let ty=&f.ty;let local=&locals[i];let rule=rules(f,rd);
         let raw=if let Some(path)=&f.attr.before{let decoded=mode.decode(ty,quote!(#rd::Input::Owned(raw)),f.attr.coerce);quote!{let raw=<#ty as #tr>::encode_input(&#local,__rydantic_ctx);let raw=match #path(raw){Ok(v)=>v,Err(e)=>{__rydantic_ctx.push(e.with_stage(#rd::Stage::Parse));return None;}};let mut value=#decoded?;}}
         else{quote!(let mut value=<#ty as #tr>::prepare_default(#local,__rydantic_ctx)?;)};
