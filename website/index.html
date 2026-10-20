@@ -44,8 +44,8 @@
         <a href="{{DOCS_URL}}" data-docs
           >Documentation <span aria-hidden="true">↗</span></a
         >
-        <a href="https://docs.rs/rydantic/{{VERSION}}/rydantic/"
-          >API reference</a
+        <a href="https://docs.rs/rydantic/0.6.0/rydantic/"
+          >Stable API reference</a
         >
         <a class="nav-github" href="{{REPO_URL}}"
           ><svg
@@ -66,9 +66,9 @@
     <main id="main">
       <section class="hero shell">
         <div class="hero-copy">
-          <a class="release" href="{{REPO_URL}}/releases/tag/v{{VERSION}}"
+          <a class="release" href="{{REPO_URL}}/releases"
             ><span class="status-dot" aria-hidden="true"></span> v{{VERSION}}
-            <span class="release-divider">/</span> Model-driven migrations
+            <span class="release-divider">/</span> Beta candidate
             <span aria-hidden="true">↗</span></a
           >
           <h1>
@@ -87,10 +87,15 @@
               >See it in code <span aria-hidden="true">↓</span></a
             >
           </div>
+          <p class="hero-description">
+            Beta opt-in with breaking changes. Stable: 0.6.0. Check
+            <a href="https://crates.io/crates/rydantic/versions">registry availability</a>
+            before installing.
+          </p>
           <div class="install">
-            <code>cargo add rydantic</code
+            <code>cargo add rydantic@={{VERSION}}</code
             ><button
-              data-copy="cargo add rydantic"
+              data-copy="cargo add rydantic@={{VERSION}}"
               aria-label="Copy install command"
             >
               <svg
@@ -355,7 +360,7 @@ assert_eq!(user.age, 25);</code></pre>
           </p>
         </div>
         <div class="migration-copy">
-          <span class="eyebrow">03 / NEW IN {{VERSION}}</span>
+          <span class="eyebrow">03 / MODEL-DRIVEN MIGRATIONS</span>
           <h2>Your model evolves.<br />Your tables follow.</h2>
           <p>
             Compare your model with the live database schema. Preview the plan,

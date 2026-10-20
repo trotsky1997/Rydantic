@@ -8,7 +8,7 @@ Add one dependency:
 
 ```toml
 [dependencies]
-rydantic = { version = "0.6.0", features = ["capnp"] }
+rydantic = { version = "=0.7.0-beta.1", features = ["capnp"] }
 ```
 
 Install the official `capnp` compiler when setting up the development environment: `brew install capnp` on macOS, or `sudo apt-get install capnproto` on Debian/Ubuntu. During compilation, the attribute macro invokes that compiler and uses the official `capnpc` generator for Rust bindings. Set `RYDANTIC_CAPNP_COMPILER` to use a specific compiler executable. Bare names (such as `capnp`) use `PATH`; relative paths (such as `./tools/capnp`) are resolved from the compiler process's working directory before entering the temporary schema directory.
@@ -59,9 +59,9 @@ Default mappings cover nested and recursive models, `Box`, `Option`, `Vec`, fixe
 
 Models must use concrete, owned types within the annotated inline module. Data enums still declare their JSON representation: named fields can use `#[model(tag = "kind")]`, while tuple variants use `#[model(untagged)]`. `capnp_name` controls the protocol name independently. `capnp_skip` with a default preserves a local field. JSON aliases, flattening, extra fields, and exclusion continue to control the JSON representation. Unsupported external types can use a default with `capnp_skip`, or the [existing-schema integration](/integrations/existing-capnp).
 
-## Upcoming change: explicit Model derives
+## Breaking change in 0.7.0-beta.1: explicit Model derives
 
-The next release removes automatic `Model` derive insertion inside `capnp_models`. Existing code that relied on it will no longer compile. Add `#[derive(rydantic::Model)]` to every model struct and enum in the annotated module, including nested modules, or add `rydantic::Model` to the model's existing derive list. With a renamed dependency, use that dependency's name instead. Already-explicit derives, including aliases imported outside the annotated module, need no change. An unrelated derive named `Model` does not implement Rydantic's model traits.
+Version 0.7.0-beta.1 removes automatic `Model` derive insertion inside `capnp_models`. Existing code that relied on it will no longer compile. Add `#[derive(rydantic::Model)]` to every model struct and enum in the annotated module, including nested modules, or add `rydantic::Model` to the model's existing derive list. With a renamed dependency, use that dependency's name instead. Already-explicit derives, including aliases imported outside the annotated module, need no change. An unrelated derive named `Model` does not implement Rydantic's model traits.
 
 This is an intentional source-breaking change. Review and update your application before upgrading; the library does not maintain the old implicit-derive behavior. The derive change alone does not change the generated wire schema.
 
