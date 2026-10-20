@@ -61,7 +61,8 @@
               "models/streaming",
               "models/partial-json",
               "models/schema",
-              "models/dates-decimal"
+              "models/dates-decimal",
+              "domain-types"
             ]
           },
           {

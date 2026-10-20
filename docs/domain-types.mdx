@@ -1,0 +1,100 @@
+---
+title: "Domain types"
+description: "Optional, versioned phone, country and currency validation"
+---
+
+This page describes unreleased main-branch functionality. The published
+`0.7.0-beta.3` package does not include these features; use a reviewed source
+revision until a later release explicitly includes them.
+
+## Opt in separately
+
+Enable `phone`, `country`, or `currency` on `rydantic`. None is enabled by default.
+Types live in `rydantic::domain` and implement `FromStr`, `Display`, Serde and
+`JsonType`. Their fields are private so invalid strings cannot be constructed
+without validation. These features also work without `derive`.
+
+```rust
+use rydantic::domain::{CountryAlpha2, CountryAlpha3, CurrencyCode, PhoneNumber};
+let country: CountryAlpha2 = "CN".parse()?;
+let country3: CountryAlpha3 = "CHN".parse()?;
+let currency: CurrencyCode = "CNY".parse()?;
+let phone: PhoneNumber = "+12025550123".parse()?;
+let national = PhoneNumber::parse_with_region("(202) 555-0123", "US")?;
+assert_eq!(phone, national);
+# Ok::<(), rydantic::domain::DomainError>(())
+```
+
+## Exact acceptance policy
+
+- `CountryAlpha2` and `CountryAlpha3`: uppercase ASCII codes in the pinned
+  ISO 3166-1 catalog. No trimming/case conversion, names, numeric codes,
+  aliases (`UK`), former-country codes (`SU`/`SUN`), or subdivisions.
+- `CurrencyCode`: uppercase codes present in the dependency's catalog. **This is
+  not a current-legal-tender validator.** Superseded entries such as `VES`, funds
+  such as `BOV`, and special codes such as `XDR`/`XXX` are accepted when present.
+  Values keep their original code; no automatic successor substitution.
+- `PhoneNumber`: JSON, Serde and `FromStr` accept only canonical E.164 strings:
+  `+`, a nonzero first digit, at most 15 ASCII digits, and successful numbering-plan
+  metadata validation. Formatting punctuation, national numbers, extensions,
+  `tel:` URLs and non-ASCII digits are rejected by these entry points.
+- `PhoneNumber::parse_with_region`: explicit uppercase phone region, at most 128
+  input bytes, ASCII digits and `+ ( ) - .` or spaces only. Delegates national or
+  international interpretation to the phone library and emits canonical E.164.
+  No default region is inferred from the machine. Extension markers/nonallowed suffixes
+  are unsupported and rejected, never silently removed. Allowed punctuation is
+  interpreted permissively by the dependency and may be removed, including trailing
+  punctuation or redundant plus signs; this constructor is not a strict dialing
+  grammar validator. A supplied region is a
+  parsing hint, not a requirement that an international number belong to it.
+
+Phone validation does not prove that a number is assigned, reachable, owned by a
+person, or that contacting it is permitted. Country codes do not establish
+political status. Currency codes provide no amounts, exchange rates or financial
+arithmetic. Catalogs are offline snapshots, not real-time authoritative feeds.
+
+All types reject JSON numbers, booleans, arrays, objects and null even with
+`coerce`. They remain required when used directly in a Model. Existing
+`Option<T>` missing/null semantics are unchanged. Errors do not echo the input;
+`Debug`, `Display` and serialization intentionally expose a successful value,
+so phone numbers must still be handled as personal data by applications.
+
+## Schema contract
+
+Input and output are strings with shape patterns and explicit
+`x-rydantic-local-rules` annotations for catalog/metadata validation. No invented
+standard `format` is used. A generic JSON Schema validator checks the pattern
+but **cannot enforce these local rules**; it can accept an unknown uppercase code
+or syntactically plausible but invalid phone number. Use Rydantic for the full
+contract. No broad Pydantic extra-types compatibility is claimed.
+
+## Dependency provenance and cost
+
+The following was inspected from published crate archives on 2026-10-20:
+
+- [phonenumber 0.3.10+9.0.33](https://docs.rs/crate/phonenumber/0.3.10+9.0.33/source/):
+  Apache-2.0, based on Google's libphonenumber metadata. The published manifest
+  declares Rust 1.76.0; newer upstream development may have a different minimum.
+  Compressed crate archive: 2,271,587 bytes. Metadata, XML/postcard processing,
+  regex caching and build dependencies make this the largest optional adapter.
+- [rust_iso3166 0.2.0](https://docs.rs/crate/rust_iso3166/0.2.0/source/README.md):
+  Apache-2.0; upstream says its ISO 3166-1 codes match
+  [iso-codes v4.20.1](https://salsa.debian.org/iso-codes-team/iso-codes/-/blob/v4.20.1/data/iso_3166-1.json).
+  Manifest minimum Rust 1.85. Compressed archive: 232,919 bytes. The dependency
+  includes subdivision/former-country data, though this API uses neither.
+  Optional CLI and Serde features are disabled; PHF lookup support remains.
+- [iso_currency 0.7.1](https://docs.rs/crate/iso_currency/0.7.1/source/): MIT code;
+  upstream identifies Wikipedia's ISO 4217 page as its data source, not an
+  official live ISO feed. Preserve upstream/source attribution when redistributing
+  derived data; the crate's code license is not a claim that source data has no
+  separate attribution requirements. No Rust minimum is declared by the crate.
+  Compressed archive: 26,396 bytes. Its `iso_country` dependency and build-time
+  `quote`/`proc-macro2` remain; optional SQL/Serde/Schema integrations are disabled.
+
+These archive sizes are not final binary size or total transitive download size.
+No ISO/phone tables are copied into Rydantic. Direct dependency release numbers
+are exact constraints; Cargo ignores semver build metadata when resolving the
+phone version, so the lockfile records the actual metadata-bearing release.
+Changes to dependency catalogs can change acceptance and require review and
+regression tests. Minimums above are upstream declarations, not an independently
+verified minimum for Rydantic's whole dependency graph.
