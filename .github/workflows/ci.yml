@@ -14,6 +14,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  pi-bridge:
+    name: pi Codex Responses bridge
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: crates/rydantic-ai/bridge/package-lock.json
+      - run: npm ci --no-audit --no-fund
+        working-directory: crates/rydantic-ai/bridge
+      - run: npm test
+        working-directory: crates/rydantic-ai/bridge
+
   release-checks:
     name: Release safety checks
     runs-on: ubuntu-latest
@@ -61,6 +78,8 @@ jobs:
         run: cargo test --locked -p rydantic-capnp-fixture --test native -- --ignored
       - name: Check runtime without derive or dynamic features
         run: cargo check -p rydantic --no-default-features --lib --locked
+      - name: Check AI agents and graphs without HTTP dependencies
+        run: cargo test -p rydantic-ai --no-default-features --locked
       - name: Check settings without derive
         run: cargo check -p rydantic --no-default-features --features settings --lib --locked
       - name: Check optional runtime features without derive

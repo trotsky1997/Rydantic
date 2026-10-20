@@ -1,0 +1,16 @@
+{
+  "name": "@rydantic/pi-codex-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "login": "node login.mjs",
+    "start": "node bridge.mjs serve",
+    "test": "node --test *.test.mjs"
+  },
+  "dependencies": {
+    "@earendil-works/pi-ai": "1.3.0",
+    "@earendil-works/pi-coding-agent": "1.3.0"
+  },
+  "engines": { "node": ">=22.19.0" }
+}

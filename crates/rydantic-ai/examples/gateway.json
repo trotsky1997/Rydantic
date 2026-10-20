@@ -1,0 +1,7 @@
+{
+  "listen": "127.0.0.1:8989",
+  "routes": {
+    "codex": [{ "base_url": "http://127.0.0.1:8787/v1", "model": "gpt-6-luna", "pi_codex": true }]
+  },
+  "clients": [{ "id": "local", "key_env": "RYDANTIC_GATEWAY_KEY", "models": ["codex"] }]
+}

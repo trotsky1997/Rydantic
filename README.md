@@ -34,6 +34,7 @@ struct User {
 | **SQL with SQLx** | Model metadata, validated CRUD, queries, and migration planning for SQLite, PostgreSQL, and MySQL. |
 | **Native Cap'n Proto** | Generate schemas and official Rust bindings, or connect an existing protocol. |
 | **More model shapes** | Borrowed strings, enums, generics, recursive models, async validators, and streaming JSON. |
+| **RydanticAI** | Independently versioned `rydantic-ai`: typed agents and tools, resumable graphs, and an authenticated Responses gateway. |
 
 Integrations are opt-in Cargo features. The default `derive` feature covers the core model API.
 
@@ -76,6 +77,8 @@ fn main() -> Result<(), rydantic::ValidationErrors> {
 Continue with [validation rules](https://rydantic.mintlify.site/models/validation), [model shapes](https://rydantic.mintlify.site/models/structure), or [JSON Schema](https://rydantic.mintlify.site/models/schema).
 
 ## Choose your integrations
+
+For AI applications, add the separate `rydantic-ai` crate. It connects to pi's Codex OAuth session through the included local Responses bridge, validates typed outputs and tool arguments, and provides graph checkpoints and gateway routing/budgets. See the [RydanticAI guide](https://rydantic.mintlify.site/integrations/ai) and [crate README](crates/rydantic-ai/README.md).
 
 Enable features on the version you selected:
 

@@ -65,6 +65,10 @@
             ]
           },
           {
+            "group": "AI",
+            "pages": ["integrations/ai"]
+          },
+          {
             "group": "HTTP",
             "pages": [
               "integrations/axum",
