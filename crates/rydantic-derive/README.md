@@ -6,7 +6,7 @@ Use the `rydantic` crate, which enables and re-exports `#[derive(Model)]` by def
 
 ```toml
 [dependencies]
-rydantic = "=0.7.0-beta.3"
+rydantic = "=0.7.0-beta.4"
 ```
 
 ```rust

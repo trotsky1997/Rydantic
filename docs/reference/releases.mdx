@@ -4,9 +4,17 @@ description: "Release history and the current migration path."
 icon: "tag"
 ---
 
-## 0.7.0-beta.3 · Source candidate
+## 0.7.0-beta.4 · Source candidate
 
-After publication, opt in with `rydantic = { version = "=0.7.0-beta.3", features = ["partial-json"] }`. Source metadata is not proof of publication. Stable remains 0.6.0.
+After publication, opt in with `rydantic = "=0.7.0-beta.4"`. Source metadata is not proof of publication. Stable remains 0.6.0.
+
+- Add individually optional [phone, country and currency types](/domain-types), with pinned offline catalogs and explicit local validation rules. Phones are not proof of reachability/ownership; currencies include legacy, fund and special entries, not a current-tender guarantee. Preserve upstream/data-source attribution.
+- The source-only JSON Schema-to-Rust developer tool remains unpublished (`publish = false`), outside the two core package archives. AI remains independent at 0.1.1; no AI upload or Jev/0.2.0 changes are included.
+- No new breaking API change from beta.3. Preserve the explicit Model derive upgrade, backup/manual migration responsibilities and partial JSON safety limits below.
+
+## 0.7.0-beta.3 · Published prerelease
+
+Published on 2026-10-20: [release and verification](https://github.com/trotsky1997/Rydantic/releases/tag/v0.7.0-beta.3). Opt in with `rydantic = { version = "=0.7.0-beta.3", features = ["partial-json"] }`. Stable remains 0.6.0.
 
 - Add bounded [partial JSON snapshots](/models/partial-json), separate from strict streaming and Model validation. Incomplete containers, numbers and literals may be recovered; all incomplete strings/keys are rejected.
 - Hard limits: 1 MiB input and 64 nested containers. The pinned parser's 4300-digit integer-part ceiling is reported as unsupported, never rounded; no equivalent fractional/exponent limit is claimed.

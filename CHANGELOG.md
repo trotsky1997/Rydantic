@@ -1,10 +1,23 @@
-# Unreleased
+# Rydantic 0.7.0-beta.4
 
-- Add individually optional phone, country and currency domain wrappers with strict string validation, Serde support and explicit local Schema rules. Country codes use an ISO 3166-1 snapshot; currency codes include catalogued legacy/fund/special codes, not a current-tender guarantee. Phone JSON is canonical E.164 and extensions are rejected. See `docs/domain-types.mdx` for provenance and limitations.
+Source candidate, not a publication announcement. Stable remains 0.6.0. After publication, opt in with `rydantic = "=0.7.0-beta.4"`; the runtime pins derive to exactly the same version.
+
+## Added and scope
+
+- Individually optional `phone`, `country` and `currency` validated string types. Phone JSON is canonical E.164 with metadata validation, never proof of reachability or ownership. Explicit-region human parsing has a bounded permissive punctuation policy; extensions are rejected. Countries use a pinned ISO 3166-1 catalog. Currency membership includes legacy, fund and special codes, not a current-legal-tender guarantee or successor conversion.
+- Catalogs are offline snapshots. Generic JSON Schema patterns cannot enforce local catalog/metadata rules. Successful phone values remain personal data. Preserve dependency/data-source attribution; see [domain types and provenance](docs/domain-types.mdx).
+- The source tree includes the fail-closed JSON Schema-to-Rust developer tool. `rydantic-codegen` remains version 0.1.0 with `publish = false`; it is not part of either published core archive or a separately published Cargo-installable tool. Use its source README for supported subset and resource limits.
+- AI has an independent release lifecycle: `rydantic-ai` remains 0.1.1 and is not uploaded by this core release. No Jev/AI 0.2.0 changes are included.
+
+## Upgrade and safety
+
+No new breaking API change from beta.3 is introduced. The beta.1 breaking explicit `Model` derive contract still applies from 0.6.0. Back up databases and test migrations; users are responsible for existing data and deployments. Unsupported SQLite layouts require reviewed manual migration, never removing constraints to bypass protections.
+
+Settings and partial JSON retain their previous contracts: previews are not business-validated, incomplete strings/keys are rejected, limits remain 1 MiB/64 containers, and integer parts over 4300 digits are unsupported rather than rounded. Require final producer input, `Complete` and Model validation; values may contain secrets and repeated prefix reparsing may cost quadratic work.
 
 # Rydantic 0.7.0-beta.3
 
-Source candidate, not a publication announcement. Check crates.io and GitHub Releases for published artifacts. Stable remains 0.6.0.
+Published on 2026-10-20 as a prerelease: [GitHub Release](https://github.com/trotsky1997/Rydantic/releases/tag/v0.7.0-beta.3). Both archives and a fresh registry-only consumer were verified. Stable remains 0.6.0.
 
 ## Added
 
@@ -13,7 +26,7 @@ Source candidate, not a publication announcement. Check crates.io and GitHub Rel
 
 ## Safety and upgrade
 
-Use `rydantic = { version = "=0.7.0-beta.3", features = ["partial-json"] }` after publication. Runtime and derive packages both use beta.3 with an exact derive pin. This opt-in API adds no breaking change from beta.2. A preview is not business-validated data: wait for the producer's final document, require `Complete`, then validate with Model before consequential actions. Successful snapshot values and Debug output may contain secrets. Calls reparse and allocate; repeated prefixes can cost quadratic total work. See [snapshot semantics and limits](docs/models/partial-json.mdx).
+Use `rydantic = { version = "=0.7.0-beta.3", features = ["partial-json"] }`. Runtime and derive packages both use beta.3 with an exact derive pin. This opt-in API adds no breaking change from beta.2. A preview is not business-validated data: wait for the producer's final document, require `Complete`, then validate with Model before consequential actions. Successful snapshot values and Debug output may contain secrets. Calls reparse and allocate; repeated prefixes can cost quadratic total work. See [snapshot semantics and limits](docs/models/partial-json.mdx).
 
 The beta.1 breaking explicit Model derive contract and SQLite migration protections remain. Back up databases and test migrations; users remain responsible for existing deployments and data. Unsupported SQLite index layouts require reviewed manual migration, not removal of constraints. New JSON Schema-to-Rust code generation and phone/country/currency domain types are not included.
 

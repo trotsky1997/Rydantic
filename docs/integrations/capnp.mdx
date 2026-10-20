@@ -8,7 +8,7 @@ Add one dependency:
 
 ```toml
 [dependencies]
-rydantic = { version = "=0.7.0-beta.3", features = ["capnp"] }
+rydantic = { version = "=0.7.0-beta.4", features = ["capnp"] }
 ```
 
 Install the official `capnp` compiler when setting up the development environment: `brew install capnp` on macOS, or `sudo apt-get install capnproto` on Debian/Ubuntu. During compilation, the attribute macro invokes that compiler and uses the official `capnpc` generator for Rust bindings. Set `RYDANTIC_CAPNP_COMPILER` to use a specific compiler executable. Bare names (such as `capnp`) use `PATH`; relative paths (such as `./tools/capnp`) are resolved from the compiler process's working directory before entering the temporary schema directory.
