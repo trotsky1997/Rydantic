@@ -5,7 +5,7 @@ Typed Rust agents, explicit workflow graphs and a Responses HTTP gateway, built 
 ```toml
 [dependencies]
 rydantic = "0.7.0-beta.1"
-rydantic-ai = "0.1.1"
+rydantic-ai = "0.2.0"
 ```
 
 `rydantic-ai` has its own version and release lifecycle inside the Rydantic workspace. The core `rydantic` crate does not depend on it. Disable default features for graphs and custom providers without HTTP dependencies.
@@ -56,6 +56,28 @@ println!("{}", result.output.answer);
 
 Run `cargo run -p rydantic-ai --example pi_codex` for a real typed tool-call round trip. Set `RYDANTIC_AI_MODEL` to a model returned by the bridge's `/v1/models` endpoint. Agent limits bound model calls, tool calls, validation retries and observed token usage. Cancellation and the absolute deadline cover model calls, validation and tool handlers. Tools execute sequentially; execution errors stop the run and are never automatically replayed. Handlers own transactional/idempotency behavior for external side effects. Prompt content is not written to tracing spans; operations, tool names and usage are recorded with standard `tracing`.
 
+## TypeSafe Jev SDK
+
+`rydantic_ai::jev` supports native `noul`, `choice` and `score` questions, typed answers, probability distributions, confidence, score legends and usage. Configure only `TYPESAFE_BASEURL` (the `/v1` API base) and `TYPESAFE_APIKEY` locally, then construct `JevClient::from_env()`. The credential is sent unchanged as the complete bearer value. Explicit configuration also accepts `JevClient::new(base_url, api_key)`.
+
+```rust,no_run
+use rydantic_ai::{jev::{JevClient, Question, SystemOneRequest}, RunContext};
+
+# async fn example() -> rydantic_ai::Result<()> {
+let client = JevClient::from_env()?;
+let request = SystemOneRequest::new("jev-1.14.0", "Payment failed. Please help now.")
+    .question("urgency", Question::noul("Does the customer request urgent help?"))?;
+let response = client.system_one(&request, RunContext::default()).await?;
+println!("{}", response.noul("urgency")?.noul);
+# Ok(()) }
+```
+
+Noul returns a probability in `[0, 1]`. Choice returns a selected label and probabilities. Score returns a possibly fractional value with confidence, level probabilities and the original legend. `response.parse::<YourModel>(&context).await` projects primary answers into a validated Rydantic model while retaining the full result in `response.answers`. It can be called from a typed tool or graph node using the same `RunContext`. Jev usage is available on `response.usage`; Agent usage counts its Responses model requests.
+
+Requests are sent once, redirects are disabled, and cancellation/deadlines cover HTTP transfer. The client validates question/answer names, variants, numeric ranges and option/level domains. Request and response limits are 1 MiB and 8 MiB. Debug output redacts the credential; upstream error bodies are omitted. Use HTTPS for network endpoints and keep credentials server-side.
+
+See [the Jev guide](https://rydantic.mintlify.site/integrations/jev) and `cargo run -p rydantic-ai --example jev`. Live tests require explicit local configuration and are ignored by default.
+
 ## Graphs
 
 `Graph<State, Dependencies, NodeKey, Output>` accepts `Node` implementations with typed state, dependencies and transitions. Node keys can be application enums. Declare each node's allowed outgoing edges when building the graph. Unknown nodes, undeclared transitions, duplicate nodes and exceeded step budgets fail explicitly.
@@ -80,11 +102,11 @@ Client and global policies each use their own reservation size and cost estimate
 
 ## Independent releases
 
-RydanticAI uses tags such as `rydantic-ai-v0.1.1`. Its version is read from this package manifest and is independent of the core workspace version. A maintainer with the repository's GitHub identity and a local Cargo publishing credential can run from a clean repository checkout:
+RydanticAI uses tags such as `rydantic-ai-v0.2.0`. Its version is read from this package manifest and is independent of the core workspace version. A maintainer with the repository's GitHub identity and a local Cargo publishing credential can run from a clean repository checkout:
 
 ```sh
-python3 scripts/release_ai.py preflight --tag rydantic-ai-v0.1.1
-python3 scripts/release_ai.py publish --tag rydantic-ai-v0.1.1
+python3 scripts/release_ai.py preflight --tag rydantic-ai-v0.2.0
+python3 scripts/release_ai.py publish --tag rydantic-ai-v0.2.0
 ```
 
 The release script requires an existing remote tag on tested main history, successful exact-commit main-push CI, an unpublished registry version and a package containing no installed Node dependencies or credential files. It performs one upload attempt and verifies the registry checksum and sparse index, including after an uncertain upload exit status. It publishes only `rydantic-ai`. Use Python 3.11 or newer.

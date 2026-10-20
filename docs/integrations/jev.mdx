@@ -1,0 +1,110 @@
+---
+title: "TypeSafe Jev SDK"
+description: "Typed Noul, Choice and Score decisions with configurable BASEURL and APIKEY."
+---
+
+The `rydantic_ai::jev` module supports the text decision contract at `POST /v1/systemone`. It provides typed questions and answers, response validation and an async client. Questions and result types also work with `default-features = false`; the HTTP client uses the default `http` feature.
+
+## Configure the client
+
+```toml
+[dependencies]
+rydantic = "0.7.0-beta.1"
+rydantic-ai = "0.2.0"
+```
+
+Configure these two environment variables in your local process or secret manager:
+
+| Variable | Meaning |
+| --- | --- |
+| `TYPESAFE_BASEURL` | The API base, including `/v1`. |
+| `TYPESAFE_APIKEY` | The complete bearer credential, passed unchanged. |
+
+`JevClient::from_env()` requires both variables. Explicit configuration uses `JevClient::new(base_url, api_key)`. Configuration is local; credentials are excluded from source, examples and debug output. Use HTTPS for network endpoints. The client accepts explicitly configured HTTP endpoints and never follows redirects.
+
+## Ask typed questions
+
+```rust
+use rydantic::Model;
+use rydantic_ai::{
+    jev::{JevClient, Question, SystemOneRequest},
+    RunContext,
+};
+
+#[derive(Model)]
+struct TicketDecision {
+    #[model(ge = 0.0, le = 1.0)]
+    urgency: f64,
+    department: String,
+    #[model(ge = 0.0, le = 2.0)]
+    frustration: f64,
+}
+
+# async fn example() -> rydantic_ai::Result<()> {
+let client = JevClient::from_env()?;
+let request = SystemOneRequest::new(
+    "jev-1.14.0",
+    "Payment failed for three days. Please help now.",
+)
+.question("urgency", Question::noul("Does the customer request urgent help?"))?
+.question(
+    "department",
+    Question::choice("Which team should handle this?", [
+        ("billing", "Payment issues"),
+        ("technical", "Bugs or integrations"),
+    ]),
+)?
+.question(
+    "frustration",
+    Question::score("How frustrated is the customer?", ["Calm", "Frustrated", "Very angry"]),
+)?;
+
+let context = RunContext::default();
+let response = client.system_one(&request, context.clone()).await?;
+let decision: TicketDecision = response.parse(&context).await?;
+
+println!("{}", decision.dump_json()?);
+println!("{}", response.choice("department")?.confidence);
+println!("{}", response.usage.total()?);
+# Ok(()) }
+```
+
+Run the complete example after configuring the two variables:
+
+```sh
+cargo run -p rydantic-ai --example jev
+```
+
+## Read the results
+
+| Question | Accessor | Result |
+| --- | --- | --- |
+| Noul | `response.noul(name)?` | `noul`: a probability in `[0, 1]`. |
+| Choice | `response.choice(name)?` | Selected `choice`, `confidence` and the option probability map. |
+| Score | `response.score(name)?` | Possibly fractional `score`, `confidence`, level probabilities and `legend`. |
+
+`response.values()` projects only the primary values into an object. `response.parse::<T>(&context).await` validates that projection as a Rydantic `Model`, including async validators. The original distributions and legends remain in `response.answers`. Caller-selected thresholds determine how a probability affects a decision.
+
+Question content accepts strings, JSON objects and arrays through `Content`. Choice descriptions may be `None`; score descriptions require content. The current contract allows 1–255 choice options and 1–10 score levels. Model names are strings, allowing pinned versions or endpoint-supported aliases.
+
+`client.models(context).await` reads the TypeSafe `GET /v1/models` metadata contract. Responses may resolve a model alias to a concrete version.
+
+## Agent and graph integration
+
+Use `JevClient` as an application dependency in `TypedTool` or `Graph`. Pass the tool/node's `RunContext` to `system_one`, then call `response.parse::<YourOutput>(&context).await` before returning. This keeps cancellation, deadlines and model validation within the run.
+
+Read `response.usage` to account for each Jev call. Agent token totals count the Responses model requests made by the agent. Persist any application decisions or graph checkpoints using your own storage.
+
+## Transport and validation
+
+The client makes one request attempt. Redirects and automatic retries are disabled. Cancellation and deadlines cover request transfer and response reading. Payloads are limited to 1 MiB for requests and 8 MiB for responses, including chunked responses. Non-success HTTP errors expose status codes; response bodies and credentials are excluded from errors.
+
+Before dispatch, the SDK validates the request. After receipt, it checks question and answer names, answer variants, finite numeric ranges, and option/level domains. It preserves reported scores and probabilities without rounding or recomputing them. The full result can be serialized back to the native Jev JSON shape.
+
+Offline tests use synthetic local servers. The opt-in live test requires the two local variables and performs a real request:
+
+```sh
+cargo test -p rydantic-ai --test jev_live -- --ignored --nocapture
+```
+
+The wire contract follows the [TypeSafe OpenAPI reference](https://api.typesafe.ai/openapi.json).
