@@ -214,3 +214,273 @@ async fn primary_values_parse_as_rydantic_models_and_obey_context() {
         Err(Error::Cancelled)
     ));
 }
+
+#[test]
+fn choices_reject_inconsistent_distributions_and_nonmaximal_selections() {
+    for probabilities in [
+        json!({"billing":0.0,"technical":0.0}),
+        json!({"billing":1.0,"technical":1.0}),
+        json!({"billing":0.0,"technical":1.0}),
+        json!({"billing":0.4999999,"technical":0.5000001}),
+        json!({"billing":0.6,"technical":0.400002}),
+        json!({"billing":0.6,"technical":0.399998}),
+    ] {
+        let mut value = response();
+        value["answers"]["department"]["probabilities"] = probabilities;
+        let answer: SystemOneResponse = serde_json::from_value(value).unwrap();
+        assert!(matches!(answer.validate(), Err(Error::Protocol(_))));
+        assert!(matches!(
+            answer.validate_for(&request()),
+            Err(Error::Protocol(_))
+        ));
+        assert!(matches!(answer.values(), Err(Error::Protocol(_))));
+    }
+}
+
+#[test]
+fn choices_accept_ties_and_small_sum_rounding_without_changing_metadata() {
+    for (choice, probabilities) in [
+        ("billing", json!({"billing":0.5,"technical":0.5})),
+        ("technical", json!({"billing":0.5,"technical":0.5})),
+        ("billing", json!({"billing":0.6,"technical":0.4000005})),
+        ("billing", json!({"billing":0.6,"technical":0.3999995})),
+    ] {
+        let mut value = response();
+        value["answers"]["department"]["choice"] = json!(choice);
+        value["answers"]["department"]["probabilities"] = probabilities;
+        value["answers"]["department"]["confidence"] = json!(0.37);
+        let answer: SystemOneResponse = serde_json::from_value(value.clone()).unwrap();
+        answer.validate_for(&request()).unwrap();
+        assert_eq!(answer.values().unwrap()["department"], choice);
+        assert_eq!(serde_json::to_value(answer).unwrap(), value);
+    }
+}
+
+#[test]
+fn choice_distribution_validation_supports_single_and_maximum_option_counts() {
+    for count in [1, 255] {
+        let criteria = (0..count).map(|i| (i.to_string(), "description"));
+        let request = SystemOneRequest::new("m", "synthetic")
+            .question("choice", Question::choice("Select", criteria))
+            .unwrap();
+        let probabilities: std::collections::BTreeMap<_, _> = (0..count)
+            .map(|i| (i.to_string(), 1.0 / f64::from(count)))
+            .collect();
+        let value = json!({"model":"m","answers":{"choice":{
+            "type":"choice","choice":"0","confidence":0.25,
+            "probabilities":probabilities
+        }},"usage":{"input_tokens":1,"output_tokens":1}});
+        let answer: SystemOneResponse = serde_json::from_value(value.clone()).unwrap();
+        answer.validate_for(&request).unwrap();
+        assert_eq!(serde_json::to_value(answer).unwrap(), value);
+    }
+}
+
+tokio::task_local! {
+    static VALIDATION_CONTEXT: RunContext;
+}
+static SLOW_VALIDATOR_FINISHED: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
+fn finish_after_deadline(_: &f64) -> Result<(), rydantic::ValidationError> {
+    // Deliberately finish in one poll after the deadline. This checks the return
+    // postcondition, not preemption of blocking synchronous user callbacks.
+    VALIDATION_CONTEXT.with(|context| {
+        std::thread::sleep(
+            context
+                .deadline
+                .saturating_duration_since(tokio::time::Instant::now())
+                + std::time::Duration::from_millis(5),
+        );
+    });
+    SLOW_VALIDATOR_FINISHED.store(true, std::sync::atomic::Ordering::SeqCst);
+    Ok(())
+}
+
+#[derive(Model)]
+struct SlowDecision {
+    #[model(validate = finish_after_deadline)]
+    urgency: f64,
+    department: String,
+    frustration: f64,
+}
+
+async fn cancel_during_validation(_: &f64) -> Result<(), rydantic::ValidationError> {
+    VALIDATION_CONTEXT.with(|context| context.cancellation.cancel());
+    Ok(())
+}
+
+#[derive(Model)]
+struct CancelDecision {
+    #[model(async_validate = cancel_during_validation)]
+    urgency: f64,
+    department: String,
+    frustration: f64,
+}
+
+#[tokio::test]
+async fn parsing_rechecks_the_deadline_after_synchronous_validation() {
+    let response: SystemOneResponse = serde_json::from_value(response()).unwrap();
+    let context = RunContext::with_timeout(std::time::Duration::from_millis(40));
+    let parsed = VALIDATION_CONTEXT
+        .scope(context.clone(), response.parse::<SlowDecision>(&context))
+        .await;
+    assert!(SLOW_VALIDATOR_FINISHED.load(std::sync::atomic::Ordering::SeqCst));
+    assert!(matches!(context.check(), Err(Error::Timeout)));
+    assert!(matches!(parsed, Err(Error::Timeout)));
+}
+
+#[tokio::test]
+async fn parsing_rechecks_cancellation_triggered_by_a_ready_async_validator() {
+    let response: SystemOneResponse = serde_json::from_value(response()).unwrap();
+    let context = RunContext::default();
+    let parsed = VALIDATION_CONTEXT
+        .scope(context.clone(), response.parse::<CancelDecision>(&context))
+        .await;
+    assert!(matches!(context.check(), Err(Error::Cancelled)));
+    assert!(matches!(parsed, Err(Error::Cancelled)));
+}
+
+#[test]
+fn score_legends_must_match_each_requested_criterion() {
+    for legend in [
+        json!({"0":"Very angry","1":"Frustrated","2":"Calm"}),
+        json!({"0":"Calm","1":"Different meaning","2":"Very angry"}),
+    ] {
+        let mut value = response();
+        value["answers"]["frustration"]["legend"] = legend;
+        let answer: SystemOneResponse = serde_json::from_value(value).unwrap();
+        assert!(matches!(
+            answer.validate_for(&request()),
+            Err(Error::Protocol(_))
+        ));
+    }
+}
+
+#[test]
+fn score_legends_preserve_complex_criteria_and_fractional_results() {
+    let criteria = [json!("Calm"), json!({"level":[1,true]}), json!(["high", 2])];
+    let request = SystemOneRequest::new("m", "synthetic")
+        .question(
+            "score",
+            Question::score(
+                "Rate",
+                criteria
+                    .clone()
+                    .map(|value| Content::try_from(value).unwrap()),
+            ),
+        )
+        .unwrap();
+    let value = json!({"model":"m","answers":{"score":{
+        "type":"score","score":1.7,"confidence":0.55,
+        "legend":{"0":criteria[0],"1":criteria[1],"2":criteria[2]},
+        "probabilities":{"0":0.1,"1":0.1,"2":0.8}
+    }},"usage":{"input_tokens":1,"output_tokens":1}});
+    let answer: SystemOneResponse = serde_json::from_value(value.clone()).unwrap();
+    answer.validate_for(&request).unwrap();
+    assert_eq!(answer.values().unwrap()["score"], 1.7);
+    assert_eq!(serde_json::to_value(answer).unwrap(), value);
+
+    for (index, replacement) in [("1", json!({"level":[1,false]})), ("2", json!(["high", 3]))] {
+        let mut changed = value.clone();
+        changed["answers"]["score"]["legend"][index] = replacement;
+        let answer: SystemOneResponse = serde_json::from_value(changed).unwrap();
+        assert!(matches!(
+            answer.validate_for(&request),
+            Err(Error::Protocol(_))
+        ));
+    }
+}
+
+fn score_with_numeric_criterion(
+    requested: &str,
+    returned: &str,
+) -> (SystemOneRequest, SystemOneResponse) {
+    let requested: Value = serde_json::from_str(requested).unwrap();
+    let returned: Value = serde_json::from_str(returned).unwrap();
+    let request = SystemOneRequest::new("m", "synthetic")
+        .question(
+            "score",
+            Question::score(
+                "Rate",
+                [Content::try_from(json!({"nested":[requested]})).unwrap()],
+            ),
+        )
+        .unwrap();
+    let response = serde_json::from_value(json!({"model":"m","answers":{"score":{
+        "type":"score","score":0.0,"confidence":0.4,
+        "legend":{"0":{"nested":[returned]}},"probabilities":{"0":1.0}
+    }},"usage":{"input_tokens":1,"output_tokens":1}}))
+    .unwrap();
+    (request, response)
+}
+
+#[test]
+fn score_legends_compare_numeric_values_without_changing_json_spelling() {
+    for (requested, returned) in [
+        ("1.00", "1.0"),
+        ("1", "10e-1"),
+        ("1.2300E+4", "12300"),
+        ("1e+000003", "1000.0"),
+        ("0.000100", "1e-4"),
+        ("-9007199254740993", "-9007199254740993.0"),
+        (
+            "0e999999999999999999999999",
+            "-0.000e-999999999999999999999999",
+        ),
+        ("1e9223372036854775808", "10e9223372036854775807"),
+        (
+            "1e-999999999999999999999999",
+            "10e-1000000000000000000000000",
+        ),
+    ] {
+        let (request, answer) = score_with_numeric_criterion(requested, returned);
+        let original_request = serde_json::to_value(&request).unwrap();
+        let original_answer = serde_json::to_value(&answer).unwrap();
+        answer.validate_for(&request).unwrap();
+        assert_eq!(serde_json::to_value(request).unwrap(), original_request);
+        assert_eq!(serde_json::to_value(answer).unwrap(), original_answer);
+    }
+}
+
+#[test]
+fn score_legends_keep_distinct_large_and_precise_numbers_distinct() {
+    for (requested, returned) in [
+        ("9007199254740992", "9007199254740993"),
+        (
+            "0.12345678901234567890123456789",
+            "0.12345678901234567890123456788",
+        ),
+        ("1e999999999999999999999999", "1e999999999999999999999998"),
+        ("1e-999999999999999999999999", "1e-999999999999999999999998"),
+        ("-1e999999999999999999999999", "1e999999999999999999999999"),
+        ("1e-999999999999999999999999", "0"),
+    ] {
+        let (request, answer) = score_with_numeric_criterion(requested, returned);
+        assert!(matches!(
+            answer.validate_for(&request),
+            Err(Error::Protocol(_))
+        ));
+    }
+}
+
+#[test]
+fn score_legend_comparison_is_bounded_by_number_spelling_not_magnitude() {
+    let exponent = "9".repeat(65_536);
+    let predecessor = format!("{}8", "9".repeat(65_535));
+    let requested = format!("1e{exponent}");
+    let returned = format!("10e{predecessor}");
+    let (request, answer) = score_with_numeric_criterion(&requested, &returned);
+    answer.validate_for(&request).unwrap();
+
+    let returned = format!("1e{predecessor}");
+    let (request, answer) = score_with_numeric_criterion(&requested, &returned);
+    assert!(matches!(
+        answer.validate_for(&request),
+        Err(Error::Protocol(_))
+    ));
+
+    let integer = format!("1{}3", "2".repeat(65_534));
+    let (request, answer) = score_with_numeric_criterion(&integer, &format!("{integer}.0"));
+    answer.validate_for(&request).unwrap();
+}

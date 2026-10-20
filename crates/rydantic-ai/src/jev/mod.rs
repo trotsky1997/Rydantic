@@ -5,6 +5,7 @@
 
 #[cfg(feature = "http")]
 mod client;
+mod content;
 #[cfg(feature = "http")]
 pub use client::JevClient;
 
@@ -224,6 +225,10 @@ fn probability(value: f64) -> bool {
 fn distribution(values: &BTreeMap<String, f64>) -> bool {
     !values.is_empty() && values.values().copied().all(probability)
 }
+// The API specifies an approximately unit-sum Choice distribution. This SDK
+// accepts an absolute sum error of at most 1e-6 without changing reported values.
+const CHOICE_SUM_TOLERANCE: f64 = 1e-6;
+
 impl Answer {
     fn valid(&self) -> bool {
         match self {
@@ -231,7 +236,14 @@ impl Answer {
             Self::Choice(answer) => {
                 probability(answer.confidence)
                     && distribution(&answer.probabilities)
-                    && answer.probabilities.contains_key(&answer.choice)
+                    && (answer.probabilities.values().sum::<f64>() - 1.0).abs()
+                        <= CHOICE_SUM_TOLERANCE
+                    && answer
+                        .probabilities
+                        .get(&answer.choice)
+                        .is_some_and(|selected| {
+                            answer.probabilities.values().all(|value| value <= selected)
+                        })
             }
             Self::Score(answer) => {
                 (1..=10).contains(&answer.legend.len())
@@ -253,6 +265,8 @@ pub struct SystemOneResponse {
     pub usage: Usage,
 }
 impl SystemOneResponse {
+    /// Validate answer domains, including Choice sums within `1e-6` of one and
+    /// selections with maximal reported probability (ties are accepted).
     pub fn validate(&self) -> Result<()> {
         if self.model.trim().is_empty()
             || self.answers.is_empty()
@@ -278,6 +292,12 @@ impl SystemOneResponse {
                 }
                 (Question::Score { criteria, .. }, Answer::Score(answer)) => {
                     criteria.len() == answer.legend.len()
+                        && criteria.iter().enumerate().all(|(index, criterion)| {
+                            answer
+                                .legend
+                                .get(&index.to_string())
+                                .is_some_and(|value| content::same(value, criterion))
+                        })
                 }
                 _ => false,
             };
@@ -322,16 +342,22 @@ impl SystemOneResponse {
                 .collect(),
         ))
     }
+    /// Validate the primary values and recheck cancellation/deadline before success.
+    ///
+    /// Synchronous validators cannot be preempted; an expired context is rejected
+    /// after they finish rather than returning a successful model.
     pub async fn parse<T: Model + AsyncCheck + Send>(&self, context: &RunContext) -> Result<T> {
         context.check()?;
         let values = self.values()?;
-        context
+        let parsed = context
             .wait(async {
                 T::parse_value_async(values)
                     .await
                     .map_err(Error::Validation)
             })
-            .await
+            .await?;
+        context.check()?;
+        Ok(parsed)
     }
 }
 

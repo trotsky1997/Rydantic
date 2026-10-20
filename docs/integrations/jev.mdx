@@ -83,7 +83,7 @@ cargo run -p rydantic-ai --example jev
 | Choice | `response.choice(name)?` | Selected `choice`, `confidence` and the option probability map. |
 | Score | `response.score(name)?` | Possibly fractional `score`, `confidence`, level probabilities and `legend`. |
 
-`response.values()` projects only the primary values into an object. `response.parse::<T>(&context).await` validates that projection as a Rydantic `Model`, including async validators. The original distributions and legends remain in `response.answers`. Caller-selected thresholds determine how a probability affects a decision.
+`response.values()` projects only the primary values into an object. `response.parse::<T>(&context).await` validates that projection as a Rydantic `Model`, including async validators, and rechecks cancellation and the deadline before returning success. Synchronous validators cannot be preempted: if one runs past the deadline, parsing rejects its result after it finishes. The original distributions and legends remain in `response.answers`. Caller-selected thresholds determine how a probability affects a decision.
 
 Question content accepts strings, JSON objects and arrays through `Content`. Choice descriptions may be `None`; score descriptions require content. The current contract allows 1–255 choice options and 1–10 score levels. Model names are strings, allowing pinned versions or endpoint-supported aliases.
 
@@ -99,7 +99,9 @@ Read `response.usage` to account for each Jev call. Agent token totals count the
 
 The client makes one request attempt. Redirects and automatic retries are disabled. Cancellation and deadlines cover request transfer and response reading. Payloads are limited to 1 MiB for requests and 8 MiB for responses, including chunked responses. Non-success HTTP errors expose status codes; response bodies and credentials are excluded from errors.
 
-Before dispatch, the SDK validates the request. After receipt, it checks question and answer names, answer variants, finite numeric ranges, and option/level domains. It preserves reported scores and probabilities without rounding or recomputing them. The full result can be serialized back to the native Jev JSON shape.
+Before dispatch, the SDK validates the request. After receipt, it checks question and answer names, answer variants, finite numeric ranges, and option/level domains. Each Score legend entry must equal the corresponding requested criterion, including object and array content. Nested JSON numbers compare by exact decimal value, so `1.00` and `1e0` match without rounding large integers or precise decimals. This comparison does not change either JSON representation or expand powers of ten.
+
+Choice probabilities must sum to one within an absolute tolerance of `1e-6`, and the selected choice must have the highest reported probability; exact ties are accepted. This sum tolerance is the SDK's numerical policy for the API's approximate-sum contract, not a server precision guarantee. Confidence is independent of the selected probability. The SDK preserves reported scores and probabilities without rounding, normalizing or recomputing them. The full result can be serialized back to the native Jev JSON shape.
 
 Offline tests use synthetic local servers. The opt-in live test requires the two local variables and performs a real request:
 
