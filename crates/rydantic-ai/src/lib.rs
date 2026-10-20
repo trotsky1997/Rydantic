@@ -11,6 +11,7 @@ pub mod gateway;
 pub mod graph;
 #[cfg(feature = "http")]
 mod http;
+pub mod jev;
 mod protocol;
 pub mod schema;
 mod tool;

@@ -34,7 +34,7 @@ struct User {
 | **SQL with SQLx** | Model metadata, validated CRUD, queries, and migration planning for SQLite, PostgreSQL, and MySQL. |
 | **Native Cap'n Proto** | Generate schemas and official Rust bindings, or connect an existing protocol. |
 | **More model shapes** | Borrowed strings, enums, generics, recursive models, async validators, and streaming JSON. |
-| **RydanticAI** | Independently versioned `rydantic-ai`: typed agents and tools, resumable graphs, and an authenticated Responses gateway. |
+| **RydanticAI** | Independently versioned `rydantic-ai`: typed agents and tools, resumable graphs, an authenticated Responses gateway, and a [TypeSafe Jev SDK](https://rydantic.mintlify.site/integrations/jev). |
 
 Integrations are opt-in Cargo features. The default `derive` feature covers the core model API.
 
