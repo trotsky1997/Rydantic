@@ -143,7 +143,16 @@ impl Replay {
             .into_iter()
             .map(|g| g.visible)
             .collect();
-        visible.extend(groups(response.output()).into_iter().map(|g| g.visible));
+        // Key the same assistant projection that public frontends return, not
+        // the upstream item boundaries/order hidden from those clients.
+        let (Ok(text), Ok(calls)) = (response.text(), response.tool_calls()) else {
+            return;
+        };
+        let calls: Vec<_> = calls
+            .into_iter()
+            .map(|call| json!({"id":call.call_id,"name":call.name,"arguments":arguments(&json!(call.arguments))}))
+            .collect();
+        visible.push(json!({"role":"assistant","text":text,"calls":calls}));
         let scope = (
             client.to_owned(),
             request.model.clone(),
@@ -186,6 +195,64 @@ mod tests {
         let mut next = request.clone();
         next.input.push(json!({"type":"message","role":"assistant","content":[{"type":"output_text","text":"working","annotations":[]}]}));
         next
+    }
+    #[test]
+    fn projected_multi_turn_replay_keeps_scope_and_prefix_isolation() {
+        let turn = |index| {
+            ModelResponse::from_value(json!({"status":"completed","output":[
+                {"type":"reasoning","id":format!("opaque-{index}"),"encrypted_content":"opaque"},
+                {"type":"message","role":"assistant","content":[{"type":"output_text","text":"first"}]},
+                {"type":"function_call","id":format!("original-{index}"),"call_id":format!("call-{index}"),"name":"add","arguments":"{}"},
+                {"type":"message","role":"assistant","content":[{"type":"output_text","text":"second"}]}
+            ],"usage":{"input_tokens":1,"output_tokens":1}})).unwrap()
+        };
+        let append = |request: &mut ModelRequest, index| {
+            request.input.extend([
+                json!({"role":"assistant","content":"firstsecond"}),
+                json!({"type":"function_call","call_id":format!("call-{index}"),"name":"add","arguments":"{}"}),
+                json!({"type":"function_call_output","call_id":format!("call-{index}"),"output":"42"}),
+            ]);
+        };
+        let mut replay = Replay::default();
+        let mut visible = ModelRequest::new("model", "compute");
+        replay.record("app", &visible, &turn(1));
+        append(&mut visible, 1);
+        replay.record("app", &visible, &turn(2));
+        append(&mut visible, 2);
+        for case in [
+            "control",
+            "client",
+            "model",
+            "instructions",
+            "prompt",
+            "first_call",
+            "second_call",
+            "tool_result",
+        ] {
+            let mut next = visible.clone();
+            match case {
+                "model" => next.model = "other".into(),
+                "instructions" => next.instructions = Some("other".into()),
+                "prompt" => next.input[0]["content"] = json!("other"),
+                "first_call" => next.input[2]["call_id"] = json!("other"),
+                "second_call" => next.input[5]["call_id"] = json!("other"),
+                "tool_result" => next.input[3]["output"] = json!("other"),
+                _ => (),
+            }
+            replay.restore(if case == "client" { "other" } else { "app" }, &mut next);
+            for index in [1, 2] {
+                let expected = case == "control"
+                    || (index == 1 && matches!(case, "second_call" | "tool_result"));
+                let original = turn(index);
+                assert_eq!(
+                    next.input
+                        .windows(original.output().len())
+                        .any(|window| window == original.output()),
+                    expected,
+                    "{case}: turn {index}"
+                );
+            }
+        }
     }
     #[test]
     fn replay_limits_entries_and_expires_native_history() {
