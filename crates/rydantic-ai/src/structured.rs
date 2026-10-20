@@ -271,6 +271,11 @@ pub(crate) trait OutputMode: Send {
     type Output: Send + 'static;
     const STREAM: bool;
     fn schema(&self) -> Result<Value>;
+    // Check each completed call before its text enters history or tools run.
+    // Tool-turn text need not validate as the final typed output.
+    fn finish_call(&mut self, _response: &crate::ModelResponse) -> Result<()> {
+        Ok(())
+    }
     fn start<'a>(
         &'a mut self,
         _attempt: u32,
@@ -490,6 +495,9 @@ impl<T: Model + AsyncCheck + Send + Sync + 'static> OutputMode for PartialMode<T
     fn schema(&self) -> Result<Value> {
         crate::schema::model_schema::<T>()
     }
+    fn finish_call(&mut self, response: &crate::ModelResponse) -> Result<()> {
+        self.text.final_text(&response.text()?)
+    }
     fn start<'a>(&'a mut self, attempt: u32, context: &'a RunContext) -> BoxFuture<'a, Result<()>> {
         Box::pin(async move {
             self.text = TextBuffer::new(self.text.options);
@@ -522,7 +530,6 @@ impl<T: Model + AsyncCheck + Send + Sync + 'static> OutputMode for PartialMode<T
         context: &'a RunContext,
     ) -> BoxFuture<'a, Result<T>> {
         Box::pin(async move {
-            self.text.final_text(text)?;
             self.preview(context).await?;
             T::parse_json_async(text).await.map_err(Error::Validation)
         })
@@ -601,6 +608,9 @@ impl<T: Model + AsyncCheck + Send + Sync + 'static> OutputMode for IterableMode<
     fn schema(&self) -> Result<Value> {
         crate::schema::model_schema::<Envelope<T>>()
     }
+    fn finish_call(&mut self, response: &crate::ModelResponse) -> Result<()> {
+        self.text.final_text(&response.text()?)
+    }
     fn start<'a>(&'a mut self, attempt: u32, context: &'a RunContext) -> BoxFuture<'a, Result<()>> {
         Box::pin(async move {
             self.text = TextBuffer::new(self.text.options);
@@ -635,7 +645,6 @@ impl<T: Model + AsyncCheck + Send + Sync + 'static> OutputMode for IterableMode<
         context: &'a RunContext,
     ) -> BoxFuture<'a, Result<usize>> {
         Box::pin(async move {
-            self.text.final_text(text)?;
             self.items(context).await?;
             let envelope: RawEnvelope<'_> =
                 serde_json::from_str(text).map_err(|_| Error::Validation(invalid_envelope()))?;

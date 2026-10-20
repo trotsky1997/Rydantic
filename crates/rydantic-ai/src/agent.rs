@@ -148,6 +148,7 @@ where
             if usage.total()? > self.limits.max_total_tokens {
                 return Err(Error::Limit("agent total token limit".into()));
             }
+            mode.finish_call(&response)?;
             let calls = response.tool_calls()?;
             request.input.extend_from_slice(response.output());
             if calls.is_empty() {
