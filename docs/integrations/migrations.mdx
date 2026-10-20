@@ -6,6 +6,10 @@ icon: "git-branch"
 
 Call `User::migrate(&pool).await?` at startup to create or upgrade its table. Rydantic compares the live SQLite, PostgreSQL or MySQL catalog with `SqlModel` metadata, generates the upgrade, executes it, and verifies the resulting schema. Tables previously created by `create_table` can be upgraded directly. Matching schemas produce a no-op receipt without adding history rows.
 
+<Warning>
+Back up existing databases, inspect the migration plan, and test the upgrade on a copy before deployment. Application owners remain responsible for existing data, custom SQL objects and deployment validation. Destructive opt-in permits planned data loss; it does not make a migration lossless or override unsupported-schema guards. Unsupported layouts need a reviewed manual migration, not removal of constraints to bypass a rejection.
+</Warning>
+
 For example, evolve an existing `accounts(id, name)` model:
 
 ```rust
@@ -70,7 +74,11 @@ Account::migrate_with(
 
 Storage conversions use database casts and constraints. SQLite checks existing storage classes before type-changing rebuilds and rejects incompatible values. The opt-in permits planned data loss; custom data transformations require separate application logic. Primary-key/identity strategy changes, composite keys/indexes, generated columns and custom foreign-key semantics require an explicit migration. Table renames are outside this per-table API. Apply referenced models before dependent models, and coordinate changes to referenced key types separately.
 
-SQLite uses transactional rebuilds when needed, preserves auto-increment high-water marks and dependent rows, checks foreign-key integrity before commit, and restores the connection's foreign-key setting. Rebuilds reject external triggers, views, CHECK constraints and custom storage options whose definitions are outside the model. PostgreSQL uses a transaction, advisory lock and table lock; schema and history roll back together on failure.
+SQLite uses transactional rebuilds when needed, preserves auto-increment high-water marks and dependent rows, checks foreign-key integrity before commit, and restores the connection's foreign-key setting. Rebuilds reject external triggers, views, CHECK constraints and custom storage options whose definitions are outside the model.
+
+Since 0.7.0-beta.1, SQLite rebuilds also reject non-BINARY index collations (such as `COLLATE NOCASE`) and descending index keys, including primary-key indexes. The planner returns `migration_unsupported` instead of silently recreating these semantics incorrectly. Ordinary BINARY ascending indexes remain supported. A matching no-op or a native rename-only plan does not require a rebuild and is not rejected by this rebuild guard; other validation and database restrictions still apply. See the [beta upgrade notes](/reference/releases) and the [implemented index-safety fix](https://github.com/trotsky1997/Rydantic/pull/15).
+
+PostgreSQL uses a transaction, advisory lock and table lock; schema and history roll back together on failure.
 
 MySQL uses a database-scoped advisory lock and requires strict SQL mode. Structural changes are grouped into one ALTER TABLE where possible. MySQL DDL implicitly commits: a sequence containing a NULL backfill or separate creation statements can leave completed work after a later failure. History records `applying`, `applied` or `failed`; interruption can leave an `applying` entry. After correcting the cause, retry `migrate`, which computes remaining work from the live catalog. See [MySQL's DDL transaction rules](https://dev.mysql.com/doc/refman/8.4/en/implicit-commit.html).
 

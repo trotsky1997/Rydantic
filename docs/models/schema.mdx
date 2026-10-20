@@ -40,3 +40,9 @@ assert!(model.validate(&json!({"age":17})).is_err());
 ```
 
 `DynamicModel::compile` rejects schemas containing `x-rydantic-local-rules`. `compile_structural` explicitly opts into standard JSON Schema assertions only. Dynamic validation follows the backend's default format-annotation semantics and preserves the input. Typed models handle default filling and coercion.
+
+## Generate Rust from a schema
+
+The workspace also contains [`rydantic-codegen`](https://github.com/trotsky1997/Rydantic/blob/main/crates/rydantic-codegen/README.md), an unpublished developer tool (`publish = false`). It is not included in the core release archives or available as a crates.io install. Use it from a repository checkout only after reviewing its deliberately limited JSON Schema 2020-12 subset, resource limits and validation semantics.
+
+This is not an OpenAPI/Protobuf generator or a drop-in replacement for `datamodel-code-generator`. Unsupported keywords and references are rejected rather than silently ignored; generated models still require ordinary Rydantic validation. The [tool guide](https://github.com/trotsky1997/Rydantic/blob/main/crates/rydantic-codegen/README.md) documents accepted inputs and safe output handling, including writing to a new temporary file so a failed command does not truncate an existing destination.
