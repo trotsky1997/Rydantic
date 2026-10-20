@@ -168,7 +168,8 @@ where
                 }
                 tool_calls += 1;
                 let result = if let Some(tool) = self.tools.get(&call.name) {
-                    tool.call(call.arguments, deps.clone(), context.clone())
+                    context
+                        .wait(tool.call(call.arguments, deps.clone(), context.clone()))
                         .instrument(tracing::info_span!("rydantic_ai.tool", tool = %call.name))
                         .await
                 } else {
