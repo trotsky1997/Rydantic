@@ -28,6 +28,8 @@ Complete the browser authorization yourself. The bridge listens on `127.0.0.1:87
 
 The gateway executable serves HTTP. For network clients, keep it on loopback or a trusted private interface behind an HTTPS reverse proxy with TLS termination. HTTPS protects bearer keys, prompts and responses in transit; bearer authentication handles client identity. Keep the unauthenticated pi bridge loopback-only. Local processes with access to the sidecar can use the authorized Codex session.
 
+TLS termination protects the client-to-proxy connection, not an off-host proxy-to-gateway HTTP connection. Prefer a same-host proxy with the gateway bound to loopback. For an off-host backend, restrict the gateway listener to the proxy and protect that hop with encrypted transport; a private IP alone does not encrypt traffic. Do not expose the plaintext gateway listener directly.
+
 The supported request fields are `model`, `input`, `instructions`, `tools`, `text`, `reasoning`, `tool_choice`, `parallel_tool_calls`, `stream`, `store` and `include`. Requests use `store=false`. Unknown fields fail explicitly. The pi Codex transport has no `max_output_tokens` request parameter; `ResponsesProvider::pi_codex` uses schema instructions plus runtime validation. A native Responses endpoint can use provider JSON Schema and output limits through `ResponsesProvider::new`.
 
 ## Typed agents and tools
