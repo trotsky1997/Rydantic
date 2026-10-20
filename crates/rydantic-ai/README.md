@@ -5,7 +5,7 @@ Typed Rust agents, explicit workflow graphs and a Responses HTTP gateway, built 
 ```toml
 [dependencies]
 rydantic = "0.7.0-beta.1"
-rydantic-ai = "0.1.0"
+rydantic-ai = "0.1.1"
 ```
 
 `rydantic-ai` has its own version and release lifecycle inside the Rydantic workspace. The core `rydantic` crate does not depend on it. Disable default features for graphs and custom providers without HTTP dependencies.
@@ -24,9 +24,11 @@ npm run login
 npm start
 ```
 
-Complete the browser authorization yourself. The bridge listens on `127.0.0.1:8787`, rejects browser-origin requests and exposes `GET /health`, `GET /v1/models` and `POST /v1/responses`. It is a local single-user sidecar without client authentication. Loopback binding and browser-origin rejection do not authenticate local processes: any process able to reach its port can use the authorized provider session. Run it only within a trusted local-process boundary, and never expose the bridge directly to network clients.
+Complete the browser authorization yourself. The bridge listens on `127.0.0.1:8787`, rejects browser-origin requests and exposes `GET /health`, `GET /v1/models` and `POST /v1/responses`. It is a local single-user sidecar. Put the authenticated Rust gateway in front of it for network access.
 
-For network access, use the authenticated Rust gateway behind an HTTPS reverse proxy as described in [Transport security](#transport-security). Persistent OAuth authorization and network deployment are separate operator decisions; authorizing pi does not make the bridge or gateway safe to expose.
+The gateway executable serves HTTP. For network clients, keep it on loopback or a trusted private interface behind an HTTPS reverse proxy with TLS termination. HTTPS protects bearer keys, prompts and responses in transit; bearer authentication handles client identity. Keep the unauthenticated pi bridge loopback-only. Local processes with access to the sidecar can use the authorized Codex session.
+
+TLS termination protects the client-to-proxy connection, not an off-host proxy-to-gateway HTTP connection. Prefer a same-host proxy with the gateway bound to loopback. For an off-host backend, restrict the gateway listener to the proxy and protect that hop with encrypted transport; a private IP alone does not encrypt traffic. Do not expose the plaintext gateway listener directly.
 
 The supported request fields are `model`, `input`, `instructions`, `tools`, `text`, `reasoning`, `tool_choice`, `parallel_tool_calls`, `stream`, `store` and `include`. Requests use `store=false`. Unknown fields fail explicitly. The pi Codex transport has no `max_output_tokens` request parameter; `ResponsesProvider::pi_codex` uses schema instructions plus runtime validation. A native Responses endpoint can use provider JSON Schema and output limits through `ResponsesProvider::new`.
 
@@ -68,14 +70,6 @@ Return `Transition::Next(key)`, `Transition::End(output)` or `Transition::Pause(
 
 The `rydantic-ai-gateway` executable exposes authenticated `GET /v1/models` and `POST /v1/responses` endpoints, including SSE. Configure gateway keys and upstream credentials by environment-variable **names** in a JSON config; credential values are excluded from the config file and error responses. See `examples/gateway.json`.
 
-### Transport security
-
-The executable serves **plaintext HTTP**, not HTTPS, at the configured `listen` address. Bearer authentication does not encrypt transport: direct network access can expose client keys, prompts and responses. The example stays on `127.0.0.1:8989`; changing `listen` to a non-loopback address does not enable TLS.
-
-For non-loopback clients, require HTTPS through a TLS-terminating reverse proxy. Prefer a proxy on the same host and keep the gateway bound to loopback. If a private interface is necessary, restrict the gateway listener to the proxy and protect any off-host proxy-to-gateway hop with encrypted transport; a private IP alone provides no encryption. Do not expose the plaintext gateway listener directly. Keep the pi bridge loopback-only, and use HTTPS for other network upstreams.
-
-These are deployment requirements, not protections configured by the executable or a claim that a deployment is secure. Operators must separately configure and verify TLS, access restrictions and their trusted local-process boundary.
-
 ```sh
 cargo run -p rydantic-ai --bin rydantic-ai-gateway -- crates/rydantic-ai/examples/gateway.json
 ```
@@ -83,6 +77,19 @@ cargo run -p rydantic-ai --bin rydantic-ai-gateway -- crates/rydantic-ai/example
 Set `RYDANTIC_GATEWAY_KEY` to a private random value of at least 16 bytes before starting the example. Each client has an explicit model allowlist. Incoming gateway bearer keys are not forwarded upstream. Disconnecting an SSE consumer cancels the provider request.
 
 Budgets track attempts, observed tokens and optional operator-configured prices in integer micro-USD. Each attempt atomically reserves token/cost capacity against both client and global ledgers before dispatch. Completion reconciles actual usage; failed, aborted or unknown outcomes retain the reservation conservatively. An upstream can exceed the token reservation, producing an overdrawn ledger that blocks later admission. These are admission controls and observed usage accounting, not a provider-side billing ceiling. Dollar limits require pricing on every permitted upstream. Codex subscription usage can use request/token controls without claiming a dollar price. Ledgers are in memory and reset on restart; durable/shared accounting requires an application-provided service in a later deployment.
+
+Client and global policies each use their own reservation size and cost estimate. They are admitted together atomically and reconciled separately, including conservative charges for unknown outcomes.
+
+## Independent releases
+
+RydanticAI uses tags such as `rydantic-ai-v0.1.1`. Its version is read from this package manifest and is independent of the core workspace version. A maintainer with the repository's GitHub identity and a local Cargo publishing credential can run from a clean repository checkout:
+
+```sh
+python3 scripts/release_ai.py preflight --tag rydantic-ai-v0.1.1
+python3 scripts/release_ai.py publish --tag rydantic-ai-v0.1.1
+```
+
+The release script requires an existing remote tag on tested main history, successful exact-commit main-push CI, an unpublished registry version and a package containing no installed Node dependencies or credential files. It performs one upload attempt and verifies the registry checksum and sparse index, including after an uncertain upload exit status. It publishes only `rydantic-ai`. Use Python 3.11 or newer.
 
 ## Validation
 
