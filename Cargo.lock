@@ -1880,6 +1880,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rydantic-codegen"
+version = "0.1.0"
+dependencies = [
+ "rydantic",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "rydantic-derive"
 version = "0.7.0-beta.3"
 dependencies = [
