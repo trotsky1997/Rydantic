@@ -3,12 +3,12 @@ title: "RydanticAI"
 description: "Build typed agents, resumable graphs and a Responses gateway with the independent rydantic-ai crate."
 ---
 
-`rydantic-ai` lives in the same workspace with its own `0.1.1` version and publishing lifecycle. The core Rydantic model crate remains independent of AI transport dependencies.
+`rydantic-ai` lives in the same workspace with its own `0.2.0` version and publishing lifecycle. The core Rydantic model crate remains independent of AI transport dependencies.
 
 ```toml
 [dependencies]
 rydantic = "0.7.0-beta.1"
-rydantic-ai = "0.1.1"
+rydantic-ai = "0.2.0"
 ```
 
 ## Authorize pi Codex
@@ -101,3 +101,7 @@ cd crates/rydantic-ai/bridge && npm ci && npm test
 ```
 
 Normal tests use local fake providers. Live Codex tests are ignored by default and require explicit authorization and `RYDANTIC_PI_URL`.
+
+## TypeSafe Jev decisions
+
+The [TypeSafe Jev SDK](/integrations/jev) adds typed Noul, Choice and Score judgments. Configure `TYPESAFE_BASEURL` and `TYPESAFE_APIKEY`, retain the native confidence/distribution metadata, and parse primary answers into a Rydantic model for a tool or graph node.

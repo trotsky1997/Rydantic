@@ -7,7 +7,7 @@ Source candidate, not a publication announcement. Stable remains 0.6.0. After pu
 - Individually optional `phone`, `country` and `currency` validated string types. Phone JSON is canonical E.164 with metadata validation, never proof of reachability or ownership. Explicit-region human parsing has a bounded permissive punctuation policy; extensions are rejected. Countries use a pinned ISO 3166-1 catalog. Currency membership includes legacy, fund and special codes, not a current-legal-tender guarantee or successor conversion.
 - Catalogs are offline snapshots. Generic JSON Schema patterns cannot enforce local catalog/metadata rules. Successful phone values remain personal data. Preserve dependency/data-source attribution; see [domain types and provenance](docs/domain-types.mdx).
 - The source tree includes the fail-closed JSON Schema-to-Rust developer tool. `rydantic-codegen` remains version 0.1.0 with `publish = false`; it is not part of either published core archive or a separately published Cargo-installable tool. Use its source README for supported subset and resource limits.
-- AI has an independent release lifecycle: `rydantic-ai` remains 0.1.1 and is not uploaded by this core release. No Jev/AI 0.2.0 changes are included.
+- AI has an independent release lifecycle: the source workspace contains the separately maintained `rydantic-ai` 0.2.0 and Jev integration. Neither is included in the two core archives or uploaded by this core release; consult its own release status.
 
 ## Upgrade and safety
 
