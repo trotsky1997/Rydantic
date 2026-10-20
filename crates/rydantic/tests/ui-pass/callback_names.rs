@@ -65,6 +65,8 @@ callback_names!(
     raw, value, child, context, ctx, start, rules, trial,
     __rydantic_ctx, __rydantic_raw, __rydantic_value, __rydantic_start,
     __rydantic_field_0,
+    __rydantic_assert_string, __rydantic_assert_length,
+    __rydantic_assert_number, __rydantic_assert_extra,
 );
 
 fn main() {}

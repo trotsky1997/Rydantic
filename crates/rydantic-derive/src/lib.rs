@@ -928,8 +928,13 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
     let (async_impl_generics, _, async_where_clause) = async_generics.split_for_impl();
     let custom_async=container.async_validate.as_ref().map(|path|quote!{if start==__rydantic_ctx.error_count(){if let Err(errors)=#path(self).await{__rydantic_ctx.extend(errors);}}});
     let body = quote! {
-        fn __rydantic_assert_string<T:#rd::StringType>(){}fn __rydantic_assert_length<T:#rd::LengthType>(){}fn __rydantic_assert_number<T:#rd::NumericType>(){}fn __rydantic_assert_extra<T:#rd::ExtraFields>(){}
-        #(#assertions)* let start=__rydantic_ctx.error_count();let value=(||{#decode})();#custom_parse value
+        // Mixed-site hygiene does not isolate item names. Keep assertion helpers
+        // outside the scope containing user callback paths and default expressions.
+        {
+            fn __rydantic_assert_string<T:#rd::StringType>(){}fn __rydantic_assert_length<T:#rd::LengthType>(){}fn __rydantic_assert_number<T:#rd::NumericType>(){}fn __rydantic_assert_extra<T:#rd::ExtraFields>(){}
+            #(#assertions)*
+        }
+        let start=__rydantic_ctx.error_count();let value=(||{#decode})();#custom_parse value
     };
     let decode_methods = if borrowed {
         quote! {fn decode(__rydantic_raw:#rd::Input<'__rydantic_de>,__rydantic_ctx:&mut #rd::Context,_coerce:bool)->::core::option::Option<Self>{#body}}
