@@ -18,6 +18,7 @@ all-features = true
 default = ["derive"]
 derive = ["dep:rydantic-derive"]
 partial-json = ["dep:jiter"]
+settings = []
 dynamic = ["dep:jsonschema"]
 chrono = ["dep:chrono"]
 decimal = ["dep:rust_decimal"]
@@ -34,7 +35,7 @@ serde.workspace = true
 serde_json.workspace = true
 regex.workspace = true
 email_address = "0.2"
-rydantic-derive = { version = "=0.7.0-beta.1", path = "../rydantic-derive", optional = true }
+rydantic-derive = { version = "=0.7.0-beta.2", path = "../rydantic-derive", optional = true }
 jsonschema = { workspace = true, optional = true }
 
 chrono = { version = "0.4", default-features = false, features = ["std"], optional = true }

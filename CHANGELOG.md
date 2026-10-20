@@ -2,9 +2,27 @@
 
 - Add an opt-in, bounded `partial-json` snapshot API using jiter raw numeric bytes and serde_json arbitrary precision. Recover incomplete containers, numbers and literals; reject all incomplete strings/keys. Strict streaming and Model required-field semantics are unchanged. No publication or version bump is included.
 
-# Rydantic 0.7.0-beta.1
+# Rydantic 0.7.0-beta.2
 
 Source candidate, not a publication announcement. Check crates.io and GitHub Releases for published artifacts. Stable remains 0.6.0.
+
+## Added
+
+- Opt-in `settings` feature with explicit ordered JSON, environment, strict dotenv-subset and flat secrets-directory sources, validated with the existing `Model` contract. Source precedence and value parsing are caller-selected; source errors and builder diagnostics redact values. No added dependencies and no claim of full pydantic-settings compatibility. See the [settings guide](docs/models/settings.mdx).
+
+## Fixed
+
+- Exact integer normalization accepts zero with arbitrarily large positive or negative JSON exponents, including signed and decimal zero. Nonzero overflow, fractional values, invalid JSON numbers and numeric strings remain rejected by the existing integer contract. This intentionally corrects previously rejected valid zero inputs.
+
+## Upgrade and scope
+
+Use `rydantic = { version = "=0.7.0-beta.2", features = ["settings"] }` after publication. Runtime and derive packages both use 0.7.0-beta.2, with an exact derive dependency pin. Settings are opt-in; no new breaking API change from beta.1 is introduced. The breaking explicit `Model` derive requirement from beta.1 still applies when upgrading from 0.6.0. Back up databases and test migration plans; users remain responsible for existing data and deployments. Unsupported SQLite index layouts require reviewed manual migration, not removal of constraints to bypass guards.
+
+This candidate includes settings and the zero-exponent correction only as new runtime behavior. Partial JSON, the new JSON Schema-to-Rust code generator, and phone/country/currency domain types are not included. Publication tooling and the documentation URL are maintained separately.
+
+# Rydantic 0.7.0-beta.1
+
+Published on 2026-10-20 as a prerelease: [GitHub Release](https://github.com/trotsky1997/Rydantic/releases/tag/v0.7.0-beta.1). Both crates and a fresh registry-only consumer were verified. Stable remains 0.6.0.
 
 This beta introduces an explicit derive contract for generated Cap'n Proto models, fixes compiler path resolution, and protects SQLite migrations from losing custom index semantics.
 

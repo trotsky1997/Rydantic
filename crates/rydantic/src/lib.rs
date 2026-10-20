@@ -54,6 +54,8 @@ mod error;
 mod object;
 pub mod rules;
 pub mod schema;
+#[cfg(feature = "settings")]
+pub mod settings;
 pub mod stream;
 mod types;
 
