@@ -42,6 +42,7 @@ pub struct Budget {
     pub max_requests: u64,
     pub max_tokens: u64,
     pub max_cost_microusd: Option<u64>,
+    /// Admission estimate for this ledger, independent of other ledgers.
     pub reservation_tokens: u64,
 }
 impl Default for Budget {
@@ -237,19 +238,13 @@ fn admission(
     Ok(next)
 }
 
-struct Reservation {
-    inner: Arc<Inner>,
-    id: String,
+#[derive(Clone, Copy)]
+struct ReservationAmounts {
     tokens: u64,
     cost: u64,
-    settled: bool,
 }
-impl Reservation {
-    fn new(inner: Arc<Inner>, policy: &ClientPolicy, price: Option<Price>) -> Result<Self> {
-        let tokens = policy
-            .budget
-            .reservation_tokens
-            .max(inner.global.reservation_tokens);
+impl ReservationAmounts {
+    fn estimate(tokens: u64, price: Option<Price>) -> Result<Self> {
         let cost = price
             .map(|p| {
                 p.cost(Usage {
@@ -259,55 +254,79 @@ impl Reservation {
             })
             .transpose()?
             .unwrap_or(0);
+        Ok(Self { tokens, cost })
+    }
+}
+
+struct Reservation {
+    inner: Arc<Inner>,
+    id: String,
+    client: ReservationAmounts,
+    global: ReservationAmounts,
+    settled: bool,
+}
+impl Reservation {
+    fn new(inner: Arc<Inner>, policy: &ClientPolicy, price: Option<Price>) -> Result<Self> {
+        let client = ReservationAmounts::estimate(policy.budget.reservation_tokens, price)?;
+        let global = ReservationAmounts::estimate(inner.global.reservation_tokens, price)?;
         {
             let mut ledger = inner.ledger.lock().map_err(|_| Error::Budget)?;
             let client = admission(
                 *ledger.clients.get(&policy.id).ok_or(Error::Unauthorized)?,
                 &policy.budget,
-                tokens,
-                cost,
+                client.tokens,
+                client.cost,
             )?;
-            let global = admission(ledger.global, &inner.global, tokens, cost)?;
+            let global = admission(ledger.global, &inner.global, global.tokens, global.cost)?;
             ledger.clients.insert(policy.id.clone(), client);
             ledger.global = global;
         }
         Ok(Self {
             inner,
             id: policy.id.clone(),
-            tokens,
-            cost,
+            client,
+            global,
             settled: false,
         })
     }
     fn settle(mut self, usage: Usage, price: Option<Price>) -> Result<()> {
-        let tokens = usage.total()?;
-        let cost = price.map(|p| p.cost(usage)).transpose()?.unwrap_or(0);
-        self.charge(tokens, cost)?;
+        let actual = ReservationAmounts {
+            tokens: usage.total()?,
+            cost: price.map(|p| p.cost(usage)).transpose()?.unwrap_or(0),
+        };
+        self.charge(actual, actual)?;
         self.settled = true;
         Ok(())
     }
-    fn charge(&self, tokens: u64, cost: u64) -> Result<()> {
+    fn charge(&self, client: ReservationAmounts, global: ReservationAmounts) -> Result<()> {
         let mut ledger = self.inner.ledger.lock().map_err(|_| Error::Budget)?;
-        let update = |s: BudgetSnapshot| -> Result<BudgetSnapshot> {
+        let update = |s: BudgetSnapshot,
+                      reserved: ReservationAmounts,
+                      charged: ReservationAmounts|
+         -> Result<BudgetSnapshot> {
             Ok(BudgetSnapshot {
-                tokens: s.tokens.checked_add(tokens).ok_or(Error::Budget)?,
+                tokens: s.tokens.checked_add(charged.tokens).ok_or(Error::Budget)?,
                 known_cost_microusd: s
                     .known_cost_microusd
-                    .checked_add(cost)
+                    .checked_add(charged.cost)
                     .ok_or(Error::Budget)?,
                 reserved_tokens: s
                     .reserved_tokens
-                    .checked_sub(self.tokens)
+                    .checked_sub(reserved.tokens)
                     .ok_or(Error::Budget)?,
                 reserved_cost_microusd: s
                     .reserved_cost_microusd
-                    .checked_sub(self.cost)
+                    .checked_sub(reserved.cost)
                     .ok_or(Error::Budget)?,
                 ..s
             })
         };
-        let client = update(*ledger.clients.get(&self.id).ok_or(Error::Unauthorized)?)?;
-        let global = update(ledger.global)?;
+        let client = update(
+            *ledger.clients.get(&self.id).ok_or(Error::Unauthorized)?,
+            self.client,
+            client,
+        )?;
+        let global = update(ledger.global, self.global, global)?;
         ledger.clients.insert(self.id.clone(), client);
         ledger.global = global;
         Ok(())
@@ -316,7 +335,7 @@ impl Reservation {
 impl Drop for Reservation {
     fn drop(&mut self) {
         if !self.settled {
-            let _ = self.charge(self.tokens, self.cost);
+            let _ = self.charge(self.client, self.global);
         }
     }
 }
