@@ -149,6 +149,86 @@ async fn all_nine_json_routes_translate_shape_auth_aliases_and_usage() {
     }
 }
 #[tokio::test]
+async fn chat_instruction_roles_and_order_survive_supported_routes() {
+    let messages = json!([
+        {"role":"system","content":"system first"},
+        {"role":"developer","content":"developer first"},
+        {"role":"user","content":"question"},
+        {"role":"assistant","content":"earlier answer"},
+        {"role":"developer","content":"developer later"},
+        {"role":"user","content":"next question"}
+    ]);
+    for source in [Api::Responses, Api::ChatCompletions] {
+        let (upstream, seen) = fixture(vec![sse(source, &native(source, "ok", None))]).await;
+        let server = serve(gateway::router(setup(provider(source, &upstream.base), 10))).await;
+        let response = post(
+            &server.base,
+            Api::ChatCompletions,
+            &json!({"model":"public-model","messages":messages}),
+            KEY,
+        )
+        .await;
+        assert_eq!(response.status(), 200);
+        let captured = seen.lock().unwrap();
+        let history = if source == Api::Responses {
+            &captured[0].2["input"]
+        } else {
+            &captured[0].2["messages"]
+        };
+        let roles: Vec<_> = history
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|m| m["role"].as_str().unwrap())
+            .collect();
+        assert_eq!(
+            roles,
+            [
+                "system",
+                "developer",
+                "user",
+                "assistant",
+                "developer",
+                "user"
+            ]
+        );
+        assert_eq!(history[4]["content"], "developer later");
+    }
+    let (upstream, seen) = fixture(vec![sse(
+        Api::AnthropicMessages,
+        &native(Api::AnthropicMessages, "ok", None),
+    )])
+    .await;
+    let server = serve(gateway::router(setup(
+        provider(Api::AnthropicMessages, &upstream.base),
+        10,
+    )))
+    .await;
+    let response = post(
+        &server.base,
+        Api::ChatCompletions,
+        &json!({"model":"public-model","messages":messages}),
+        KEY,
+    )
+    .await;
+    assert_eq!(response.status(), 400);
+    assert!(seen.lock().unwrap().is_empty());
+    let leading = messages.as_array().unwrap()[..3].to_vec();
+    let response = post(
+        &server.base,
+        Api::ChatCompletions,
+        &json!({"model":"public-model","messages":leading}),
+        KEY,
+    )
+    .await;
+    assert_eq!(response.status(), 200);
+    assert_eq!(
+        seen.lock().unwrap()[0].2["system"],
+        "system first\ndeveloper first"
+    );
+}
+
+#[tokio::test]
 async fn all_nine_sse_routes_work_with_native_protocol_clients() {
     for source in all() {
         for front in all() {

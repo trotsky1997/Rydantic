@@ -107,6 +107,8 @@ JSON Schema maps between `text.format`, `response_format.json_schema` and `outpu
 
 The gateway implements text and client function tools. Unsupported parameters, multimodal content and model-specific reasoning controls fail explicitly where they cannot be represented. Stored responses are disabled. The gateway relays tool calls; the client application executes handlers and returns tool results with the original call IDs.
 
+Chat system and developer messages retain their roles and conversation order for Chat and Responses upstreams. Messages upstreams combine leading system/developer instructions into their top-level system field and reject interleaved instruction messages.
+
 ## Streaming and errors
 
 Text and representable tool-argument fragments are emitted incrementally. Chat tool-name fragments are accumulated before conversion to formats requiring a complete tool name. Same-protocol Chat and Messages streams retain their native content events, including supported reasoning blocks.

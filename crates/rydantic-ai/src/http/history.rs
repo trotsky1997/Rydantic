@@ -204,6 +204,12 @@ pub(crate) fn messages(request: &ModelRequest) -> Result<(String, Vec<Value>)> {
                     continue;
                 }
                 if matches!(role, "system" | "developer") {
+                    if !messages.is_empty() {
+                        return Err(Error::Configuration(
+                            "Messages cannot represent interleaved system or developer messages"
+                                .into(),
+                        ));
+                    }
                     if !system.is_empty() {
                         system.push('\n');
                     }

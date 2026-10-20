@@ -280,7 +280,7 @@ fn chat(wire: Chat) -> Result<Decoded> {
             ],
         )?;
         match string(&message,"role")? {
-            "system" | "developer" => instruction(&mut request,text(&message["content"])?),
+            "system" | "developer" => request.input.push(json!({"role":message["role"],"content":text(&message["content"])?})),
             "user"=>request.input.push(json!({"role":"user","content":text(&message["content"])?})),
             "tool"=>request.input.push(json!({"type":"function_call_output","call_id":string(&message,"tool_call_id")?,"output":text(&message["content"])?})),
             "assistant"=> {
