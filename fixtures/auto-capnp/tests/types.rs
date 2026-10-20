@@ -8,30 +8,30 @@ mod models {
     pub type Bytes = Vec<u8>;
     pub type Digest = [u8; 2];
 
-    #[derive(Debug, PartialEq)]
+    #[derive(rd::Model, Debug, PartialEq)]
     pub struct String {
         pub value: std::string::String,
     }
-    #[derive(Debug, PartialEq)]
+    #[derive(rd::Model, Debug, PartialEq)]
     pub struct Option {
         pub value: u8,
     }
-    #[derive(Debug, PartialEq)]
+    #[derive(rd::Model, Debug, PartialEq)]
     pub struct r#type {
         pub r#union: bool,
     }
-    #[derive(Debug, PartialEq)]
+    #[derive(rd::Model, Debug, PartialEq)]
     pub struct Text {
         pub data: std::string::String,
     }
-    #[derive(Debug, PartialEq)]
+    #[derive(rd::Model, Debug, PartialEq)]
     pub enum Status {
         #[model(rename = "完成")]
         Done,
         Pending,
     }
 
-    #[derive(Debug, PartialEq)]
+    #[derive(rd::Model, Debug, PartialEq)]
     pub struct Scalars {
         pub signed: i128,
         pub floats: [f64; 2],

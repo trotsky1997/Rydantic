@@ -27,7 +27,7 @@ assert_eq!(user.name, "Alice");
 
 See the [API documentation](https://docs.rs/rydantic) and [complete guide](https://github.com/trotsky1997/Rydantic) for borrowing, validators, model attributes, schemas and Cap'n Proto mappings.
 
-With `rydantic`'s `capnp` feature, `#[rydantic::capnp_models]` on an inline model module also infers the complete Cap'n Proto schema, invokes the installed official `capnp` compiler, and generates native Rust bindings automatically. Consumers maintain Rust model definitions without a separate schema, generated source file, or build script. The schema is available through `CapnpSchema` and the model module's `CAPNP_SCHEMA` constant.
+With `rydantic`'s `capnp` feature, `#[rydantic::capnp_models]` on an inline model module also infers the complete Cap'n Proto schema, invokes the installed official `capnp` compiler, and generates native Rust bindings automatically. Each struct and enum must explicitly derive `rydantic::Model` (or an imported alias). Consumers maintain Rust model definitions without a separate schema, generated source file, or build script. **Breaking change in the next release:** `capnp_models` no longer inserts `Model` derives; add the derive to models that previously relied on automatic insertion before upgrading. The schema is available through `CapnpSchema` and the model module's `CAPNP_SCHEMA` constant.
 
 License: MIT.
 

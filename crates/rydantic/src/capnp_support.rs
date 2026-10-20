@@ -5,7 +5,7 @@
 //! use rydantic::{CapnpModel, CapnpSchema};
 //! #[rydantic::capnp_models(namespace = "docs.users")]
 //! mod models {
-//!     #[derive(Debug, PartialEq)]
+//!     #[derive(rydantic::Model, Debug, PartialEq)]
 //!     pub struct User { pub name: String, pub age: u8 }
 //! }
 //! let user = models::User { name: "Alice".into(), age: 25 };

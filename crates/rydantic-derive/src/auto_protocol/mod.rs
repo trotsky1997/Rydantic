@@ -279,26 +279,6 @@ fn model_input(item: &Item) -> ::core::option::Option<DeriveInput> {
         _ => None,
     }
 }
-fn ensure_derive(input: &mut DeriveInput, rd: &Tokens) {
-    let exists = input
-        .attrs
-        .iter()
-        .filter(|a| a.path().is_ident("derive"))
-        .any(|a| {
-            a.parse_args_with(syn::punctuated::Punctuated::<Path, syn::Token![,]>::parse_terminated)
-                .is_ok_and(|paths| {
-                    paths
-                        .iter()
-                        .any(|p| p.segments.last().is_some_and(|s| s.ident == "Model"))
-                })
-        });
-    if !exists {
-        input.attrs.insert(
-            0,
-            syn::parse_quote_spanned!(input.ident.span()=>#[derive(#rd::Model)]),
-        );
-    }
-}
 fn set_native_name(attributes: &mut Vec<syn::Attribute>, name: &str) -> syn::Result<()> {
     let mut retained = Vec::new();
     for attr in attributes.drain(..) {
@@ -381,7 +361,6 @@ fn configure(
     registry: &Registry,
     rd: &Tokens,
 ) -> syn::Result<()> {
-    ensure_derive(input, rd);
     let container = attrs::container(&input.attrs)?;
     if container.capnp.is_some() || container.capnp_enum.is_some() {
         return Err(syn::Error::new(input.span(),"capnp_models generates bindings automatically; remove the manual capnp/capnp_enum path"));
@@ -620,6 +599,25 @@ pub(super) fn expand(args: Tokens, input: Tokens) -> syn::Result<Tokens> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn model_configuration_preserves_explicit_derives_without_inserting_one() {
+        for derives in [
+            quote!(),
+            quote!(#[derive(RModel)]),
+            quote!(#[derive(other::Model)]),
+        ] {
+            let item: Item = syn::parse2(quote!(#derives struct Example { value: u64 })).unwrap();
+            let registry = Registry::collect(std::slice::from_ref(&item), "models").unwrap();
+            let mut input = model_input(&item).unwrap();
+            configure(&mut input, &[], &registry, &quote!(::rydantic)).unwrap();
+            let actual = input
+                .attrs
+                .iter()
+                .filter(|attr| attr.path().is_ident("derive"));
+            assert_eq!(quote!(#(#actual)*).to_string(), derives.to_string());
+        }
+    }
 
     #[test]
     fn compiler_paths_preserve_absolute_paths_and_path_lookup() {

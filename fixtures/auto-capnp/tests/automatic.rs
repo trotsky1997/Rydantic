@@ -203,14 +203,14 @@ fn exported_schema_and_official_cli_exchange_native_and_packed_messages() {
 // The same schema identity survives declaration reordering when ordinals are pinned.
 #[rd::capnp_models(id = 0xd80e_54b1_1368_67c1)]
 mod previous {
-    #[derive(Debug, PartialEq)]
+    #[derive(rd::Model, Debug, PartialEq)]
     pub enum Role {
         #[model(capnp_ordinal = 0)]
         Guest,
         #[model(capnp_ordinal = 1)]
         Admin,
     }
-    #[derive(Debug, PartialEq)]
+    #[derive(rd::Model, Debug, PartialEq)]
     #[model(tag = "kind")]
     pub enum Action {
         #[model(capnp_ordinal = 0)]
@@ -218,7 +218,7 @@ mod previous {
         #[model(capnp_ordinal = 1)]
         Update { name: String, count: u64 },
     }
-    #[derive(Debug, PartialEq)]
+    #[derive(rd::Model, Debug, PartialEq)]
     pub struct Record {
         #[model(capnp_ordinal = 0)]
         pub name: String,
@@ -229,14 +229,14 @@ mod previous {
 mod enclosing {
     #[rd::capnp_models(id = 0xd80e_54b1_1368_67c1)]
     pub mod reordered {
-        #[derive(Debug, PartialEq)]
+        #[derive(rd::Model, Debug, PartialEq)]
         pub enum Role {
             #[model(capnp_ordinal = 1)]
             Admin,
             #[model(capnp_ordinal = 0)]
             Guest,
         }
-        #[derive(Debug, PartialEq)]
+        #[derive(rd::Model, Debug, PartialEq)]
         #[model(tag = "kind")]
         pub enum Action {
             Update {
@@ -248,7 +248,7 @@ mod enclosing {
             #[model(capnp_ordinal = 0)]
             Ping,
         }
-        #[derive(Debug, PartialEq)]
+        #[derive(rd::Model, Debug, PartialEq)]
         pub struct Record {
             #[model(capnp_ordinal = 1)]
             pub count: u64,
@@ -258,7 +258,7 @@ mod enclosing {
     }
     #[rd::capnp_models(id = 0xd80e_54b1_1368_67c1)]
     pub mod extended {
-        #[derive(Debug, PartialEq)]
+        #[derive(rd::Model, Debug, PartialEq)]
         pub struct Record {
             pub name: String,
             pub count: u64,

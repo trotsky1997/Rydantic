@@ -718,7 +718,7 @@ use rydantic::{CapnpModel, CapnpSchema, Model};
 
 #[rydantic::capnp_models(namespace = "my_app.users")]
 pub mod models {
-    #[derive(Debug, PartialEq)]
+    #[derive(rydantic::Model, Debug, PartialEq)]
     pub struct User {
         #[model(trim, min_length = 1)]
         pub name: String,
@@ -729,7 +729,7 @@ pub mod models {
         pub avatar: Vec<u8>,
     }
 
-    #[derive(Debug, PartialEq)]
+    #[derive(rydantic::Model, Debug, PartialEq)]
     pub enum Role { Guest, Admin }
 }
 
@@ -749,7 +749,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-The macro adds the `Model` derive automatically and preserves other derives such as `Debug` and `PartialEq`. The module exposes:
+Each model must explicitly derive `rydantic::Model` (or an imported alias). `capnp_models` generates the schema and binding attributes; Rust resolves and runs the derives you write. Other derives such as `Debug` and `PartialEq` are preserved. The module exposes:
 
 - `models::wire`: public Rust Reader, Builder, and Enum bindings from the official generator.
 - `models::CAPNP_SCHEMA` and `CAPNP_SCHEMA_ID`: the complete schema text and file ID.
@@ -758,6 +758,12 @@ The macro adds the `Model` derive automatically and preserves other derives such
 Default mappings cover nested and recursive models, `Box`, `Option`, `Vec`, fixed arrays, String-keyed `BTreeMap`/`HashMap`, unit enums, and data enums. `Vec<u8>` becomes `Data`; full-range `i128`/`u128`, dates, and Decimal become `Text`, including inside containers. Module-local type aliases, container aliases with concrete type arguments, explicit `use` aliases, and inline submodules work together. Dates and Decimal require the `chrono` and `decimal` features respectively.
 
 Models must use concrete, owned types within the annotated inline module. Data enums still declare their JSON representation: named fields can use `#[model(tag = "kind")]`, while tuple variants use `#[model(untagged)]`. `capnp_name` controls the protocol name independently. `capnp_skip` with a default preserves a local field. JSON aliases, flattening, extra fields, and exclusion continue to control the JSON representation. Unsupported external types can use a default with `capnp_skip`, or the existing-schema integration below.
+
+### Breaking change: explicit Model derives
+
+The next release removes automatic `Model` derive insertion inside `capnp_models`. Existing code that relied on it will no longer compile. Add `#[derive(rydantic::Model)]` to every model struct and enum in the annotated module, including nested modules, or add `rydantic::Model` to the model's existing derive list. With a renamed dependency, use that dependency's name instead. Already-explicit derives, including aliases imported outside the annotated module, need no change. An unrelated derive named `Model` does not implement Rydantic's model traits.
+
+This is an intentional source-breaking change. Review and update your application before upgrading; the library does not maintain the old implicit-derive behavior. The derive change alone does not change the generated wire schema.
 
 ### Protocol IDs and compatible evolution
 
@@ -768,6 +774,7 @@ Fields and enum members are numbered from `@0` in declaration order by default. 
 ```rust
 #[rydantic::capnp_models(namespace = "my_app.counters")]
 mod models {
+    #[derive(rydantic::Model)]
     pub struct Counter {
         #[model(capnp_ordinal = 1)]
         pub count: u64,

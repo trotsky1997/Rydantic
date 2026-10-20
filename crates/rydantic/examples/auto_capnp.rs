@@ -2,7 +2,7 @@ use rydantic::{CapnpModel, CapnpSchema, Model};
 
 #[rydantic::capnp_models(namespace = "rydantic.examples.users")]
 mod models {
-    #[derive(Debug, PartialEq)]
+    #[derive(rydantic::Model, Debug, PartialEq)]
     pub struct User {
         #[model(trim, min_length = 1)]
         pub name: String,
@@ -13,7 +13,7 @@ mod models {
         pub avatar: Vec<u8>,
     }
 
-    #[derive(Debug, PartialEq)]
+    #[derive(rydantic::Model, Debug, PartialEq)]
     pub enum Role {
         Guest,
         Admin,
