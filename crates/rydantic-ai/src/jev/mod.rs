@@ -5,6 +5,7 @@
 
 #[cfg(feature = "http")]
 mod client;
+mod content;
 #[cfg(feature = "http")]
 pub use client::JevClient;
 
@@ -292,7 +293,10 @@ impl SystemOneResponse {
                 (Question::Score { criteria, .. }, Answer::Score(answer)) => {
                     criteria.len() == answer.legend.len()
                         && criteria.iter().enumerate().all(|(index, criterion)| {
-                            answer.legend.get(&index.to_string()) == Some(criterion)
+                            answer
+                                .legend
+                                .get(&index.to_string())
+                                .is_some_and(|value| content::same(value, criterion))
                         })
                 }
                 _ => false,

@@ -391,3 +391,96 @@ fn score_legends_preserve_complex_criteria_and_fractional_results() {
         ));
     }
 }
+
+fn score_with_numeric_criterion(
+    requested: &str,
+    returned: &str,
+) -> (SystemOneRequest, SystemOneResponse) {
+    let requested: Value = serde_json::from_str(requested).unwrap();
+    let returned: Value = serde_json::from_str(returned).unwrap();
+    let request = SystemOneRequest::new("m", "synthetic")
+        .question(
+            "score",
+            Question::score(
+                "Rate",
+                [Content::try_from(json!({"nested":[requested]})).unwrap()],
+            ),
+        )
+        .unwrap();
+    let response = serde_json::from_value(json!({"model":"m","answers":{"score":{
+        "type":"score","score":0.0,"confidence":0.4,
+        "legend":{"0":{"nested":[returned]}},"probabilities":{"0":1.0}
+    }},"usage":{"input_tokens":1,"output_tokens":1}}))
+    .unwrap();
+    (request, response)
+}
+
+#[test]
+fn score_legends_compare_numeric_values_without_changing_json_spelling() {
+    for (requested, returned) in [
+        ("1.00", "1.0"),
+        ("1", "10e-1"),
+        ("1.2300E+4", "12300"),
+        ("1e+000003", "1000.0"),
+        ("0.000100", "1e-4"),
+        ("-9007199254740993", "-9007199254740993.0"),
+        (
+            "0e999999999999999999999999",
+            "-0.000e-999999999999999999999999",
+        ),
+        ("1e9223372036854775808", "10e9223372036854775807"),
+        (
+            "1e-999999999999999999999999",
+            "10e-1000000000000000000000000",
+        ),
+    ] {
+        let (request, answer) = score_with_numeric_criterion(requested, returned);
+        let original_request = serde_json::to_value(&request).unwrap();
+        let original_answer = serde_json::to_value(&answer).unwrap();
+        answer.validate_for(&request).unwrap();
+        assert_eq!(serde_json::to_value(request).unwrap(), original_request);
+        assert_eq!(serde_json::to_value(answer).unwrap(), original_answer);
+    }
+}
+
+#[test]
+fn score_legends_keep_distinct_large_and_precise_numbers_distinct() {
+    for (requested, returned) in [
+        ("9007199254740992", "9007199254740993"),
+        (
+            "0.12345678901234567890123456789",
+            "0.12345678901234567890123456788",
+        ),
+        ("1e999999999999999999999999", "1e999999999999999999999998"),
+        ("1e-999999999999999999999999", "1e-999999999999999999999998"),
+        ("-1e999999999999999999999999", "1e999999999999999999999999"),
+        ("1e-999999999999999999999999", "0"),
+    ] {
+        let (request, answer) = score_with_numeric_criterion(requested, returned);
+        assert!(matches!(
+            answer.validate_for(&request),
+            Err(Error::Protocol(_))
+        ));
+    }
+}
+
+#[test]
+fn score_legend_comparison_is_bounded_by_number_spelling_not_magnitude() {
+    let exponent = "9".repeat(65_536);
+    let predecessor = format!("{}8", "9".repeat(65_535));
+    let requested = format!("1e{exponent}");
+    let returned = format!("10e{predecessor}");
+    let (request, answer) = score_with_numeric_criterion(&requested, &returned);
+    answer.validate_for(&request).unwrap();
+
+    let returned = format!("1e{predecessor}");
+    let (request, answer) = score_with_numeric_criterion(&requested, &returned);
+    assert!(matches!(
+        answer.validate_for(&request),
+        Err(Error::Protocol(_))
+    ));
+
+    let integer = format!("1{}3", "2".repeat(65_534));
+    let (request, answer) = score_with_numeric_criterion(&integer, &format!("{integer}.0"));
+    answer.validate_for(&request).unwrap();
+}
