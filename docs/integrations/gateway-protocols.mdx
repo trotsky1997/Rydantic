@@ -1,0 +1,128 @@
+---
+title: "Gateway protocols"
+description: "Use Responses, Chat Completions or Messages clients with any supported upstream protocol."
+---
+
+RydanticAI 0.5.0 serves three standard API frontends. A client selects its wire protocol by endpoint; the model alias selects the upstream route. These choices are independent.
+
+| Frontend endpoint | Responses upstream | Chat Completions upstream | Messages upstream |
+| --- | --- | --- | --- |
+| `POST /v1/responses` | JSON + SSE | JSON + SSE | JSON + SSE |
+| `POST /v1/chat/completions` | JSON + SSE | JSON + SSE | JSON + SSE |
+| `POST /v1/messages` | JSON + SSE | JSON + SSE | JSON + SSE |
+
+All nine combinations support text, client function tools, tool-result continuations, structured output mappings and token accounting. Agent validation correction, `Partial<T>` and `Iterable<T>` also work through every frontend.
+
+## Configure routes
+
+Each upstream chooses `api`: `responses`, `chat_completions` or `anthropic_messages`. `base_url` includes the API prefix, and credential fields contain environment-variable names.
+
+```json
+{
+  "listen": "127.0.0.1:8989",
+  "routes": {
+    "chat": [{
+      "api": "chat_completions",
+      "base_url": "https://api.openai.com/v1",
+      "model": "your-model",
+      "api_key_env": "UPSTREAM_APIKEY"
+    }]
+  },
+  "clients": [{
+    "id": "app",
+    "key_env": "GATEWAY_APIKEY",
+    "models": ["chat"]
+  }]
+}
+```
+
+Use the configured alias `chat` with any frontend. Public responses use the alias; upstream credentials and private replay metadata stay inside the gateway. Keep upstream APIKEY and client APIKEY separate. Client keys require at least 16 bytes. See [gateway budgets and deployment](/integrations/ai).
+
+## Authenticate clients
+
+Responses, Chat Completions and `GET /v1/models` use `Authorization: Bearer APIKEY`. Messages accepts `x-api-key: APIKEY` with `anthropic-version: 2023-06-01`, and also accepts bearer authentication. Conflicting credentials are rejected.
+
+For HTTP clients and Rydantic providers, set `BASEURL` to the API prefix, such as `http://127.0.0.1:8989/v1`. Set `APIKEY` to the gateway client key. Use HTTPS for network deployment.
+
+```sh
+curl "${BASEURL}/chat/completions" \
+  -H "Authorization: Bearer ${APIKEY}" \
+  -H "Content-Type: application/json" \
+  --data '{"model":"chat","messages":[{"role":"user","content":"Hello"}],"stream":true,"stream_options":{"include_usage":true}}'
+```
+
+The same route can receive Messages requests and forward them to its Chat Completions upstream:
+
+```sh
+curl "${BASEURL}/messages" \
+  -H "x-api-key: ${APIKEY}" \
+  -H "anthropic-version: 2023-06-01" \
+  -H "Content-Type: application/json" \
+  --data '{"model":"chat","max_tokens":256,"messages":[{"role":"user","content":"Hello"}]}'
+```
+
+## Standard SDKs
+
+OpenAI's Python SDK uses a BASEURL including `/v1`:
+
+```python
+import os
+from openai import OpenAI
+
+client = OpenAI(base_url=os.environ["BASEURL"], api_key=os.environ["APIKEY"])
+response = client.responses.create(model="chat", input="Hello")
+print(response.output_text)
+
+completion = client.chat.completions.create(
+    model="chat", messages=[{"role": "user", "content": "Hello"}]
+)
+print(completion.choices[0].message.content)
+```
+
+Anthropic's Python SDK appends `/v1/messages` itself. Pass the origin or proxy prefix before `/v1`:
+
+```python
+import os
+from anthropic import Anthropic
+
+client = Anthropic(
+    base_url=os.environ["BASEURL"].rstrip("/").removesuffix("/v1"),
+    api_key=os.environ["APIKEY"],
+)
+with client.messages.stream(
+    model="chat", max_tokens=256,
+    messages=[{"role": "user", "content": "Hello"}],
+) as stream:
+    for text in stream.text_stream:
+        print(text, end="", flush=True)
+```
+
+Rydantic clients use the [standard protocol providers](/integrations/api-providers). Their BASEURL always includes the API prefix. Configure capabilities for the selected route when using native structured output.
+
+## Supported controls
+
+Tool definitions, tool choice, parallel tool settings, output token limits, temperature and top-p are translated between native field names. Named tool choices retain the tool name. Messages temperature must be at most 1. Responses accepts a text string or an input array. Chat Completions accepts one choice (`n = 1`) and either `max_completion_tokens` or `max_tokens`.
+
+JSON Schema maps between `text.format`, `response_format.json_schema` and `output_config.format`. The upstream model must support its schema subset. Rydantic Agent runtime validation remains available through every frontend. JSON object mode is supported by Responses and Chat Completions; Messages uses JSON Schema or instruction-based output.
+
+The gateway implements text and client function tools. Unsupported parameters, multimodal content and model-specific reasoning controls fail explicitly where they cannot be represented. Stored responses are disabled. The gateway relays tool calls; the client application executes handlers and returns tool results with the original call IDs.
+
+Chat system and developer messages retain their roles and conversation order for Chat and Responses upstreams. Messages upstreams combine leading system/developer instructions into their top-level system field and reject interleaved instruction messages.
+
+## Streaming and errors
+
+Text and representable tool-argument fragments are emitted incrementally. Chat tool-name fragments are accumulated before conversion to formats requiring a complete tool name. Same-protocol Chat and Messages streams retain their native content events, including supported reasoning blocks.
+
+Each frontend receives its standard success terminal: `response.completed`, Chat `[DONE]`, or Messages `message_stop`. Success is emitted after the upstream completes and usage is reconciled with gateway budgets. Truncation, malformed streams, refusals and settlement failures end with a protocol-specific error and no success terminal. Chat usage chunks are emitted when `stream_options.include_usage` is true. Messages cumulative usage and cache creation/read counters are preserved or mapped without double counting.
+
+SSE disconnects cancel upstream work. Deadlines also cover stalled output queues and closed event sinks. Failed or unknown attempts retain conservative budget reservations. Ordered failover applies only to supported transient HTTP errors before any provider events.
+
+## Opaque tool history
+
+Text and function history is translated from each incoming request. The gateway keeps original assistant tool output, upstream item IDs, opaque reasoning and thinking signatures in a replay cache for tool continuation. Lookup requires the same authenticated client, model alias, instructions and complete visible conversation prefix. Changing the client or history cannot retrieve another conversation's native metadata.
+
+Replay is process-local and bounded to 128 entries and 8 MiB of serialized data, with a 30-minute TTL and FIFO eviction. Restart, expiry and eviction remove opaque metadata. Keep multi-turn tool sessions on one instance; durable replay across restarts or replicas requires application-managed state. Native metadata and incoming tool-error flags are retained when replaying their originating protocol.
+
+## Verification
+
+The test suite covers all nine JSON/SSE combinations, multi-turn tools, partial/iterable validation, authentication, usage, cache isolation, failure terminals, cancellation and bounded replay. CI also runs 27 cases through pinned official Python SDKs with strict response validation, using loopback fixtures and no live provider credentials.

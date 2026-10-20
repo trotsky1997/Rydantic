@@ -13,6 +13,7 @@ pub(super) fn responses_request(request: &ModelRequest, preserve_native: bool) -
         for item in body["input"].as_array_mut().expect("serialized input") {
             if let Some(object) = item.as_object_mut() {
                 object.remove(NATIVE);
+                object.remove("_rydantic_tool_result");
             }
         }
     }
@@ -75,7 +76,7 @@ fn configuration() -> Error {
     Error::Configuration("unsupported or malformed conversation item".into())
 }
 
-pub(super) fn chat(request: &ModelRequest) -> Result<Vec<Value>> {
+pub(crate) fn chat(request: &ModelRequest) -> Result<Vec<Value>> {
     let mut messages: Vec<Value> = Vec::new();
     let mut covered = HashSet::new();
     if let Some(instructions) = &request.instructions {
@@ -139,7 +140,7 @@ fn append_message(messages: &mut Vec<Value>, role: &str, blocks: Vec<Value>) -> 
     }
     Ok(())
 }
-pub(super) fn messages(request: &ModelRequest) -> Result<(String, Vec<Value>)> {
+pub(crate) fn messages(request: &ModelRequest) -> Result<(String, Vec<Value>)> {
     let mut messages = Vec::new();
     let mut covered = HashSet::new();
     let mut system = request.instructions.clone().unwrap_or_default();
@@ -174,6 +175,10 @@ pub(super) fn messages(request: &ModelRequest) -> Result<(String, Vec<Value>)> {
                 )?;
             }
             Some("function_call_output") => {
+                if let Some(block) = item.get("_rydantic_tool_result") {
+                    append_message(&mut messages, "user", vec![block.clone()])?;
+                    continue;
+                }
                 // Tool results lead the user turn; later user text may follow them.
                 if messages.last().is_some_and(|last| {
                     last["role"] == "user"
@@ -199,6 +204,12 @@ pub(super) fn messages(request: &ModelRequest) -> Result<(String, Vec<Value>)> {
                     continue;
                 }
                 if matches!(role, "system" | "developer") {
+                    if !messages.is_empty() {
+                        return Err(Error::Configuration(
+                            "Messages cannot represent interleaved system or developer messages"
+                                .into(),
+                        ));
+                    }
                     if !system.is_empty() {
                         system.push('\n');
                     }

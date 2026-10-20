@@ -3,7 +3,7 @@ title: "API providers"
 description: "Connect Responses, Chat Completions and Anthropic Messages with BASEURL and APIKEY."
 ---
 
-RydanticAI 0.4.0 supports three upstream protocols. They share typed Agent output, client tools, validation correction, [Partial and Iterable streams](/integrations/structured-output), token usage, deadlines and cancellation.
+RydanticAI 0.5.0 supports three upstream protocols. They share typed Agent output, client tools, validation correction, [Partial and Iterable streams](/integrations/structured-output), token usage, deadlines and cancellation.
 
 | Protocol | Rust provider | Path appended to BASEURL | APIKEY header |
 | --- | --- | --- | --- |
@@ -85,7 +85,7 @@ Chat Completions requires final prompt/completion usage. Messages updates cumula
 
 ## Gateway upstreams
 
-The gateway's external endpoints remain `GET /v1/models` and `POST /v1/responses`. Its upstreams support all three protocols through the `api` field:
+The gateway exposes `GET /v1/models`, `POST /v1/responses`, `POST /v1/chat/completions` and `POST /v1/messages`. Frontend and upstream protocols are independent. See [gateway protocols](/integrations/gateway-protocols). Upstreams select their protocol through the `api` field:
 
 ```json
 {
@@ -98,7 +98,7 @@ The gateway's external endpoints remain `GET /v1/models` and `POST /v1/responses
 
 Omitting `api` selects `responses`. An optional `capabilities` object accepts `native_json_schema` and `output_token_limit`. Upstream API keys remain separate from incoming gateway client keys. See the [gateway configuration and budgets](/integrations/ai).
 
-Use the dedicated gateway constructor for an HTTP gateway client. It preserves native tool-history metadata across the gateway's Responses interface and defaults to local schema validation for mixed upstream routes:
+Use any standard protocol provider for a gateway frontend. The server restores native tool-history metadata from a bounded process-local cache. The Responses gateway helper also defaults to local schema validation for mixed upstream routes:
 
 ```rust
 use rydantic_ai::ResponsesProvider;

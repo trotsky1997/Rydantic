@@ -3,7 +3,7 @@ use rydantic_ai::{
     gateway::{self, Budget, ClientPolicy, Gateway, Route},
     graph::{Graph, GraphResult, Node, Transition},
     rydantic::Model,
-    Agent, BoxFuture, ResponsesProvider, Result, RunContext, TypedTool,
+    Agent, Api, BoxFuture, HttpProvider, ResponsesProvider, Result, RunContext, TypedTool,
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -76,122 +76,124 @@ impl Node<State, Agent<(), Answer>, Key, String> for Finish {
 
 #[tokio::test]
 #[ignore = "requires BASEURL and MODEL for a live Responses endpoint"]
-async fn responses_agent_tool_gateway_and_graph_checkpoint() {
+async fn responses_upstream_with_responses_and_chat_frontends() {
     let base = std::env::var("BASEURL").expect("set BASEURL for the live endpoint");
     let model = std::env::var("MODEL").expect("set MODEL");
-    let provider = Arc::new(
-        ResponsesProvider::new(&base, std::env::var("APIKEY").ok())
-            .unwrap()
-            .with_capabilities(rydantic_ai::Capabilities {
-                native_json_schema: std::env::var("NATIVE_JSON_SCHEMA")
-                    .map(|v| v == "true")
-                    .unwrap_or(true),
-                output_token_limit: std::env::var("OUTPUT_TOKEN_LIMIT")
-                    .map(|v| v == "true")
-                    .unwrap_or(true),
-            }),
-    );
-    let budget = Budget {
-        max_requests: 8,
-        max_tokens: 100_000,
-        reservation_tokens: 2048,
-        max_cost_microusd: None,
-    };
-    let key = "live-test-gateway-key-12345";
-    let gateway = Gateway::new(
-        BTreeMap::from([(
-            "model".into(),
-            vec![Route {
-                provider,
-                model,
-                price: None,
+    for frontend in [Api::Responses, Api::ChatCompletions] {
+        let provider = Arc::new(
+            ResponsesProvider::new(&base, std::env::var("APIKEY").ok())
+                .unwrap()
+                .with_capabilities(rydantic_ai::Capabilities {
+                    native_json_schema: std::env::var("NATIVE_JSON_SCHEMA")
+                        .map(|v| v == "true")
+                        .unwrap_or(true),
+                    output_token_limit: std::env::var("OUTPUT_TOKEN_LIMIT")
+                        .map(|v| v == "true")
+                        .unwrap_or(true),
+                }),
+        );
+        let budget = Budget {
+            max_requests: 8,
+            max_tokens: 100_000,
+            reservation_tokens: 2048,
+            max_cost_microusd: None,
+        };
+        let key = "live-test-gateway-key-12345";
+        let gateway = Gateway::new(
+            BTreeMap::from([(
+                "model".into(),
+                vec![Route {
+                    provider,
+                    model: model.clone(),
+                    price: None,
+                }],
+            )]),
+            vec![ClientPolicy {
+                id: "live".into(),
+                key: key.into(),
+                models: HashSet::from(["model".into()]),
+                budget: budget.clone(),
             }],
-        )]),
-        vec![ClientPolicy {
-            id: "live".into(),
-            key: key.into(),
-            models: HashSet::from(["model".into()]),
-            budget: budget.clone(),
-        }],
-        budget,
-    )
-    .unwrap();
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let url = format!("http://{}/v1", listener.local_addr().unwrap());
-    let app = gateway::router(gateway.clone());
-    let server = tokio::spawn(async move {
-        axum::serve(listener, app).await.unwrap();
-    });
-    let http = Arc::new(
-        ResponsesProvider::gateway(&url, Some(key.into()))
-            .unwrap()
-            .with_capabilities(rydantic_ai::Capabilities {
-                native_json_schema: false,
-                output_token_limit: false,
-            }),
-    );
-    let tool = TypedTool::<(), Add, Sum, _>::new(
-        "add",
-        "Add two integers",
-        |args: Add, _, _| async move {
-            Ok(Sum {
-                sum: args.a + args.b,
-            })
-        },
-    )
-    .unwrap();
-    let agent = Agent::<(), Answer>::new(http, "model")
-        .instructions("Use add for arithmetic and return the exact numeric result in answer.")
-        .tool(tool)
-        .unwrap();
-    let graph = Graph::new(4)
-        .unwrap()
-        .node(Key::Agent, [Key::Finish], CallAgent)
-        .unwrap()
-        .node(Key::Finish, [], Finish)
-        .unwrap();
-    let state = State {
-        answer: String::new(),
-        model_calls: 0,
-        tool_calls: 0,
-        tokens: 0,
-    };
-    let result = graph
-        .run(state, &agent, Key::Agent, RunContext::default())
-        .await
-        .unwrap();
-    let GraphResult::Paused(checkpoint) = result else {
-        panic!("expected paused checkpoint")
-    };
-    let saved = serde_json::to_string(&checkpoint).unwrap();
-    let resumed = graph
-        .resume(
-            serde_json::from_str(&saved).unwrap(),
-            &agent,
-            RunContext::default(),
+            budget,
         )
-        .await
         .unwrap();
-    let GraphResult::Completed {
-        state,
-        output,
-        steps,
-    } = resumed
-    else {
-        panic!("expected completion")
-    };
-    assert!(output.contains("42"));
-    assert!(state.tool_calls >= 1);
-    assert!(state.model_calls >= 2);
-    assert!(state.tokens > 0);
-    assert_eq!(steps, 2);
-    let ledger = gateway.snapshot("live").unwrap();
-    assert_eq!(ledger.requests, u64::from(state.model_calls));
-    assert_eq!(ledger.tokens, state.tokens);
-    assert_eq!(ledger.reserved_tokens, 0);
-    println!(
-        "LIVE_RECEIPT={}",
-        serde_json::json!({"answer":output,"model_calls":state.model_calls,"tool_calls":state.tool_calls,"tokens":state.tokens,"graph_steps":steps,"gateway":ledger})
-    );
-    server.abort();
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}/v1", listener.local_addr().unwrap());
+        let app = gateway::router(gateway.clone());
+        let server = tokio::spawn(async move {
+            axum::serve(listener, app).await.unwrap();
+        });
+        let http = Arc::new(
+            HttpProvider::new(frontend, &url, Some(key.into()))
+                .unwrap()
+                .with_capabilities(rydantic_ai::Capabilities {
+                    native_json_schema: false,
+                    output_token_limit: false,
+                }),
+        );
+        let tool = TypedTool::<(), Add, Sum, _>::new(
+            "add",
+            "Add two integers",
+            |args: Add, _, _| async move {
+                Ok(Sum {
+                    sum: args.a + args.b,
+                })
+            },
+        )
+        .unwrap();
+        let agent = Agent::<(), Answer>::new(http, "model")
+            .instructions("Use add for arithmetic and return the exact numeric result in answer.")
+            .tool(tool)
+            .unwrap();
+        let graph = Graph::new(4)
+            .unwrap()
+            .node(Key::Agent, [Key::Finish], CallAgent)
+            .unwrap()
+            .node(Key::Finish, [], Finish)
+            .unwrap();
+        let state = State {
+            answer: String::new(),
+            model_calls: 0,
+            tool_calls: 0,
+            tokens: 0,
+        };
+        let result = graph
+            .run(state, &agent, Key::Agent, RunContext::default())
+            .await
+            .unwrap();
+        let GraphResult::Paused(checkpoint) = result else {
+            panic!("expected paused checkpoint")
+        };
+        let saved = serde_json::to_string(&checkpoint).unwrap();
+        let resumed = graph
+            .resume(
+                serde_json::from_str(&saved).unwrap(),
+                &agent,
+                RunContext::default(),
+            )
+            .await
+            .unwrap();
+        let GraphResult::Completed {
+            state,
+            output,
+            steps,
+        } = resumed
+        else {
+            panic!("expected completion")
+        };
+        assert!(output.contains("42"));
+        assert!(state.tool_calls >= 1);
+        assert!(state.model_calls >= 2);
+        assert!(state.tokens > 0);
+        assert_eq!(steps, 2);
+        let ledger = gateway.snapshot("live").unwrap();
+        assert_eq!(ledger.requests, u64::from(state.model_calls));
+        assert_eq!(ledger.tokens, state.tokens);
+        assert_eq!(ledger.reserved_tokens, 0);
+        println!(
+            "LIVE_RECEIPT={}",
+            serde_json::json!({"frontend":format!("{frontend:?}"),"answer":output,"model_calls":state.model_calls,"tool_calls":state.tool_calls,"tokens":state.tokens,"graph_steps":steps,"gateway":ledger})
+        );
+        server.abort();
+    }
 }

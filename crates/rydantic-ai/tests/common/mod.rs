@@ -50,3 +50,6 @@ impl ModelProvider for Scripted {
         })
     }
 }
+
+#[cfg(feature = "http")]
+pub mod wire;

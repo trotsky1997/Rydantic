@@ -13,13 +13,32 @@ pub(super) fn request(request: &ModelRequest) -> Result<Value> {
     if let Some(limit) = request.max_output_tokens {
         body["max_completion_tokens"] = json!(limit);
     }
+    if let Some(value) = request.temperature {
+        body["temperature"] = json!(value);
+    }
+    if let Some(value) = request.top_p {
+        body["top_p"] = json!(value);
+    }
+    if let Some(value) = request.parallel_tool_calls {
+        body["parallel_tool_calls"] = json!(value);
+    }
+    if let Some(choice) = &request.tool_choice {
+        body["tool_choice"] = if choice.is_string() {
+            choice.clone()
+        } else {
+            json!({"type":"function","function":{"name":choice["name"]}})
+        };
+    }
     if let Some(format) = request.text.as_ref().and_then(|v| v.get("format")) {
-        if format["type"] != "json_schema" {
+        if matches!(format["type"].as_str(), Some("text" | "json_object")) {
+            body["response_format"] = format.clone();
+        } else if format["type"] != "json_schema" {
             return Err(Error::Configuration(
                 "unsupported structured output format".into(),
             ));
+        } else {
+            body["response_format"] = json!({"type":"json_schema","json_schema":{"name":format["name"],"schema":format["schema"],"strict":format["strict"]}});
         }
-        body["response_format"] = json!({"type":"json_schema","json_schema":{"name":format["name"],"schema":format["schema"],"strict":format["strict"]}});
     }
     if !request.tools.is_empty() {
         body["tools"] = json!(request.tools.iter().map(|tool| json!({"type":"function","function":{"name":tool.name,"description":tool.description,"parameters":tool.parameters,"strict":tool.strict}})).collect::<Vec<_>>());

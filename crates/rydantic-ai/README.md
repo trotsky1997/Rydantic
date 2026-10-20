@@ -1,11 +1,11 @@
 # RydanticAI
 
-Typed Rust agents, explicit workflow graphs and a Responses HTTP gateway, built on [Rydantic](https://github.com/trotsky1997/Rydantic).
+Typed Rust agents, explicit workflow graphs and a three-protocol HTTP gateway, built on [Rydantic](https://github.com/trotsky1997/Rydantic).
 
 ```toml
 [dependencies]
 rydantic = "0.7.0-beta.3"
-rydantic-ai = "0.4.0"
+rydantic-ai = "0.5.0"
 ```
 
 `rydantic-ai` has its own version and release lifecycle inside the Rydantic workspace. The core `rydantic` crate does not depend on it. Disable default features for graphs and custom providers without HTTP dependencies.
@@ -115,7 +115,7 @@ println!("{}", response.noul("urgency")?.noul);
 # Ok(()) }
 ```
 
-Noul returns a probability in `[0, 1]`. Choice returns a selected label and probabilities. Score returns a possibly fractional value with confidence, level probabilities and the original legend. `response.parse::<YourModel>(&context).await` projects primary answers into a validated Rydantic model while retaining the full result in `response.answers`. It can be called from a typed tool or graph node using the same `RunContext`. Jev usage is available on `response.usage`; Agent usage counts its Responses model requests.
+Noul returns a probability in `[0, 1]`. Choice returns a selected label and probabilities. Score returns a possibly fractional value with confidence, level probabilities and the original legend. `response.parse::<YourModel>(&context).await` projects primary answers into a validated Rydantic model while retaining the full result in `response.answers`. It can be called from a typed tool or graph node using the same `RunContext`. Jev usage is available on `response.usage`; Agent usage counts its model provider requests.
 
 Requests are sent once, redirects are disabled, and cancellation/deadlines cover HTTP transfer. The client validates question/answer names, variants, numeric ranges and option/level domains. Request and response limits are 1 MiB and 8 MiB. Debug output redacts the credential; upstream error bodies are omitted. Use HTTPS for network endpoints and keep credentials server-side.
 
@@ -129,9 +129,9 @@ Return `Transition::Next(key)`, `Transition::End(output)` or `Transition::Pause(
 
 ## Gateway
 
-`Gateway` implements ordered model routing and per-client/global admission budgets. A gateway client implements `ModelProvider`, so the same agent can use a direct provider or a gateway. Only explicit HTTP 429/502/503/504 failures permit ordered failover. Transport/protocol failures and partially delivered streams are not replayed.
+`Gateway` implements ordered model routing and per-client/global admission budgets. A gateway client implements `ModelProvider`, so the same agent can use a direct provider or a gateway. Only explicit HTTP 429/502/503/504 failures permit ordered failover. Successful stream terminals are emitted after usage and budget settlement. Transport/protocol failures and partially delivered streams are not replayed.
 
-The `rydantic-ai-gateway` executable exposes authenticated `GET /v1/models` and `POST /v1/responses` endpoints, including SSE. Configure gateway keys and upstream credentials by environment-variable **names** in a JSON config; credential values are excluded from the config file and error responses. See `examples/gateway.json`. Each upstream selects `api`: `responses` (default), `chat_completions` or `anthropic_messages`. The external gateway interface uses Responses. Use `ResponsesProvider::gateway(BASEURL, APIKEY)?` for an HTTP gateway client so opaque native tool-history metadata survives subsequent turns.
+The `rydantic-ai-gateway` executable exposes authenticated `GET /v1/models`, `POST /v1/responses`, `POST /v1/chat/completions` and `POST /v1/messages`. All nine combinations of frontend and upstream protocols support JSON and SSE. Configure gateway keys and upstream credentials by environment-variable **names** in a JSON config; credential values are excluded from the config file and error responses. See `examples/gateway.json`. Each upstream selects `api`: `responses` (default), `chat_completions` or `anthropic_messages`. Clients choose their standard wire protocol independently of the route's upstream. Messages accepts `x-api-key`; all frontends accept bearer authentication. Opaque native tool history is restored from a bounded process-local replay cache, scoped to the authenticated client, model alias and full conversation prefix. It holds up to 128 entries and 8 MiB of serialized data for 30 minutes, with FIFO eviction. Keep tool sessions on one instance; restart, expiry or eviction removes opaque replay metadata. Ordinary text and function history remains translatable. See the [gateway protocol guide](https://rydantic.mintlify.site/integrations/gateway-protocols).
 
 ```sh
 cargo run -p rydantic-ai --bin rydantic-ai-gateway -- crates/rydantic-ai/examples/gateway.json
@@ -145,11 +145,11 @@ Client and global policies each use their own reservation size and cost estimate
 
 ## Independent releases
 
-RydanticAI uses tags such as `rydantic-ai-v0.4.0`. Its version is read from this package manifest and is independent of the core workspace version. A maintainer with the repository's GitHub identity and a local Cargo publishing credential can run from a clean repository checkout:
+RydanticAI uses tags such as `rydantic-ai-v0.5.0`. Its version is read from this package manifest and is independent of the core workspace version. A maintainer with the repository's GitHub identity and a local Cargo publishing credential can run from a clean repository checkout:
 
 ```sh
-python3 scripts/release_ai.py preflight --tag rydantic-ai-v0.4.0
-python3 scripts/release_ai.py publish --tag rydantic-ai-v0.4.0
+python3 scripts/release_ai.py preflight --tag rydantic-ai-v0.5.0
+python3 scripts/release_ai.py publish --tag rydantic-ai-v0.5.0
 ```
 
 The release script requires an existing remote tag on tested main history, successful exact-commit main-push CI, an unpublished registry version and a package containing no installed Node dependencies or credential files. It performs one upload attempt and verifies the registry checksum and sparse index, including after an uncertain upload exit status. It publishes only `rydantic-ai`. Use Python 3.11 or newer.

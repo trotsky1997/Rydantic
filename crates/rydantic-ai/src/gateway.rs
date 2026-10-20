@@ -416,6 +416,14 @@ impl ModelProvider for GatewayClient {
 }
 
 #[cfg(feature = "http")]
+mod egress;
+#[cfg(feature = "http")]
+mod ingress;
+#[cfg(feature = "http")]
+mod replay;
+#[cfg(feature = "http")]
 mod server;
+#[cfg(feature = "http")]
+mod stream;
 #[cfg(feature = "http")]
 pub use server::router;

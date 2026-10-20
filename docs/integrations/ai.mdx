@@ -1,14 +1,14 @@
 ---
 title: "RydanticAI"
-description: "Build typed agents, resumable graphs and a Responses gateway with the independent rydantic-ai crate."
+description: "Build typed agents, resumable graphs and a three-protocol gateway with the independent rydantic-ai crate."
 ---
 
-`rydantic-ai` lives in the same workspace with its own `0.4.0` version and publishing lifecycle. The core Rydantic model crate remains independent of AI transport dependencies.
+`rydantic-ai` lives in the same workspace with its own `0.5.0` version and publishing lifecycle. The core Rydantic model crate remains independent of AI transport dependencies.
 
 ```toml
 [dependencies]
 rydantic = "0.7.0-beta.3"
-rydantic-ai = "0.4.0"
+rydantic-ai = "0.5.0"
 ```
 
 ## Connect an API
@@ -41,7 +41,7 @@ Responses and Chat Completions request native JSON Schema by default. Messages u
 
 ## Structured output streams
 
-RydanticAI 0.4.0 adds `Agent::stream_partial()` and `Agent::stream_iterable()`. `Partial<T>` emits provisional JSON field snapshots and returns a fully validated final `T`. `Iterable<T>` validates complete elements before emission and can collect the accepted attempt into `Vec<T>`, with no `Clone` requirement. Both modes preserve validation correction, tool execution, usage, cancellation and bounded backpressure. See the [structured output guide](/integrations/structured-output).
+RydanticAI 0.5.0 adds `Agent::stream_partial()` and `Agent::stream_iterable()`. `Partial<T>` emits provisional JSON field snapshots and returns a fully validated final `T`. `Iterable<T>` validates complete elements before emission and can collect the accepted attempt into `Vec<T>`, with no `Clone` requirement. Both modes preserve validation correction, tool execution, usage, cancellation and bounded backpressure. See the [structured output guide](/integrations/structured-output).
 
 ## Tools and execution limits
 
@@ -69,7 +69,7 @@ Checkpoints are boundaries between nodes. Applications own durable storage, chec
 
 ## Authenticated model gateway
 
-The gateway exposes `GET /v1/models` and `POST /v1/responses`, including SSE. Each upstream selects `api`: `responses`, `chat_completions` or `anthropic_messages`. HTTP clients use `ResponsesProvider::gateway(BASEURL, APIKEY)` to retain native message metadata across tool turns. Each client has a bearer key and an explicit model allowlist. Configuration files contain environment-variable names for keys, and route definitions identify upstream URLs and models.
+The gateway exposes `GET /v1/models`, `POST /v1/responses`, `POST /v1/chat/completions` and `POST /v1/messages`, including JSON and SSE. Each upstream selects `api`: `responses`, `chat_completions` or `anthropic_messages`. Frontend and upstream protocols are independent; all nine combinations support text, tools, JSON Schema mappings and usage. See [gateway protocols](/integrations/gateway-protocols) for authentication, SDK configuration and bounded native replay. Each client has a bearer key and an explicit model allowlist. Configuration files contain environment-variable names for keys, and route definitions identify upstream URLs and models.
 
 ```sh
 cargo run -p rydantic-ai --bin rydantic-ai-gateway -- crates/rydantic-ai/examples/gateway.json
