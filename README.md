@@ -102,9 +102,9 @@ See the [complete feature reference](https://rydantic.mintlify.site/reference/fe
 | Channel | Version | Use it for |
 | --- | --- | --- |
 | **Stable** | `0.6.0` | Published API, with [versioned source documentation](https://github.com/trotsky1997/Rydantic/tree/v0.6.0) and [Rust API reference](https://docs.rs/rydantic/0.6.0/rydantic/). |
-| **Source candidate** | `0.7.0-beta.3` | Testing bounded partial JSON snapshots, retaining settings and the beta.1 derive contract and migration protections. |
+| **Source candidate** | `0.7.0-beta.4` | Testing opt-in phone, country and currency types; retaining partial JSON, settings and the beta.1 upgrade protections. |
 
-A version in this branch is **not a publication announcement**. Check [published versions](https://crates.io/crates/rydantic/versions) before installing a candidate. Once published, opt in exactly with `rydantic = "=0.7.0-beta.3"`. The guides follow the working source; use the versioned links above for stable behavior.
+A version in this branch is **not a publication announcement**. Check [published versions](https://crates.io/crates/rydantic/versions) before installing a candidate. Once published, opt in exactly with `rydantic = "=0.7.0-beta.4"`. The guides follow the working source; use the versioned links above for stable behavior.
 
 > **Breaking upgrade:** 0.7.0-beta.1 removes automatic `Model` derive insertion inside `#[rydantic::capnp_models]`. Add an explicit `#[derive(rydantic::Model)]` to every model struct and enum, including nested models. The beta also rejects unsupported custom SQLite index layouts before a table rebuild. Read the [changelog and migration guidance](https://github.com/trotsky1997/Rydantic/blob/main/CHANGELOG.md) before upgrading.
 
