@@ -1,3 +1,7 @@
+# Unreleased
+
+- Add the opt-in `settings` feature: explicit ordered JSON, environment, strict dotenv-subset and flat secrets-directory sources validated with the existing `Model` contract. Source precedence and value parsing are caller-selected. Source errors and builder diagnostics redact values. This additive API is not included in 0.7.0-beta.1 and does not imply full pydantic-settings compatibility.
+
 # Rydantic 0.7.0-beta.1
 
 Source candidate, not a publication announcement. Check crates.io and GitHub Releases for published artifacts. Stable remains 0.6.0.

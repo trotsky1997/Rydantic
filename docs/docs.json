@@ -53,6 +53,7 @@
             "group": "Models",
             "pages": [
               "models/validation",
+              "models/settings",
               "models/structure",
               "models/borrowed",
               "models/lifecycle",
