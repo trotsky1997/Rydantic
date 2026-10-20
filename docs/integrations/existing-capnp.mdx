@@ -89,3 +89,9 @@ See [fixtures/capnp](https://github.com/trotsky1997/Rydantic/tree/main/fixtures/
 ```sh
 cargo run -p rydantic-capnp-fixture
 cargo test -p rydantic-capnp-fixture --test native
+# Requires the system capnp compiler:
+cargo test -p rydantic-capnp-fixture --test native -- --include-ignored
+# Regenerate and format bindings after changing the example schema:
+RYDANTIC_REGENERATE_CAPNP=1 cargo check -p rydantic-capnp-fixture
+cargo fmt --all
+```

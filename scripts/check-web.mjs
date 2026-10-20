@@ -26,6 +26,11 @@ for (const page of pages) {
     /[\u3400-\u9fff]/u,
     `${page}: documentation must be English`,
   );
+  assert.equal(
+    [...source.matchAll(/^```/gm)].length % 2,
+    0,
+    `${page}: unclosed code block`,
+  );
   for (const link of source.matchAll(
     /(?:href="|\]\()\/(?!\/)([^"\s)#]+)(?:#[^"\s)]+)?/g,
   )) {

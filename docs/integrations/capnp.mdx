@@ -57,7 +57,7 @@ Derive `rydantic::Model` explicitly on each model (an imported alias also works)
 
 Default mappings cover nested and recursive models, `Box`, `Option`, `Vec`, fixed arrays, String-keyed `BTreeMap`/`HashMap`, unit enums, and data enums. `Vec<u8>` becomes `Data`; full-range `i128`/`u128`, dates, and Decimal become `Text`, including inside containers. Module-local type aliases, container aliases with concrete type arguments, explicit `use` aliases, and inline submodules work together. Dates and Decimal require the `chrono` and `decimal` features respectively.
 
-Models must use concrete, owned types within the annotated inline module. Data enums still declare their JSON representation: named fields can use `#[model(tag = "kind")]`, while tuple variants use `#[model(untagged)]`. `capnp_name` controls the protocol name independently. `capnp_skip` with a default preserves a local field. JSON aliases, flattening, extra fields, and exclusion continue to control the JSON representation. Unsupported external types can use a default with `capnp_skip`, or the existing-schema integration below.
+Models must use concrete, owned types within the annotated inline module. Data enums still declare their JSON representation: named fields can use `#[model(tag = "kind")]`, while tuple variants use `#[model(untagged)]`. `capnp_name` controls the protocol name independently. `capnp_skip` with a default preserves a local field. JSON aliases, flattening, extra fields, and exclusion continue to control the JSON representation. Unsupported external types can use a default with `capnp_skip`, or the [existing-schema integration](/integrations/existing-capnp).
 
 ## Upcoming change: explicit Model derives
 
