@@ -16,6 +16,8 @@ struct Options {
     references: Option<(String, String)>,
     on_delete: Option<String>,
     length: Option<usize>,
+    rename_from: Option<String>,
+    default: Option<syn::Expr>,
 }
 fn identifier(value: &str, span: Span) -> syn::Result<()> {
     let mut chars = value.chars();
@@ -55,6 +57,16 @@ fn options(attributes: &[syn::Attribute], container: bool) -> syn::Result<Option
                     let value = meta.value()?.parse::<LitStr>()?;
                     identifier(&value.value(), value.span())?;
                     result.name = Some(value.value());
+                }
+                "rename_from" => {
+                    let value = meta.value()?.parse::<LitStr>()?;
+                    identifier(&value.value(), value.span())?;
+                    result.rename_from = Some(value.value());
+                }
+                "default" => {
+                    let value = meta.value()?.parse::<syn::Expr>()?;
+                    sql_default(&value)?;
+                    result.default = Some(value);
                 }
                 "primary_key" => result.primary_key = true,
                 "auto_increment" => result.auto_increment = true,
@@ -113,6 +125,8 @@ fn options(attributes: &[syn::Attribute], container: bool) -> syn::Result<Option
             || result.index
             || result.references.is_some()
             || result.length.is_some()
+            || result.rename_from.is_some()
+            || result.default.is_some()
             || result.name.is_some())
     {
         return Err(syn::Error::new(
@@ -121,6 +135,40 @@ fn options(attributes: &[syn::Attribute], container: bool) -> syn::Result<Option
         ));
     }
     Ok(result)
+}
+
+fn sql_default(expr: &syn::Expr) -> syn::Result<(&'static str, Tokens)> {
+    use syn::{Expr, Lit, UnOp};
+    let (literal, negative) = match expr {
+        Expr::Unary(value) if matches!(value.op, UnOp::Neg(_)) => (&*value.expr, true),
+        other => (other, false),
+    };
+    let Expr::Lit(value) = literal else {
+        return Err(syn::Error::new_spanned(
+            expr,
+            "SQL default requires a string, boolean, integer or finite float literal",
+        ));
+    };
+    let kind = match &value.lit {
+        Lit::Str(value) if !negative && !value.value().contains('\0') => "Text",
+        Lit::Bool(_) if !negative => "Boolean",
+        Lit::Int(value) => {
+            let text = format!(
+                "{}{}",
+                if negative { "-" } else { "" },
+                value.base10_digits()
+            );
+            text.parse::<i64>()
+                .map_err(|_| syn::Error::new_spanned(expr, "SQL integer default must fit i64"))?;
+            "Integer"
+        }
+        Lit::Float(value) if value.base10_parse::<f64>()?.is_finite() => "Real",
+        _ => return Err(syn::Error::new_spanned(
+            expr,
+            "SQL default requires a string without NUL, boolean, integer or finite float literal",
+        )),
+    };
+    Ok((kind, quote!(#expr)))
 }
 
 pub(super) fn expand(input: DeriveInput) -> syn::Result<Tokens> {
@@ -199,6 +247,24 @@ pub(super) fn expand(input: DeriveInput) -> syn::Result<Tokens> {
         let auto = options.auto_increment;
         let unique = options.unique;
         let indexed = options.index;
+        let rename_from = crate::option(&options.rename_from);
+        let default = if let Some(expr) = &options.default {
+            if auto {
+                return Err(syn::Error::new_spanned(
+                    expr,
+                    "auto_increment cannot have a SQL default",
+                ));
+            }
+            let (kind, value) = sql_default(expr)?;
+            let kind = format_ident!("{kind}");
+            checks.push(quote_spanned!(ty.span()=>
+                const _: () = assert!(matches!(<#ty as #rd::sql::SqlValue>::SQL_TYPE, #rd::sql::SqlType::#kind),
+                    "SQL default must match the column storage type");
+            ));
+            quote!(::core::option::Option::Some(#rd::sql::SqlDefault::#kind(#value)))
+        } else {
+            quote!(::core::option::Option::None)
+        };
         let length = crate::option(&options.length.or(field.attr.max_length));
         if options.length.is_some() {
             checks.push(quote_spanned!(ty.span()=>
@@ -235,7 +301,7 @@ pub(super) fn expand(input: DeriveInput) -> syn::Result<Tokens> {
         } else {
             quote!(::core::option::Option::None)
         };
-        columns.push(quote!(#rd::sql::Column{name:#column,sql_type:<#ty as #rd::sql::SqlValue>::SQL_TYPE,nullable:<#ty as #rd::sql::SqlValue>::NULLABLE && !#pk,primary_key:#pk,auto_increment:#auto,unique:#unique,index:#indexed,references:#references,length:#length}));
+        columns.push(quote!(#rd::sql::Column{name:#column,sql_type:<#ty as #rd::sql::SqlValue>::SQL_TYPE,nullable:<#ty as #rd::sql::SqlValue>::NULLABLE && !#pk,primary_key:#pk,auto_increment:#auto,unique:#unique,index:#indexed,references:#references,length:#length,rename_from:#rename_from,default:#default}));
         reads.push(quote!(#ident:<__RydanticDb as #rd::sql::SqlBackend>::read::<#ty>(row,#column).map_err(|error|#rd::sqlx::Error::ColumnDecode{index:#column.to_owned(),source: ::std::boxed::Box::new(error)})?));
         let location = &field.input;
         bindings.push(quote!(#index=>#rd::sql::bind_value::<__RydanticDb,#ty>(&self.#ident,&<Self as #rd::SqlModel>::COLUMNS[#index],query).map_err(|error|error.at(#location))));
@@ -279,15 +345,13 @@ pub(super) fn expand(input: DeriveInput) -> syn::Result<Tokens> {
             const TABLE:&'static str=#table;
             const COLUMNS:&'static [#rd::sql::Column]=&[#(#columns),*];
             fn key(&self)->::core::option::Option<&Self::Key>{<#key_ty as #rd::sql::Key>::value(&self.#key)}
-            fn decode_row(row:&#rd::sqlx::sqlite::SqliteRow)->::core::result::Result<Self,#rd::sqlx::Error>{<Self as #rd::sql::SqlRow<#rd::sqlx::Sqlite>>::decode_sql_row(row)}
-            fn bind_column(&self,index:usize,query:&mut #rd::sqlx::QueryBuilder<#rd::sqlx::Sqlite>)->::core::result::Result<(),#rd::SqlError>{<Self as #rd::sql::SqlRow<#rd::sqlx::Sqlite>>::bind_sql_column(self,index,query)}
             fn include_insert_column(&self,index:usize)->bool{match index{#(#included,)* _=>false}}
         }
         impl<__RydanticDb: #rd::sql::SqlBackend> #rd::sql::SqlRow<__RydanticDb> for #name {
             fn decode_sql_row(row:&__RydanticDb::Row)->::core::result::Result<Self,#rd::sqlx::Error>{Ok(Self{#(#reads),*})}
             fn bind_sql_column(&self,index:usize,query:&mut #rd::sqlx::QueryBuilder<__RydanticDb>)->::core::result::Result<(),#rd::SqlError>{match index{#(#bindings,)* _=>unreachable!("generated SQL column index")}}
         }
-        #sqlite_row
+        #rd::__rydantic_sqlite!{#sqlite_row}
         #rd::__rydantic_postgres!{#postgres_row}
         #rd::__rydantic_mysql!{#mysql_row}
     })

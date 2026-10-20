@@ -1,4 +1,4 @@
-#![cfg(all(feature = "axum", feature = "sqlx"))]
+#![cfg(all(feature = "axum", feature = "sqlite"))]
 #[path = "../examples/sqlite_api.rs"]
 #[allow(dead_code)]
 mod api;

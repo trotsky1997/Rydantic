@@ -1,4 +1,4 @@
-#![cfg(feature = "sqlx")]
+#![cfg(feature = "sqlite")]
 use rydantic::sqlx::{self, sqlite::SqlitePoolOptions, Row, SqlitePool};
 use rydantic::{
     sql::{Compare, Order},

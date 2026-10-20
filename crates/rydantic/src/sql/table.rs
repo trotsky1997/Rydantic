@@ -3,7 +3,7 @@ use super::{
     SqlParameter, SqlValue, ValidationConnection,
 };
 use crate::{AsyncCheck, Context, Model};
-use sqlx::{Acquire, QueryBuilder, Sqlite};
+use sqlx::{Acquire, QueryBuilder};
 use std::future::Future;
 
 /// Typed row decoding and binding for a specific SQLx driver.
@@ -24,10 +24,6 @@ pub trait SqlModel: Model + AsyncCheck + Send + 'static {
     const TABLE: &'static str;
     const COLUMNS: &'static [Column];
     #[doc(hidden)]
-    fn decode_row(row: &sqlx::sqlite::SqliteRow) -> Result<Self, sqlx::Error>;
-    #[doc(hidden)]
-    fn bind_column(&self, index: usize, query: &mut QueryBuilder<Sqlite>) -> Result<(), SqlError>;
-    #[doc(hidden)]
     fn include_insert_column(&self, index: usize) -> bool;
     fn key(&self) -> Option<&Self::Key>;
     fn primary_key() -> &'static Column {
@@ -36,17 +32,33 @@ pub trait SqlModel: Model + AsyncCheck + Send + 'static {
             .find(|c| c.primary_key)
             .expect("SqlModel requires a primary key")
     }
-    fn create_table_sql() -> String {
-        Self::create_table_sql_for::<Sqlite>()
-    }
-    fn create_index_sql() -> Vec<String> {
-        Self::create_index_sql_for::<Sqlite>()
-    }
-    fn create_table_sql_for<DB: SqlBackend>() -> String {
+    fn create_table_sql<DB: SqlBackend>() -> String {
         ddl::table::<Self, DB>()
     }
-    fn create_index_sql_for<DB: SqlBackend>() -> Vec<String> {
+    fn create_index_sql<DB: SqlBackend>() -> Vec<String> {
         ddl::indexes::<Self, DB>()
+    }
+
+    /// Preview changes from the live schema without modifying the database.
+    fn migration_plan<DB: SqlBackend>(
+        pool: &sqlx::Pool<DB>,
+    ) -> impl Future<Output = Result<super::MigrationPlan, SqlError>> + Send {
+        super::migration::preview::<Self, DB>(pool)
+    }
+
+    /// Upgrade a table from this model; destructive changes are rejected.
+    fn migrate<DB: SqlBackend>(
+        pool: &sqlx::Pool<DB>,
+    ) -> impl Future<Output = Result<super::MigrationReport, SqlError>> + Send {
+        Self::migrate_with(pool, super::MigrationOptions::default())
+    }
+
+    /// Upgrade with explicit data-loss policy. Requires a pool for lock isolation.
+    fn migrate_with<DB: SqlBackend>(
+        pool: &sqlx::Pool<DB>,
+        options: super::MigrationOptions,
+    ) -> impl Future<Output = Result<super::MigrationReport, SqlError>> + Send {
+        super::migration::migrate::<Self, DB>(pool, options)
     }
 
     fn create_table<'c, A>(connection: A) -> impl Future<Output = Result<(), SqlError>> + Send
@@ -58,7 +70,7 @@ pub trait SqlModel: Model + AsyncCheck + Send + 'static {
         async move {
             ddl::check_identifiers::<Self, A::Database>()?;
             let mut query =
-                QueryBuilder::<A::Database>::new(Self::create_table_sql_for::<A::Database>());
+                QueryBuilder::<A::Database>::new(Self::create_table_sql::<A::Database>());
             if <A::Database as SqlBackend>::DIALECT == Dialect::MySql {
                 if !A::Connection::RELEASES_POOL_SLOT {
                     return Err(field_error(
@@ -71,7 +83,7 @@ pub trait SqlModel: Model + AsyncCheck + Send + 'static {
             } else {
                 let mut transaction = connection.begin().await?;
                 A::Database::execute(&mut query, &mut transaction).await?;
-                for statement in Self::create_index_sql_for::<A::Database>() {
+                for statement in Self::create_index_sql::<A::Database>() {
                     A::Database::execute(&mut QueryBuilder::new(statement), &mut transaction)
                         .await?;
                 }
