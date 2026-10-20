@@ -143,6 +143,30 @@ struct WithoutReference {
     code: i64,
     parent: Option<i64>,
 }
+#[derive(Debug, Model, SqlModel)]
+#[sql(table = "rd06_collision")]
+struct CollisionOptional {
+    #[sql(primary_key)]
+    id: i64,
+    #[sql(rename_from = "rd06_collision")]
+    legacy: Option<String>,
+}
+#[derive(Debug, Model, SqlModel)]
+#[sql(table = "rd06_collision")]
+struct CollisionRequired {
+    #[sql(primary_key)]
+    id: i64,
+    #[sql(rename_from = "legacy")]
+    rd06_collision: String,
+}
+#[derive(Debug, Model, SqlModel)]
+#[sql(table = "rd06_collision")]
+struct CollisionBackfill {
+    #[sql(primary_key)]
+    id: i64,
+    #[sql(rename_from = "legacy", default = "fallback")]
+    rd06_collision: String,
+}
 async fn execute<DB: SqlBackend>(pool: &Pool<DB>, sql: &str) {
     let mut c = pool.acquire().await.unwrap();
     DB::execute(&mut QueryBuilder::new(sql), &mut c)
@@ -159,6 +183,7 @@ async fn evolution<DB: SqlBackend>(pool: &Pool<DB>) {
     for table in [
         "rd06_child",
         "rd06_self",
+        "rd06_collision",
         "rd06_parent",
         "rd06_accounts",
         "rd06_values",
@@ -320,6 +345,45 @@ async fn evolution<DB: SqlBackend>(pool: &Pool<DB>) {
         .plan
         .is_empty());
 
+    CollisionOptional::migrate(pool).await.unwrap();
+    CollisionOptional {
+        id: 1,
+        legacy: Some("keep".into()),
+    }
+    .insert(pool)
+    .await
+    .unwrap();
+    CollisionRequired::migrate(pool).await.unwrap();
+    assert_eq!(
+        CollisionRequired::get(pool, &1)
+            .await
+            .unwrap()
+            .unwrap()
+            .rd06_collision,
+        "keep"
+    );
+    CollisionOptional::migrate(pool).await.unwrap();
+    CollisionOptional {
+        id: 1,
+        legacy: None,
+    }
+    .update(pool)
+    .await
+    .unwrap();
+    CollisionBackfill::migrate(pool).await.unwrap();
+    assert_eq!(
+        CollisionBackfill::get(pool, &1)
+            .await
+            .unwrap()
+            .unwrap()
+            .rd06_collision,
+        "fallback"
+    );
+    assert!(CollisionBackfill::migrate(pool)
+        .await
+        .unwrap()
+        .plan
+        .is_empty());
     let (first, second) = tokio::join!(Nullable::migrate(pool), Nullable::migrate(pool));
     assert_eq!(
         usize::from(first.unwrap().revision.is_some())
@@ -389,7 +453,7 @@ async fn sqlite_model_evolution() {
             .fetch_one(&pool)
             .await
             .unwrap();
-    assert_eq!(applied, 13);
+    assert_eq!(applied, 17);
 }
 #[cfg(feature = "postgres")]
 #[tokio::test]

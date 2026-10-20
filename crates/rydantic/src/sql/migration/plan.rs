@@ -3,6 +3,18 @@ use super::{
     ddl, error, DbColumn, Dialect, MigrationChange, MigrationPlan, SqlBackend, SqlError, SqlModel,
 };
 
+fn source_name<T: SqlModel>(before: &Catalog, name: &str) -> String {
+    if before.columns.iter().any(|c| c.name == name) {
+        return name.into();
+    }
+    T::COLUMNS
+        .iter()
+        .find(|c| c.name == name)
+        .and_then(|c| c.rename_from)
+        .filter(|source| before.columns.iter().any(|c| c.name == *source))
+        .unwrap_or(name)
+        .into()
+}
 fn effective_default(value: &Option<String>) -> Option<&str> {
     value.as_deref().filter(|s| *s != "null")
 }
@@ -237,7 +249,7 @@ pub(super) fn build<T: SqlModel, DB: SqlBackend>(
         if !wanted.nullable {
             if let Some(old) = current.columns.iter().find(|c| c.name == wanted.name) {
                 if old.nullable && wanted.default.is_none() {
-                    plan.checks.push((format!("SELECT 1 FROM {table} WHERE {} IS NULL LIMIT 1",q(&old.name)),format!("column {} contains NULL; provide a SQL default before making it required",old.name)));
+                    plan.checks.push((format!("SELECT 1 FROM {table} WHERE {} IS NULL LIMIT 1",q(&source_name::<T>(&plan.before,&old.name))),format!("column {} contains NULL; provide a SQL default before making it required",old.name)));
                 }
             }
         }
@@ -362,18 +374,6 @@ pub(super) fn build<T: SqlModel, DB: SqlBackend>(
             &added_fks,
         );
     }
-    // Preflight queries run before native renames, against the original names.
-    for (sql, _) in &mut plan.checks {
-        for column in T::COLUMNS {
-            if let Some(source) = column.rename_from {
-                if plan.before.columns.iter().any(|c| c.name == source)
-                    && !plan.before.columns.iter().any(|c| c.name == column.name)
-                {
-                    *sql = sql.replace(&q(column.name), &q(source));
-                }
-            }
-        }
-    }
     Ok(plan)
 }
 fn index_statements(plan: &mut MigrationPlan, removed: &[DbIndex], added: &[DbIndex]) {
@@ -441,7 +441,7 @@ fn sqlite_rebuild<T: SqlModel, DB: SqlBackend>(
                 plan.checks.push((
                     format!(
                         "SELECT 1 FROM {table} WHERE typeof({}) NOT IN ({allowed}) LIMIT 1",
-                        q(&old.name)
+                        q(&source_name::<T>(&plan.before, &old.name))
                     ),
                     format!(
                         "column {} has values incompatible with its new SQLite storage type",
@@ -570,22 +570,19 @@ fn server_alter<T: SqlModel, DB: SqlBackend>(
             }
             if old.nullable && !column.nullable {
                 if let Some(default) = column.default {
+                    let source = if dialect == Dialect::MySql {
+                        source_name::<T>(&plan.before, column.name)
+                    } else {
+                        column.name.into()
+                    };
                     let statement = format!(
                         "UPDATE {table} SET {} = {} WHERE {} IS NULL",
-                        q(column.name),
+                        q(&source),
                         default.sql(dialect),
-                        q(column.name)
+                        q(&source)
                     );
                     if dialect == Dialect::MySql {
-                        // Backfill uses the original name until the batched ALTER runs.
-                        let original = column
-                            .rename_from
-                            .filter(|name| plan.before.columns.iter().any(|c| c.name == *name));
-                        deferred_backfills.push(if let Some(old) = original {
-                            statement.replace(&q(column.name), &q(old))
-                        } else {
-                            statement
-                        });
+                        deferred_backfills.push(statement);
                     } else {
                         plan.statements.push(statement);
                     }
