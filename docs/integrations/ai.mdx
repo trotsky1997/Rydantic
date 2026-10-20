@@ -3,12 +3,12 @@ title: "RydanticAI"
 description: "Build typed agents, resumable graphs and a Responses gateway with the independent rydantic-ai crate."
 ---
 
-`rydantic-ai` lives in the same workspace with its own `0.1.0` version and publishing lifecycle. The core Rydantic model crate remains independent of AI transport dependencies.
+`rydantic-ai` lives in the same workspace with its own `0.1.1` version and publishing lifecycle. The core Rydantic model crate remains independent of AI transport dependencies.
 
 ```toml
 [dependencies]
 rydantic = "0.7.0-beta.1"
-rydantic-ai = "0.1.0"
+rydantic-ai = "0.1.1"
 ```
 
 ## Authorize pi Codex
@@ -82,7 +82,11 @@ cargo run -p rydantic-ai --bin rydantic-ai-gateway -- crates/rydantic-ai/example
 
 Set `RYDANTIC_GATEWAY_KEY` to a private random value of at least 16 bytes before running the example configuration. Keys supplied by gateway clients remain separate from upstream provider credentials. SSE disconnects cancel the upstream request. Ordered failover applies to HTTP 429/502/503/504 before any stream events; partially delivered responses and transport/protocol failures are not replayed.
 
+The executable serves HTTP. Use an HTTPS reverse proxy with TLS termination for network clients, keeping the gateway on loopback or a trusted private interface. HTTPS encrypts bearer keys, prompts and responses in transit. The pi sidecar stays loopback-only, within the trusted local-process boundary of the authorized account.
+
 Per-client and global ledgers atomically reserve capacity before each attempt. They track attempts, tokens and optional operator-maintained prices using integer micro-USD. Actual completion reconciles usage; unknown or cancelled outcomes consume reservations conservatively. Usage exceeding a reservation can overdraw the ledger and block subsequent admission. These controls govern admission and observed accounting; an upstream billing ceiling requires provider-side enforcement. Dollar limits require prices on every allowed route. Codex subscriptions can use request and token controls without assigning a dollar cost. Ledgers are in memory and reset on restart.
+
+Each ledger applies its own configured token/cost reservation. Admission is atomic across client and global policies; completion or cancellation reconciles each hold separately.
 
 ## Tracing and tests
 

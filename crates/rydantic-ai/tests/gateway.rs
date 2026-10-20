@@ -233,3 +233,94 @@ fn price_math_is_integer_checked_and_missing_prices_reject_cost_limits() {
     );
     assert!(config.is_err());
 }
+
+#[tokio::test]
+async fn small_client_reservation_is_independent_of_global_default() {
+    let provider = Arc::new(Scripted::new(vec![Ok(response("hello"))]));
+    let gateway = gateway(vec![route(provider)], Budget::default());
+    gateway
+        .client(KEY)
+        .unwrap()
+        .complete(ModelRequest::new("chat", "x"), RunContext::default())
+        .await
+        .unwrap();
+    assert_eq!(gateway.snapshot("app").unwrap().tokens, 5);
+    assert_eq!(gateway.global_snapshot().unwrap().tokens, 5);
+    assert_eq!(gateway.snapshot("app").unwrap().reserved_tokens, 0);
+    assert_eq!(gateway.global_snapshot().unwrap().reserved_tokens, 0);
+}
+
+#[tokio::test]
+async fn distinct_client_global_holds_are_reconciled_separately_on_cancellation() {
+    let started = Arc::new(Notify::new());
+    let price = Some(Price {
+        input_microusd_per_million: 1_000_000,
+        output_microusd_per_million: 1_000_000,
+    });
+    let routes = BTreeMap::from([(
+        "chat".into(),
+        vec![Route {
+            provider: Arc::new(Waiting {
+                started: started.clone(),
+            }),
+            model: "upstream".into(),
+            price,
+        }],
+    )]);
+    let policy = ClientPolicy {
+        id: "app".into(),
+        key: KEY.into(),
+        models: HashSet::from(["chat".into()]),
+        budget: Budget {
+            max_cost_microusd: Some(100),
+            ..budget()
+        },
+    };
+    let global = Budget {
+        reservation_tokens: 512,
+        max_cost_microusd: Some(10_000),
+        ..Budget::default()
+    };
+    let gateway = Gateway::new(routes, vec![policy], global).unwrap();
+    let context = RunContext::default();
+    let cancellation = context.cancellation.clone();
+    let client = gateway.client(KEY).unwrap();
+    let running = tokio::spawn(async move {
+        client
+            .complete(ModelRequest::new("chat", "x"), context)
+            .await
+    });
+    tokio::time::timeout(Duration::from_secs(1), started.notified())
+        .await
+        .unwrap();
+    let local = gateway.snapshot("app").unwrap();
+    let total = gateway.global_snapshot().unwrap();
+    assert_eq!(
+        (local.reserved_tokens, local.reserved_cost_microusd),
+        (10, 20)
+    );
+    assert_eq!(
+        (total.reserved_tokens, total.reserved_cost_microusd),
+        (512, 1024)
+    );
+    cancellation.cancel();
+    assert!(matches!(running.await.unwrap(), Err(Error::Cancelled)));
+    let local = gateway.snapshot("app").unwrap();
+    let total = gateway.global_snapshot().unwrap();
+    assert_eq!(
+        (
+            local.tokens,
+            local.known_cost_microusd,
+            local.reserved_tokens
+        ),
+        (10, 20, 0)
+    );
+    assert_eq!(
+        (
+            total.tokens,
+            total.known_cost_microusd,
+            total.reserved_tokens
+        ),
+        (512, 1024, 0)
+    );
+}

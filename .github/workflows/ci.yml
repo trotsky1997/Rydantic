@@ -41,7 +41,7 @@ jobs:
         with:
           persist-credentials: false
       - run: rustup toolchain install 1.98.1 --profile minimal
-      - run: python3 -m unittest discover -s scripts -p test_release.py -v
+      - run: python3 -m unittest discover -s scripts -p 'test_release*.py' -v
 
   test:
     name: Rust / ${{ matrix.os }}
