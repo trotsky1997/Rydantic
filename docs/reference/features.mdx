@@ -9,6 +9,8 @@ The default feature is `derive`. Every integration below is opt-in.
 | Feature | Provides |
 | --- | --- |
 | `derive` | `Model`, `SqlModel` and protocol generation macros |
+| `partial-json` | Bounded [partial JSON snapshots](/models/partial-json), not business-validated models |
+| `settings` | Explicit ordered [settings sources](/models/settings) with Model validation and redacted source errors |
 | `dynamic` | Runtime JSON Schema validation with `DynamicModel` |
 | `chrono` | `chrono` date and time support |
 | `decimal` | `rust_decimal` support |
@@ -23,14 +25,14 @@ The default feature is `derive`. Every integration below is opt-in.
 
 <CodeGroup>
 ```toml JSON only
-rydantic = "=0.7.0-beta.1"
+rydantic = "=0.7.0-beta.3"
 ```
 ```toml HTTP + PostgreSQL
-rydantic = { version = "=0.7.0-beta.1", features = ["axum", "postgres"] }
+rydantic = { version = "=0.7.0-beta.3", features = ["axum", "postgres"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "net"] }
 ```
 ```toml Binary protocol
-rydantic = { version = "=0.7.0-beta.1", features = ["capnp"] }
+rydantic = { version = "=0.7.0-beta.3", features = ["capnp"] }
 ```
 </CodeGroup>
 

@@ -17,6 +17,8 @@ all-features = true
 [features]
 default = ["derive"]
 derive = ["dep:rydantic-derive"]
+partial-json = ["dep:jiter"]
+settings = []
 dynamic = ["dep:jsonschema"]
 chrono = ["dep:chrono"]
 decimal = ["dep:rust_decimal"]
@@ -28,11 +30,12 @@ postgres = ["sqlx", "sqlx/postgres", "sqlx/tls-rustls-ring"]
 mysql = ["sqlx", "sqlx/mysql-rsa", "sqlx/tls-rustls-ring"]
 
 [dependencies]
+jiter = { version = "=0.17.0", default-features = false, optional = true }
 serde.workspace = true
 serde_json.workspace = true
 regex.workspace = true
 email_address = "0.2"
-rydantic-derive = { version = "=0.7.0-beta.1", path = "../rydantic-derive", optional = true }
+rydantic-derive = { version = "=0.7.0-beta.3", path = "../rydantic-derive", optional = true }
 jsonschema = { workspace = true, optional = true }
 
 chrono = { version = "0.4", default-features = false, features = ["std"], optional = true }

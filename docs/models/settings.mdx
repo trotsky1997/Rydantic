@@ -1,0 +1,114 @@
+---
+title: "Settings"
+description: "Explicit source layers, typed validation, and redacted loading errors."
+---
+
+<Warning>
+The `settings` feature was published in 0.7.0-beta.2; it is not included in 0.7.0-beta.1 or stable 0.6.0. Check [registry availability](https://crates.io/crates/rydantic/versions) before installing the candidate. This is a deliberately small settings API, not full pydantic-settings compatibility.
+</Warning>
+
+Enable the `settings` Cargo feature in addition to the default `derive` feature. There are no added dependencies. Settings use the same `Model` fields, aliases, constraints, defaults and synchronous validators as ordinary JSON inputs.
+
+For the current beta.3 candidate, opt in after publication:
+
+```toml
+rydantic = { version = "=0.7.0-beta.3", features = ["settings"] }
+```
+
+## Start with deterministic input
+
+```rust
+use rydantic::{json, Model, settings::{Settings, ValueMode}};
+
+#[derive(Model)]
+struct Database {
+    host: String,
+    #[model(default = 5432)]
+    port: u16,
+}
+
+#[derive(Model)]
+struct App {
+    database: Database,
+    #[model(default = 2, ge = 1)]
+    workers: u16,
+}
+
+let app: App = Settings::new()
+    .json(json!({"database": {"host": "localhost"}}))?
+    .pairs([("APP_WORKERS", "4")], "APP_", ValueMode::JsonOrString)?
+    .load()?;
+assert_eq!(app.workers, 4);
+assert_eq!(app.database.port, 5432);
+```
+
+`pairs` is also the testing seam: tests do not need to modify global process environment variables.
+
+## Source precedence is explicit
+
+Every method consumes and returns the builder. Later calls override earlier calls. No source is discovered or read implicitly. For example, this order gives environment values priority over dotenv, secrets, and JSON:
+
+```rust
+let app: App = Settings::new()
+    .json_file("config.json")?
+    .secrets_dir("./synthetic-secrets", ValueMode::String)?
+    .dotenv_file(".env", "APP_", ValueMode::JsonOrString)?
+    .env("APP_", ValueMode::JsonOrString)?
+    .load()?;
+```
+
+All paths are explicit and relative to the caller's current working directory. Missing files/directories, malformed inputs and read failures are errors; they are never silently ignored. Provide only sources you actually want to load. Reading sources is not an atomic snapshot of all files and the process environment.
+
+- Objects merge recursively across layers.
+- Arrays, strings, numbers, booleans and `null` replace earlier values completely. Arrays are not merged element-by-element.
+- A later object replaces an earlier scalar, and vice versa.
+- Model defaults apply after merging, only where the existing model rules apply. An explicit `null` is not an instruction to restore a default.
+- Unknown fields, field aliases, validators and coercion obey ordinary `Model` behavior. Async-required models are rejected by this synchronous loader.
+- JSON files must contain an object. Duplicate keys in JSON follow serde_json's last-key-wins behavior. A later layer cannot repair an earlier source parsing error.
+
+## Environment keys and values
+
+`env` reads the process environment without modifying it. `pairs` accepts supplied entries with the identical mapping rules:
+
+- The required prefix is nonempty ASCII letters, digits or underscores and matches case-sensitively. `APP_` does not match `app_`.
+- After stripping the prefix, keys are ASCII-lowercased. Use lowercase input aliases if mapping to aliased fields.
+- `__` separates nested object keys: `APP_DATABASE__PORT` becomes `database.port`.
+- Segments must be ASCII identifiers (letter or underscore first, then letters/digits/underscores). Empty segments and paths over 64 segments are rejected. Numeric path segments do not address arrays.
+- Unmatched entries are ignored. Matching non-Unicode entries are errors.
+- Duplicate normalized keys and parent/child keys in a single source are rejected, regardless of iteration order. `APP_DATABASE` plus `APP_DATABASE__PORT` is a conflict, even if the parent contains JSON. Put them in separate ordered layers if you want an override.
+
+Choose a value mode for each key/value source:
+
+- `ValueMode::JsonOrString`: valid JSON becomes that value, otherwise the entire value is a string. `42`, `true`, `null`, arrays and objects are parsed. A malformed JSON-looking value such as `[unfinished` remains a string.
+- `ValueMode::String`: preserve all values as strings, including JSON-looking credentials. Numeric fields need explicit model coercion or another source/mode.
+- `ValueMode::Json`: every value must be valid JSON. String values must include JSON quotes; malformed JSON fails immediately.
+
+No schema-driven type guessing, variable expansion, shell execution, or automatic case-insensitive prefix matching occurs.
+
+## Deliberately strict dotenv subset
+
+`dotenv_file` accepts UTF-8 text with LF or CRLF line endings:
+
+- Empty lines and lines whose first non-whitespace character is `#` are ignored.
+- Every other line is `KEY=VALUE`, split at the first `=`. Whitespace around key and value is trimmed.
+- Keys must be ASCII identifiers. All lines are parsed, including keys outside the selected prefix.
+- Unquoted values are literal, including `#`, `$`, backslashes and further `=` characters.
+- Single quotes surround a single-line literal string; embedded single quotes are unsupported.
+- Double quotes use JSON string syntax and escapes, so `"a\nb"` decodes to a string containing a newline. The physical assignment must still occupy one line.
+- Quoting is removed before the selected value mode runs. Thus `APP_TOKEN="true"` becomes a boolean in `JsonOrString`; use `String` for tokens.
+
+`export`, inline comments, multiline quoting and interpolation are not supported. For example `APP_NAME=value # note` includes ` # note` in the value; `APP_NAME="value" # note` is a syntax error. This grammar must not be presented as full dotenv compatibility.
+
+## Secrets directories and redaction
+
+`secrets_dir` reads all entries in one flat directory. Filenames map like environment suffixes, without a prefix: `DATABASE__HOST` maps to `database.host`. File contents lose at most one trailing LF or CRLF; all other whitespace is preserved. Use `ValueMode::String` when secret bytes look like JSON but are intended as strings.
+
+Files must be regular UTF-8 files with Unicode names. Symlinks, subdirectories and conflicting keys are rejected, not skipped. Kubernetes projected-secret symlink layouts are therefore not supported by this source. JSON and dotenv files also reject final file-entry symlinks. These checks do not reject symlinks in the secrets-directory root or ancestor paths; those may be followed. Use trusted paths that are not concurrently modified; these checks are not a filesystem sandbox or protection against an attacker racing filesystem changes.
+
+`Settings` Debug output contains no keys or values. `SettingsError` retains only a fixed error kind or validation-error count, not file paths, variable names, input values, custom validator messages, codes, locations or parameters. This deliberately sacrifices detailed diagnostics because custom validators may embed secrets anywhere in an error.
+
+<Warning>
+The returned model is an ordinary model. Its Debug implementation and serialization are not automatically redacted. Neither the builder nor the model zeroizes memory. Custom validators can still log or otherwise expose input themselves. Do not log secret-bearing models, and do not treat this API as a secret vault.
+</Warning>
+
+TOML/YAML, remote vaults, automatic file discovery, async loading and a separate Settings derive are outside this first version. JSON sources reuse the existing parser; no new JSON engine is introduced.
