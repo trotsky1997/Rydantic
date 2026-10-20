@@ -67,6 +67,14 @@ pub struct ModelRequest {
     pub max_output_tokens: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reasoning: Option<Value>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tool_choice: Option<Value>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parallel_tool_calls: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub temperature: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub top_p: Option<f64>,
     #[serde(default)]
     pub stream: bool,
     #[serde(default)]
@@ -83,6 +91,10 @@ impl ModelRequest {
             text: None,
             max_output_tokens: None,
             reasoning: None,
+            tool_choice: None,
+            parallel_tool_calls: None,
+            temperature: None,
+            top_p: None,
             stream: false,
             store: false,
         }
@@ -98,6 +110,27 @@ impl ModelRequest {
             return Err(Error::Configuration(
                 "max_output_tokens must be positive".into(),
             ));
+        }
+        if self
+            .temperature
+            .is_some_and(|v| !v.is_finite() || !(0.0..=2.0).contains(&v))
+            || self
+                .top_p
+                .is_some_and(|v| !v.is_finite() || !(0.0..=1.0).contains(&v))
+        {
+            return Err(Error::Configuration("invalid sampling settings".into()));
+        }
+        if let Some(choice) = &self.tool_choice {
+            let valid = matches!(choice.as_str(), Some("auto" | "none" | "required"))
+                || (choice["type"] == "function"
+                    && choice["name"].as_str().is_some_and(|v| !v.is_empty())
+                    && choice.as_object().is_some_and(|v| v.len() == 2));
+            if !valid {
+                return Err(Error::Configuration("unsupported tool_choice".into()));
+            }
+            if choice != "none" && self.tools.is_empty() {
+                return Err(Error::Configuration("tool_choice requires tools".into()));
+            }
         }
         if serde_json::to_vec(self)
             .map_err(|e| Error::Protocol(e.to_string()))?

@@ -1,4 +1,4 @@
-//! Typed agents, explicit graph transitions and a metered Responses gateway.
+//! Typed agents, explicit graph transitions and a metered multi-protocol gateway.
 //!
 //! Providers implement [`ModelProvider`]. Both agent outputs and tool arguments use
 //! Rydantic's runtime validation, including async validators. Optional HTTP

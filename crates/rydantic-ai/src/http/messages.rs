@@ -11,16 +11,52 @@ pub(super) fn request(request: &ModelRequest) -> Result<Value> {
     }
     let (system, messages) = history::messages(request)?;
     let mut body = json!({"model":request.model,"messages":messages,"max_tokens":request.max_output_tokens.unwrap_or(2048),"stream":true});
+    if let Some(value) = request.temperature {
+        if value > 1.0 {
+            return Err(Error::Configuration(
+                "Messages temperature must be at most 1".into(),
+            ));
+        }
+        body["temperature"] = json!(value);
+    }
+    if let Some(value) = request.top_p {
+        body["top_p"] = json!(value);
+    }
+    if let Some(choice) = &request.tool_choice {
+        body["tool_choice"] = match choice.as_str() {
+            Some("auto") => json!({"type":"auto"}),
+            Some("none") => json!({"type":"none"}),
+            Some("required") => json!({"type":"any"}),
+            _ => json!({"type":"tool","name":choice["name"]}),
+        };
+    }
+    if let Some(parallel) = request
+        .parallel_tool_calls
+        .filter(|_| !request.tools.is_empty())
+    {
+        if body.get("tool_choice").is_none() {
+            body["tool_choice"] = json!({"type":"auto"});
+        }
+        if body["tool_choice"]["type"] != "none" {
+            body["tool_choice"]["disable_parallel_tool_use"] = json!(!parallel);
+        }
+    }
     if !system.is_empty() {
         body["system"] = json!(system);
     }
     if let Some(format) = request.text.as_ref().and_then(|v| v.get("format")) {
-        if format["type"] != "json_schema" {
-            return Err(Error::Configuration(
-                "unsupported structured output format".into(),
-            ));
+        match format["type"].as_str() {
+            Some("text") => (),
+            Some("json_schema") => {
+                body["output_config"] =
+                    json!({"format":{"type":"json_schema","schema":format["schema"]}})
+            }
+            _ => {
+                return Err(Error::Configuration(
+                    "unsupported structured output format".into(),
+                ))
+            }
         }
-        body["output_config"] = json!({"format":{"type":"json_schema","schema":format["schema"]}});
     }
     if !request.tools.is_empty() {
         body["tools"] = json!(request.tools.iter().map(|tool| {

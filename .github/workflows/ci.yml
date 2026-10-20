@@ -73,6 +73,13 @@ jobs:
         run: cargo test --workspace --all-features --locked
       - name: Clippy
         run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+      - name: Verify all gateway protocols with official Python SDKs
+        if: runner.os == 'Linux'
+        run: |
+          cargo build -p rydantic-ai --bin rydantic-ai-gateway --locked
+          python3 -m venv "$RUNNER_TEMP/rydantic-gateway-sdks"
+          "$RUNNER_TEMP/rydantic-gateway-sdks/bin/pip" install --disable-pip-version-check -r scripts/gateway_sdk_requirements.txt
+          "$RUNNER_TEMP/rydantic-gateway-sdks/bin/python" scripts/check_gateway_sdks.py
       - name: Verify official Cap'n Proto CLI interoperability
         if: runner.os == 'Linux'
         run: cargo test --locked -p rydantic-capnp-fixture --test native -- --ignored

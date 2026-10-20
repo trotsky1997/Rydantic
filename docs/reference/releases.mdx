@@ -4,6 +4,12 @@ description: "Release history and the current migration path."
 icon: "tag"
 ---
 
+## RydanticAI 0.5.0
+
+The independently versioned [rydantic-ai crate](https://crates.io/crates/rydantic-ai/0.5.0) adds native gateway frontends for `/v1/chat/completions` and `/v1/messages`. [Gateway protocols](/integrations/gateway-protocols) covers all nine frontend/upstream combinations, JSON and SSE, tools, structured output mappings, usage, authentication and bounded native history replay.
+
+Successful stream terminals follow budget settlement. Shared tool-choice and sampling controls map to each upstream protocol. CI includes strict official Python SDK checks for all three frontends.
+
 ## RydanticAI 0.4.0
 
 The independently versioned [rydantic-ai crate](https://crates.io/crates/rydantic-ai/0.4.0) supports Responses, Chat Completions and Anthropic Messages upstreams through BASEURL and APIKEY. [API providers](/integrations/api-providers) share typed tools, validation correction, Partial and Iterable streams, usage accounting and gateway routing. Native message history survives same-protocol tool continuations, including through the gateway HTTP interface.

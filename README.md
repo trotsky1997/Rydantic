@@ -34,7 +34,7 @@ struct User {
 | **SQL with SQLx** | Model metadata, validated CRUD, queries, and migration planning for SQLite, PostgreSQL, and MySQL. |
 | **Native Cap'n Proto** | Generate schemas and official Rust bindings, or connect an existing protocol. |
 | **More model shapes** | Borrowed strings, enums, generics, recursive models, async validators, and streaming JSON. |
-| **RydanticAI** | Independently versioned `rydantic-ai`: typed agents and tools, [structured output streams](https://rydantic.mintlify.site/integrations/structured-output), resumable graphs, an authenticated Responses gateway, and a [TypeSafe Jev SDK](https://rydantic.mintlify.site/integrations/jev). |
+| **RydanticAI** | Independently versioned `rydantic-ai`: typed agents and tools, [structured output streams](https://rydantic.mintlify.site/integrations/structured-output), resumable graphs, an authenticated three-protocol gateway, and a [TypeSafe Jev SDK](https://rydantic.mintlify.site/integrations/jev). |
 
 Integrations are opt-in Cargo features. The default `derive` feature covers the core model API.
 
@@ -78,7 +78,7 @@ Continue with [validation rules](https://rydantic.mintlify.site/models/validatio
 
 ## Choose your integrations
 
-For AI applications, add the separate `rydantic-ai` crate. It supports Responses, Chat Completions and Anthropic Messages APIs through BASEURL and APIKEY, validates typed outputs and tool arguments, streams partial JSON snapshots and validated list items, and provides graph checkpoints and gateway routing/budgets. See the [RydanticAI guide](https://rydantic.mintlify.site/integrations/ai) and [crate README](crates/rydantic-ai/README.md).
+For AI applications, add the separate `rydantic-ai` crate. It supports Responses, Chat Completions and Anthropic Messages APIs through BASEURL and APIKEY, validates typed outputs and tool arguments, streams partial JSON snapshots and validated list items, and provides graph checkpoints and a gateway that converts between all three protocols with routing and budgets. See the [RydanticAI guide](https://rydantic.mintlify.site/integrations/ai) and [crate README](crates/rydantic-ai/README.md).
 
 Enable features on the version you selected:
 

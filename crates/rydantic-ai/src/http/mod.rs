@@ -3,6 +3,24 @@ mod chat;
 mod history;
 mod messages;
 mod sse;
+pub(crate) use history::{chat as chat_history, messages as messages_history};
+
+pub(crate) fn chat_message(message: Value) -> Result<Vec<Value>> {
+    let tools = message["tool_calls"]
+        .as_array()
+        .is_some_and(|v| !v.is_empty());
+    chat::response(json!({"id":"history","choices":[{"index":0,"message":message,"finish_reason":if tools {"tool_calls"} else {"stop"}}],"usage":{"prompt_tokens":0,"completion_tokens":0}}))
+        .map(|response| response.output().to_vec())
+        .map_err(|_| Error::Configuration("invalid assistant history".into()))
+}
+pub(crate) fn messages_message(content: Value) -> Result<Vec<Value>> {
+    let tools = content
+        .as_array()
+        .is_some_and(|v| v.iter().any(|b| b["type"] == "tool_use"));
+    messages::response(json!({"id":"history","type":"message","role":"assistant","content":content,"stop_reason":if tools {"tool_use"} else {"end_turn"},"usage":{"input_tokens":0,"output_tokens":0}}))
+        .map(|response| response.output().to_vec())
+        .map_err(|_| Error::Configuration("invalid assistant history".into()))
+}
 use crate::{
     BoxFuture, Capabilities, Error, ModelProvider, ModelRequest, ModelResponse, Result, RunContext,
 };
