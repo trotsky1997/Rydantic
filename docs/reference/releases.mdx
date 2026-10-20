@@ -4,12 +4,21 @@ description: "Release history and the current migration path."
 icon: "tag"
 ---
 
+## RydanticAI 0.3.0
+
+The independently versioned [rydantic-ai crate](https://crates.io/crates/rydantic-ai/0.3.0) adds [structured output streaming](/integrations/structured-output). Core release versions remain independent.
+
+- `Partial<T>` emits provisional JSON snapshots and completes with a fully validated Rust model.
+- `Iterable<T>` emits validated elements from an `items` envelope and collects the accepted attempt into `Vec<T>` without a `Clone` bound. Async item validators run once per element per attempt.
+- Explicit model-call numbers and reset reasons cover validation correction and tool continuations. Completion retains usage and history. Cancellation, deadlines, bounded queues and byte/depth/item limits cover stream processing.
+- Preserve native Responses events and support custom providers without HTTP features. Non-streaming providers fall back to processing their completed response.
+
 ## 0.7.0-beta.4 · Source candidate
 
 After publication, opt in with `rydantic = "=0.7.0-beta.4"`. Source metadata is not proof of publication. Stable remains 0.6.0.
 
 - Add individually optional [phone, country and currency types](/domain-types), with pinned offline catalogs and explicit local validation rules. Phones are not proof of reachability/ownership; currencies include legacy, fund and special entries, not a current-tender guarantee. Preserve upstream/data-source attribution.
-- The source-only JSON Schema-to-Rust developer tool remains unpublished (`publish = false`), outside the two core package archives. The source workspace also contains independent AI 0.2.0/Jev work; neither is part of the core archives or uploaded by this release.
+- The source-only JSON Schema-to-Rust developer tool remains unpublished (`publish = false`), outside the two core package archives. The source workspace also contains independent AI/Jev work; neither is part of the core archives or uploaded by this release.
 - No new breaking API change from beta.3. Preserve the explicit Model derive upgrade, backup/manual migration responsibilities and partial JSON safety limits below.
 
 ## 0.7.0-beta.3 · Published prerelease

@@ -1,3 +1,4 @@
+use crate::structured::{OutputMode, Plain, ResetReason};
 use crate::{Error, ModelProvider, ModelRequest, Result, RunContext, Tool, Usage};
 use rydantic::{AsyncCheck, Model};
 use serde_json::{json, Value};
@@ -28,6 +29,7 @@ impl Default for AgentLimits {
     }
 }
 
+#[derive(Debug)]
 pub struct RunResult<O> {
     pub output: O,
     pub usage: Usage,
@@ -43,6 +45,19 @@ pub struct Agent<D, O> {
     tools: BTreeMap<String, Arc<dyn Tool<D>>>,
     limits: AgentLimits,
     output: PhantomData<fn() -> O>,
+}
+
+impl<D, O> Clone for Agent<D, O> {
+    fn clone(&self) -> Self {
+        Self {
+            provider: self.provider.clone(),
+            model: self.model.clone(),
+            instructions: self.instructions.clone(),
+            tools: self.tools.clone(),
+            limits: self.limits.clone(),
+            output: PhantomData,
+        }
+    }
 }
 
 impl<D, O> Agent<D, O>
@@ -83,21 +98,22 @@ where
         context: RunContext,
     ) -> Result<RunResult<O>> {
         let prompt = prompt.into();
-        self.run_inner(prompt, deps, context)
+        self.run_inner(prompt, deps, context, Plain::<O>::new())
             .instrument(tracing::info_span!("rydantic_ai.agent", model = %self.model))
             .await
     }
-    async fn run_inner(
+    pub(crate) async fn run_inner<P: OutputMode>(
         &self,
         prompt: String,
         deps: Arc<D>,
         context: RunContext,
-    ) -> Result<RunResult<O>> {
+        mut mode: P,
+    ) -> Result<RunResult<P::Output>> {
         if self.limits.max_model_calls == 0 || self.limits.max_output_tokens == 0 {
             return Err(Error::Configuration("agent limits must be positive".into()));
         }
         let capabilities = self.provider.capabilities();
-        let schema = crate::schema::model_schema::<O>()?;
+        let schema = mode.schema()?;
         if capabilities.native_json_schema && schema["type"] != "object" {
             return Err(Error::Configuration("native structured output requires an object model; use an instruction-based provider for other shapes".into()));
         }
@@ -118,8 +134,9 @@ where
         let mut seen_calls = HashSet::new();
         for model_calls in 1..=self.limits.max_model_calls {
             context.check()?;
+            mode.start(model_calls, &context).await?;
             let response = context
-                .wait(self.provider.complete(request.clone(), context.clone()))
+                .wait(self.complete(request.clone(), &context, &mut mode))
                 .await?;
             usage.add(response.usage)?;
             tracing::info!(
@@ -135,10 +152,7 @@ where
             request.input.extend_from_slice(response.output());
             if calls.is_empty() {
                 let text = response.text()?;
-                match context
-                    .wait(async { O::parse_json_async(&text).await.map_err(Error::Validation) })
-                    .await
-                {
+                match context.wait(mode.finish(&text, &context)).await {
                     Ok(output) => {
                         return Ok(RunResult {
                             output,
@@ -148,9 +162,12 @@ where
                             tool_calls,
                         })
                     }
-                    Err(Error::Validation(errors))
-                        if retries < self.limits.max_validation_retries =>
-                    {
+                    Err(Error::Validation(errors)) => {
+                        mode.reset(ResetReason::Validation(errors.clone()), &context)
+                            .await?;
+                        if retries >= self.limits.max_validation_retries {
+                            return Err(Error::Validation(errors));
+                        }
                         retries += 1;
                         tracing::warn!(retries, "output validation failed");
                         request.input.push(json!({"role":"user","content":format!("Correct the final JSON. Validation errors: {errors}")}));
@@ -159,6 +176,7 @@ where
                 }
                 continue;
             }
+            mode.reset(ResetReason::ToolContinuation, &context).await?;
             for call in calls {
                 if tool_calls >= self.limits.max_tool_calls {
                     return Err(Error::Limit("tool call limit".into()));
@@ -192,5 +210,53 @@ where
             }
         }
         Err(Error::Limit("model call limit".into()))
+    }
+
+    async fn complete<P: OutputMode>(
+        &self,
+        mut request: ModelRequest,
+        context: &RunContext,
+        mode: &mut P,
+    ) -> Result<crate::ModelResponse> {
+        if !P::STREAM {
+            return self.provider.complete(request, context.clone()).await;
+        }
+        request.stream = true;
+        let (sender, mut events) = tokio::sync::mpsc::channel(16);
+        let provider_context = context.clone().with_events(sender);
+        let response = self.provider.complete(request, provider_context);
+        tokio::pin!(response);
+        loop {
+            tokio::select! {
+                biased;
+                Some(event) = events.recv() => {
+                    Self::observe(mode, context, event).await?;
+                }
+                result = &mut response => {
+                    while let Ok(event) = events.try_recv() {
+                        Self::observe(mode, context, event).await?;
+                    }
+                    return result;
+                }
+            }
+        }
+    }
+
+    async fn observe<P: OutputMode>(
+        mode: &mut P,
+        context: &RunContext,
+        event: Value,
+    ) -> Result<()> {
+        if let Some(sender) = &context.events {
+            context
+                .wait(async {
+                    sender
+                        .send(event.clone())
+                        .await
+                        .map_err(|_| Error::Cancelled)
+                })
+                .await?;
+        }
+        mode.observe(&event, context).await
     }
 }

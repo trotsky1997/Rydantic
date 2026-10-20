@@ -67,7 +67,7 @@
           },
           {
             "group": "AI",
-            "pages": ["integrations/ai", "integrations/jev"]
+            "pages": ["integrations/ai", "integrations/structured-output", "integrations/jev"]
           },
           {
             "group": "HTTP",

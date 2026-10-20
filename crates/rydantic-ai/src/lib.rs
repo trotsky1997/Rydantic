@@ -14,6 +14,7 @@ mod http;
 pub mod jev;
 mod protocol;
 pub mod schema;
+pub mod structured;
 mod tool;
 
 pub use agent::{Agent, AgentLimits, RunResult};
@@ -25,5 +26,9 @@ pub use protocol::{
     Capabilities, ModelProvider, ModelRequest, ModelResponse, ToolCall, ToolDefinition, Usage,
 };
 pub use rydantic;
+pub use structured::{
+    Iterable, IterableEvent, OutputEvent, Partial, PartialEvent, PartialSnapshot, ResetReason,
+    StreamItem, StreamOptions,
+};
 pub use tokio_util::sync::CancellationToken;
 pub use tool::{Tool, TypedTool};

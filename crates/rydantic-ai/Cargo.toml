@@ -1,6 +1,6 @@
 [package]
 name = "rydantic-ai"
-version = "0.2.0"
+version = "0.3.0"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
@@ -17,7 +17,7 @@ default = ["http"]
 http = ["dep:reqwest", "dep:axum", "dep:futures-util", "dep:tokio-stream", "dep:tracing-subscriber"]
 
 [dependencies]
-rydantic = { version = "0.7.0-beta.1", path = "../rydantic" }
+rydantic = { version = "0.7.0-beta.3", path = "../rydantic", features = ["partial-json"] }
 serde.workspace = true
 serde_json.workspace = true
 thiserror = "2"

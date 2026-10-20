@@ -3,12 +3,12 @@ title: "RydanticAI"
 description: "Build typed agents, resumable graphs and a Responses gateway with the independent rydantic-ai crate."
 ---
 
-`rydantic-ai` lives in the same workspace with its own `0.2.0` version and publishing lifecycle. The core Rydantic model crate remains independent of AI transport dependencies.
+`rydantic-ai` lives in the same workspace with its own `0.3.0` version and publishing lifecycle. The core Rydantic model crate remains independent of AI transport dependencies.
 
 ```toml
 [dependencies]
-rydantic = "0.7.0-beta.1"
-rydantic-ai = "0.2.0"
+rydantic = "0.7.0-beta.3"
+rydantic-ai = "0.3.0"
 ```
 
 ## Authorize pi Codex
@@ -47,6 +47,10 @@ println!("{}", result.output.answer);
 ```
 
 Select an account-available model instead of relying on the example ID. The pi Codex transport uses schema instructions followed by Rydantic runtime validation and supports bounded correction attempts. It has no output-token request parameter. Native Responses endpoints use `ResponsesProvider::new` and can request provider JSON Schema and output limits.
+
+## Structured output streams
+
+RydanticAI 0.3.0 adds `Agent::stream_partial()` and `Agent::stream_iterable()`. `Partial<T>` emits provisional JSON field snapshots and returns a fully validated final `T`. `Iterable<T>` validates complete elements before emission and can collect the accepted attempt into `Vec<T>`, with no `Clone` requirement. Both modes preserve validation correction, tool execution, usage, cancellation and bounded backpressure. See the [structured output guide](/integrations/structured-output).
 
 ## Tools and execution limits
 
