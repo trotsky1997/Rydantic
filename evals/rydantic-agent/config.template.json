@@ -1,0 +1,36 @@
+{
+  "protocol": 1,
+  "campaign_id": "REPLACE_WITH_UNIQUE_CAMPAIGN_ID",
+  "repository_commit": null,
+  "rust_toolchain": "1.98.1",
+  "target": "x86_64-unknown-linux-gnu",
+  "host_adapter_version": null,
+  "sandbox_description": null,
+  "base_tools": "Identical pinned shell, filesystem, Cargo and public library docs in A/B/C",
+  "network": "disabled",
+  "model": {
+    "provider": null,
+    "model": null,
+    "revision": null,
+    "parameters": {}
+  },
+  "budgets": {
+    "wall_seconds": 600,
+    "input_tokens": 60000,
+    "output_tokens": 12000,
+    "repair_rounds": 5
+  },
+  "seed": 104729,
+  "repetitions": 3,
+  "artifacts": {
+    "skill_bundle": "pins/skill.tar",
+    "cli_binary": "pins/rydantic",
+    "public_docs": "pins/public-docs.tar"
+  },
+  "locks": {
+    "serde-dto": "tasks/serde-dto/Cargo.lock",
+    "typed-user": "tasks/typed-user/Cargo.lock",
+    "stable-feature-stop": "tasks/stable-feature-stop/Cargo.lock",
+    "typed-normalization": "tasks/typed-normalization/Cargo.lock"
+  }
+}

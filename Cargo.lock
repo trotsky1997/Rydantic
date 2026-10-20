@@ -2128,6 +2128,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "rydantic-cli"
+version = "0.1.0"
+dependencies = [
+ "semver",
+ "serde",
+ "serde_json",
+ "toml",
+]
+
+[[package]]
 name = "rydantic-codegen"
 version = "0.1.0"
 dependencies = [

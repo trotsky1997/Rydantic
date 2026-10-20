@@ -1,0 +1,449 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:rydantic:agent-eval:result:1",
+  "title": "Trusted host trial record; never synthetic smoke evidence",
+  "type": "object",
+  "properties": {
+    "protocol": {
+      "const": 1
+    },
+    "kind": {
+      "const": "host_agent_trial"
+    },
+    "campaign_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "trial_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "enum": [
+        "completed",
+        "timeout",
+        "budget_exhausted",
+        "environment_blocked",
+        "agent_failed"
+      ]
+    },
+    "host_attestation": {
+      "type": "object",
+      "properties": {
+        "isolated_session": {
+          "const": true
+        },
+        "fresh_workspace": {
+          "const": true
+        },
+        "hidden_tests_withheld": {
+          "const": true
+        },
+        "network_disabled": {
+          "const": true
+        },
+        "unchanged_pins": {
+          "const": true
+        },
+        "budgets_enforced": {
+          "const": true,
+          "description": "Host budget stop controls were active; stopping/accounting tails may appear only in noncompleted records. Never clamp measured costs."
+        },
+        "no_cross_arm_history": {
+          "const": true
+        }
+      },
+      "required": [
+        "isolated_session",
+        "fresh_workspace",
+        "hidden_tests_withheld",
+        "network_disabled",
+        "unchanged_pins",
+        "budgets_enforced",
+        "no_cross_arm_history"
+      ],
+      "additionalProperties": false
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/evidence"
+      },
+      "minItems": 1
+    },
+    "wall_seconds": {
+      "type": "number",
+      "minimum": 0
+    },
+    "input_tokens": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "output_tokens": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "repair_rounds": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "compile_attempts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/compile_attempt"
+      },
+      "minItems": 0
+    },
+    "final_findings": {
+      "type": "object",
+      "properties": {
+        "invalid_api": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/finding"
+          },
+          "minItems": 0
+        },
+        "wrong_feature": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/finding"
+          },
+          "minItems": 0
+        },
+        "invented_method": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/finding"
+          },
+          "minItems": 0
+        }
+      },
+      "required": [
+        "invalid_api",
+        "wrong_feature",
+        "invented_method"
+      ],
+      "additionalProperties": false
+    },
+    "hidden_contract": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "enum": [
+            "pass",
+            "fail",
+            "not_run"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence"
+          },
+          "minItems": 1
+        },
+        "pack_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "additionalProperties": false,
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "pass",
+              "fail"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "evidence",
+          "pack_sha256"
+        ]
+      }
+    },
+    "review": {
+      "type": "object",
+      "properties": {
+        "security": {
+          "type": "object",
+          "properties": {
+            "score": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 4
+            },
+            "blind_reviewer_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "evidence": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/evidence"
+              },
+              "minItems": 1
+            }
+          },
+          "required": [
+            "score"
+          ],
+          "additionalProperties": false,
+          "if": {
+            "properties": {
+              "score": {
+                "type": "integer"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "blind_reviewer_id",
+              "evidence"
+            ]
+          }
+        },
+        "maintainability": {
+          "type": "object",
+          "properties": {
+            "score": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 4
+            },
+            "blind_reviewer_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "evidence": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/evidence"
+              },
+              "minItems": 1
+            }
+          },
+          "required": [
+            "score"
+          ],
+          "additionalProperties": false,
+          "if": {
+            "properties": {
+              "score": {
+                "type": "integer"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "blind_reviewer_id",
+              "evidence"
+            ]
+          }
+        },
+        "unnecessary_complexity": {
+          "type": "object",
+          "properties": {
+            "score": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 4
+            },
+            "blind_reviewer_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "evidence": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/evidence"
+              },
+              "minItems": 1
+            }
+          },
+          "required": [
+            "score"
+          ],
+          "additionalProperties": false,
+          "if": {
+            "properties": {
+              "score": {
+                "type": "integer"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "blind_reviewer_id",
+              "evidence"
+            ]
+          }
+        }
+      },
+      "required": [
+        "security",
+        "maintainability",
+        "unnecessary_complexity"
+      ],
+      "additionalProperties": false
+    },
+    "appropriate_serde_choice": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "serde_choice_evidence": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/evidence"
+      },
+      "minItems": 0
+    }
+  },
+  "required": [
+    "protocol",
+    "kind",
+    "campaign_sha256",
+    "trial_id",
+    "status",
+    "host_attestation",
+    "artifacts",
+    "wall_seconds",
+    "input_tokens",
+    "output_tokens",
+    "repair_rounds",
+    "compile_attempts",
+    "final_findings",
+    "hidden_contract",
+    "review",
+    "appropriate_serde_choice",
+    "serde_choice_evidence"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "evidence": {
+      "type": "object",
+      "properties": {
+        "artifact": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "artifact",
+        "sha256"
+      ],
+      "additionalProperties": false
+    },
+    "finding": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence"
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "symbol",
+        "reason",
+        "evidence"
+      ],
+      "additionalProperties": false
+    },
+    "compile_attempt": {
+      "type": "object",
+      "properties": {
+        "attempt": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "success": {
+          "type": "boolean"
+        },
+        "meaningful_contract_implementation": {
+          "const": true
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence"
+          },
+          "minItems": 1
+        },
+        "findings": {
+          "type": "object",
+          "properties": {
+            "invalid_api": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/finding"
+              },
+              "minItems": 0
+            },
+            "wrong_feature": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/finding"
+              },
+              "minItems": 0
+            },
+            "invented_method": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/finding"
+              },
+              "minItems": 0
+            }
+          },
+          "required": [
+            "invalid_api",
+            "wrong_feature",
+            "invented_method"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "attempt",
+        "success",
+        "meaningful_contract_implementation",
+        "evidence",
+        "findings"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "description": "The importer also checks frozen campaign-relative budgets: completed records must not exceed any cap. Noncompleted records retain actual usage including overruns and cannot claim hidden-contract pass. Standard JSON Schema cannot compare against the separate campaign document."
+}

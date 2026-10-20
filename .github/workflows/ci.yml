@@ -42,6 +42,10 @@ jobs:
           persist-credentials: false
       - run: rustup toolchain install 1.98.1 --profile minimal
       - run: python3 -m unittest discover -s scripts -p 'test_release*.py' -v
+      - name: Check agent toolkit packaging and evaluation harness
+        run: |
+          python3 -m unittest discover -s scripts -p 'test_agent_toolkit.py' -v
+          python3 -m unittest discover -s evals/rydantic-agent/tests -p 'test_*.py' -v
 
   test:
     name: Rust / ${{ matrix.os }}
@@ -71,6 +75,8 @@ jobs:
         run: cargo fmt --all -- --check
       - name: Test models, schema parity, compile diagnostics and documentation
         run: cargo test --workspace --all-features --locked
+      - name: Verify exact stable agent Skill consumer
+        run: cargo test --manifest-path skills/rydantic/assets/stable-0.6.0/Cargo.toml --locked
       - name: Clippy
         run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
       - name: Verify official Cap'n Proto CLI interoperability

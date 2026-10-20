@@ -1,0 +1,26 @@
+[
+  {
+    "id": "serde-dto",
+    "track": "stable-0.6.0",
+    "compile_applicable": true,
+    "serde_choice_applicable": true
+  },
+  {
+    "id": "typed-user",
+    "track": "stable-0.6.0",
+    "compile_applicable": true,
+    "serde_choice_applicable": false
+  },
+  {
+    "id": "stable-feature-stop",
+    "track": "stable-0.6.0",
+    "compile_applicable": false,
+    "serde_choice_applicable": false
+  },
+  {
+    "id": "typed-normalization",
+    "track": "beta-0.7.0-beta.4",
+    "compile_applicable": true,
+    "serde_choice_applicable": false
+  }
+]
