@@ -130,12 +130,17 @@ async fn sqlite_objects<DB: SqlBackend>(
     catalog: &mut Catalog,
 ) -> Result<(), SqlError> {
     for row in rows::<DB>(connection, "SELECT name, CAST(\"unique\" AS TEXT) AS uq, origin, CAST(partial AS TEXT) AS partial FROM pragma_index_list({bind})", &[table]).await? {
-        if required::<DB>(&row, "origin")? == "pk" { continue; }
         let name = required::<DB>(&row, "name")?;
         let mut columns = Vec::new();
-        for row in rows::<DB>(connection, "SELECT name FROM pragma_index_info({bind}) ORDER BY seqno", &[&name]).await? {
+        for row in rows::<DB>(connection, "SELECT name, coll, CAST(desc AS TEXT) AS descending FROM pragma_index_xinfo({bind}) WHERE key=1 ORDER BY seqno", &[&name]).await? {
             columns.push(text::<DB>(&row, "name")?.unwrap_or_default());
+            if !required::<DB>(&row, "coll")?.eq_ignore_ascii_case("BINARY") || required::<DB>(&row, "descending")? != "0" {
+                catalog.unsupported.push("custom index collation or ordering".into());
+            }
         }
+        // Primary-key indexes are excluded from index reconciliation, but their
+        // collation and ordering must still be checked before a table rebuild.
+        if required::<DB>(&row, "origin")? == "pk" { continue; }
         if required::<DB>(&row, "partial")? != "0" { catalog.unsupported.push("partial indexes".into()); }
         catalog.indexes.push(DbIndex {name, columns, unique: required::<DB>(&row,"uq")? == "1", constraint: required::<DB>(&row,"origin")? == "u"});
     }

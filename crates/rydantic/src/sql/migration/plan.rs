@@ -678,3 +678,54 @@ fn server_alter<T: SqlModel, DB: SqlBackend>(
         index_statements(plan, &[], added_indexes);
     }
 }
+#[cfg(all(test, feature = "mysql", feature = "derive"))]
+mod tests {
+    use super::*;
+    #[derive(Debug, crate::Model, crate::SqlModel)]
+    #[sql(table = "names")]
+    struct RetainedRename {
+        #[sql(primary_key)]
+        id: i64,
+        old_name: Option<String>,
+        #[sql(rename_from = "old_name", default = "fallback")]
+        name: String,
+    }
+    #[test]
+    fn backfill_targets_existing_column() {
+        let mut before = target::<RetainedRename, sqlx::MySql>();
+        let name = before
+            .columns
+            .iter_mut()
+            .find(|c| c.name == "name")
+            .unwrap();
+        name.nullable = true;
+        name.default = None;
+        let plan = build::<RetainedRename, sqlx::MySql>(before).unwrap();
+        assert!(
+            plan.statements[0].contains("SET `name`"),
+            "must backfill name, not retained old_name"
+        );
+    }
+    #[derive(Debug, crate::Model, crate::SqlModel)]
+    #[sql(table = "names")]
+    struct ActiveRename {
+        #[sql(primary_key)]
+        id: i64,
+        #[sql(rename_from = "legacy", default = "fallback")]
+        names: String,
+    }
+    #[test]
+    fn backfill_keeps_table_name_during_active_rename() {
+        let mut before = target::<ActiveRename, sqlx::MySql>();
+        let name = before
+            .columns
+            .iter_mut()
+            .find(|c| c.name == "names")
+            .unwrap();
+        name.name = "legacy".into();
+        name.nullable = true;
+        name.default = None;
+        let plan = build::<ActiveRename, sqlx::MySql>(before).unwrap();
+        assert_eq!(plan.statements[0], "UPDATE `names` SET `legacy` = (CONVERT(X'66616c6c6261636b' USING utf8mb4)) WHERE `legacy` IS NULL");
+    }
+}
