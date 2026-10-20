@@ -58,8 +58,15 @@ for (const link of html.matchAll(/(?:href|src)="([^"#]+|#[^"]+)"/g)) {
   else if (target.startsWith("./") && target !== "./")
     assert(files.includes(target.slice(2)), `Missing asset ${target}`);
 }
-for (const link of html.matchAll(/data-docs-path="([^"]+)"/g))
-  assert(pageSet.has(link[1]), `Missing documentation ${link[1]}`);
+const site = JSON.parse(await readFile(new URL("website/site.json", root), "utf8"));
+const docs = site.docs.replace(/\/$/, "");
+for (const anchor of html.matchAll(/<a\b[^>]*>/g)) {
+  const page = anchor[0].match(/\bdata-docs-path="([^"]+)"/)?.[1];
+  if (!page) continue;
+  assert(pageSet.has(page), `Missing documentation ${page}`);
+  const href = anchor[0].match(/\bhref="([^"]+)"/)?.[1];
+  assert.equal(href, `${docs}/${page}`, `Incorrect documentation link for ${page}`);
+}
 console.log(
   `Checked ${pages.length} documentation pages, navigation, English content, assets and homepage links.`,
 );
