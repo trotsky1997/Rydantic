@@ -4,7 +4,7 @@
 
 Executed:
 
-- Python standard-library unit tests: 24 passed. Covers seeded balanced pairing,
+- Python standard-library unit tests: 28 passed. Covers seeded balanced pairing,
   pin drift, missing locks/config, offline requirement, missing-result disclosure,
   first-compile failure preservation, timeout denominators, duplicate rejection,
   refusal to import explicit smoke kinds, required host isolation attestations,
@@ -38,3 +38,13 @@ Pending:
   reported separately and conservatively rather than inferred from stable docs.
 
 No provider services, LLM calls, installs, publication or telemetry were performed.
+
+PR review regression, 2026-10-20:
+
+- Reproduced all four budget bypasses before the fix: completed wall=11 with cap=10,
+  input=101/cap=100, output=51/cap=50, and repairs=3/cap=2 were accepted.
+- Importer now rejects each over-budget completed record, accepts exact-boundary
+  completion, and preserves noncompleted overruns/costs in summary denominators
+  with explicit per-metric overrun counts. Noncompleted hidden passes remain invalid.
+- Negative tests also retain all four failure/blocker terminal states and reject
+  missing token telemetry. All 28 harness unit tests pass; no Agent trials run.

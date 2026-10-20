@@ -128,6 +128,42 @@ class HarnessTests(unittest.TestCase):
         self.assertEqual(len(groups),6)
         self.assertEqual({g['track'] for g in groups},{'stable-0.6.0','beta-0.7.0-beta.4'})
 
+    def test_completed_over_budget_rejected(self):
+        for key, limit in self.config['budgets'].items():
+            with self.subTest(metric=key):
+                r=self.record(); r[key]=limit+1
+                with self.assertRaisesRegex(ValueError, 'budget'):
+                    runner.summarize([r],self.campaign)
+
+    def test_completed_at_exact_budgets_accepted(self):
+        r=self.record(); r.update(self.config['budgets'])
+        summary=runner.summarize([r],self.campaign)['groups'][0]
+        self.assertEqual(summary['final_contract']['pass'],1)
+        self.assertEqual(summary['budget_overruns'],{key:0 for key in self.config['budgets']})
+
+    def test_failed_overruns_preserved_not_clamped_or_dropped(self):
+        for status in ('timeout','budget_exhausted','environment_blocked','agent_failed'):
+            with self.subTest(status=status):
+                r=self.record(); r['status']=status
+                r.update({key:limit+1 for key,limit in self.config['budgets'].items()})
+                r['hidden_contract']={'status':'not_run'}
+                summary=runner.summarize([r],self.campaign)['groups'][0]
+                self.assertEqual(summary['recorded_trials'],1)
+                self.assertEqual(summary['first_compile']['eligible'],1)
+                self.assertEqual(summary['status_counts'][status],1)
+                self.assertEqual(summary['final_contract'],{'pass':0,'fail':0,'not_run':1})
+                self.assertEqual(summary['budget_overruns'],{key:1 for key in self.config['budgets']})
+                for key,limit in self.config['budgets'].items():
+                    self.assertEqual(summary[key]['median'],limit+1)
+                r['hidden_contract']=self.record()['hidden_contract']
+                with self.assertRaisesRegex(ValueError,'incomplete trial'):
+                    runner.validate_result(r,self.campaign)
+
+    def test_missing_token_telemetry_cannot_be_imported(self):
+        for key in ('input_tokens','output_tokens'):
+            r=self.record(); r[key]=None
+            with self.assertRaises(ValueError): runner.validate_result(r,self.campaign)
+
     def test_nonfinite_time_and_bool_counts_rejected(self):
         for key,value in [('wall_seconds',float('nan')),('input_tokens',True),('output_tokens',-1)]:
             r=self.record(); r[key]=value

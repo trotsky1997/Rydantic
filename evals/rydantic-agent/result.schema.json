@@ -46,7 +46,8 @@
           "const": true
         },
         "budgets_enforced": {
-          "const": true
+          "const": true,
+          "description": "Host budget stop controls were active; stopping/accounting tails may appear only in noncompleted records. Never clamp measured costs."
         },
         "no_cross_arm_history": {
           "const": true
@@ -443,5 +444,6 @@
       ],
       "additionalProperties": false
     }
-  }
+  },
+  "description": "The importer also checks frozen campaign-relative budgets: completed records must not exceed any cap. Noncompleted records retain actual usage including overruns and cannot claim hidden-contract pass. Standard JSON Schema cannot compare against the separate campaign document."
 }

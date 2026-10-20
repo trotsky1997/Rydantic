@@ -133,6 +133,12 @@ def validate_result(result, campaign):
     require(type(time) in (int, float) and math.isfinite(time) and time >= 0, 'invalid wall time')
     for key in ('input_tokens', 'output_tokens', 'repair_rounds'):
         integer(result[key], key)
+    # Resource-stop/accounting tails remain measured failures, never clipped costs.
+    for key in ('wall_seconds', 'input_tokens', 'output_tokens', 'repair_rounds'):
+        limit = campaign['frozen']['budgets'][key]
+        integer(limit, 'budgets.' + key, 1)
+        if result['status'] == 'completed':
+            require(result[key] <= limit, 'completed trial exceeds budget: ' + key)
     # Compile events must preserve the FIRST meaningful implementation, not first success.
     events = result['compile_attempts']
     require(isinstance(events, list), 'compile attempts must be an array')
@@ -218,6 +224,9 @@ def summarize(results, campaign):
         item['findings'] = {key: {'occurrences': sum(len(e['findings'][key]) for _, r in rows for e in r['compile_attempts']),
                                  'affected_trials': sum(any(e['findings'][key] for e in r['compile_attempts']) for _, r in rows),
                                  'compile_attempts': sum(len(r['compile_attempts']) for _, r in rows)} for key in COUNTS}
+        item['budget_overruns'] = {key: sum(r[key] > campaign['frozen']['budgets'][key]
+                                            for _, r in rows) for key in
+                                   ('wall_seconds', 'input_tokens', 'output_tokens', 'repair_rounds')}
         item['final_findings'] = {key: {'occurrences': sum(len(r['final_findings'][key]) for _, r in rows),
                                          'affected_trials': sum(bool(r['final_findings'][key]) for _, r in rows)} for key in COUNTS}
         item['rubrics'] = {key: distribution([r['review'][key]['score'] for _, r in rows if r['review'][key]['score'] is not None]) for key in RUBRICS}

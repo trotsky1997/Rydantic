@@ -93,6 +93,16 @@ existing authorized agent host must:
    phrase in REPORT.md. Evidence must include review rationale. Use pass/fail/not_run
    for hidden contract. Timeouts, budget exhaustion and environment failures remain
    recorded with their actual costs, never discarded or called success.
+   A `completed` record must be at or below **every** frozen wall-time, input-token,
+   output-token and repair-round cap; exact equality is allowed. Otherwise the host
+   must report the truthful noncompleted outcome (`timeout` for deadline stops,
+   `budget_exhausted` for token/repair stops, or the actual failure/blocker).
+   Noncompleted records retain actual overages, including cancellation latency and
+   final usage-accounting tails. They cannot claim hidden-contract pass. Do not
+   clamp costs, relabel an overrun as completed, or drop failed records from the
+   denominator. `budgets_enforced` attests active host stop controls, not absence of
+   measured stopping/accounting overshoot; document any overshoot in the evidence.
+   Missing token telemetry is not zero and is not accepted for any terminal status.
 7. Export one local JSON per trial following `result.schema.json` and the executable
    checks in `runner.validate_result`. Artifact references are relative to a
    host-managed evidence root and SHA-256 verified at import. Retain redacted
@@ -129,7 +139,8 @@ records before drawing conclusions.
   nonexistent method; `invalid_api` covers other nonexistent/misused API symbols;
   `wrong_feature` is unavailable/misspelled/incompatible feature selection.
 - Time, input/output tokens, repairs: count, median and nearest-rank p90, including
-  failed trials. Tokens are cost units, not invented dollar prices. Monetary cost,
+  failed trials. Per-metric `budget_overruns` counts expose retained failed overages.
+  Tokens are cost units, not invented dollar prices. Monetary cost,
   if desired, needs the exact provider pricing version and recorded billed usage.
 - Security/maintainability/complexity: blind rubric score distribution with known
   count; null is unreviewed, never zero or success.
