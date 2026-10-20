@@ -9,9 +9,14 @@ The default feature is `derive`. Every integration below is opt-in.
 | Feature | Provides |
 | --- | --- |
 | `derive` | `Model`, `SqlModel` and protocol generation macros |
+| `partial-json` | Bounded [partial JSON snapshots](/models/partial-json), not business-validated models |
+| `settings` | Explicit ordered [settings sources](/models/settings) with Model validation and redacted source errors |
 | `dynamic` | Runtime JSON Schema validation with `DynamicModel` |
 | `chrono` | `chrono` date and time support |
 | `decimal` | `rust_decimal` support |
+| `phone` | Unreleased source-only [canonical E.164 phone type](/domain-types), not available in beta.3 |
+| `country` | Unreleased source-only [ISO 3166-1 code types](/domain-types), not available in beta.3 |
+| `currency` | Unreleased source-only [known currency catalog codes](/domain-types), not available in beta.3 |
 | `capnp` | Native and packed Cap’n Proto serialization |
 | `axum` | Axum 0.8 extractors, responses and structured rejections |
 | `sqlx` | Shared SQL metadata and API, with no database driver |
@@ -23,14 +28,14 @@ The default feature is `derive`. Every integration below is opt-in.
 
 <CodeGroup>
 ```toml JSON only
-rydantic = "=0.7.0-beta.1"
+rydantic = "=0.7.0-beta.3"
 ```
 ```toml HTTP + PostgreSQL
-rydantic = { version = "=0.7.0-beta.1", features = ["axum", "postgres"] }
+rydantic = { version = "=0.7.0-beta.3", features = ["axum", "postgres"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "net"] }
 ```
 ```toml Binary protocol
-rydantic = { version = "=0.7.0-beta.1", features = ["capnp"] }
+rydantic = { version = "=0.7.0-beta.3", features = ["capnp"] }
 ```
 </CodeGroup>
 

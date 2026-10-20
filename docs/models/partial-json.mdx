@@ -1,0 +1,40 @@
+---
+title: "Partial JSON snapshots"
+description: "Opt-in bounded previews without numeric precision loss."
+icon: "layers"
+---
+
+The `partial-json` feature adds `rydantic::partial_json::snapshot(&[u8])` for an accumulated input buffer. This feature is introduced in the 0.7.0-beta.3 source candidate and is not in beta.2 or stable 0.6.0. Check [registry availability](https://crates.io/crates/rydantic/versions) before installing it. It is separate from strict `JsonStream` and NDJSON APIs. It does not change existing parsing or model validation.
+
+After publication, enable it explicitly:
+
+```toml
+rydantic = { version = "=0.7.0-beta.3", features = ["partial-json"] }
+```
+
+```rust
+use rydantic::partial_json::{snapshot, Status};
+
+let preview = snapshot(br#"{"items":[1,2,"#)?;
+assert_eq!(preview.status, Status::Incomplete);
+assert_eq!(preview.value.unwrap(), serde_json::json!({"items": [1, 2]}));
+# Ok::<(), rydantic::partial_json::Error>(())
+```
+
+## Deliberately narrow recovery
+
+- Missing array/object tails and unfinished literals/numbers can produce an `Incomplete` snapshot. A root with no recovered value has `value: None`, not JSON null.
+- Incomplete strings and object keys always return `IncompleteString`, including truncated escapes and UTF-8. There is no opt-in truncated-string mode. Call again with a larger accumulated buffer if appropriate.
+- Malformed syntax returns an error rather than a preview. Incomplete-string errors are not proof of a valid prefix: an invalid truncated escape can produce that error too.
+- Completed duplicate keys use last-value-wins semantics. An unfinished later value is omitted, so a prior value for the same key may remain. Partially recovered containers count as values and replace earlier values. Never use these provisional choices as validated business data.
+- Numeric lexemes pass from jiter directly into serde_json's arbitrary-precision representation, without an f64 conversion. Within supported limits, complete buffers return the same value as ordinary strict serde_json parsing. jiter 0.17 limits the integer-part scan to 4300 digits (excluding a minus sign), including numbers with a decimal/exponent suffix. Larger valid numbers return `UnsupportedNumberLimit`, not `InvalidJson`, and are never rounded. Fraction/exponent bounds are not claimed to be the same as that integer-part limit.
+
+## Completion and safety
+
+`Complete` means the entire current buffer is valid JSON. It does not mean the transport or model output has finished: a current buffer `1` is complete JSON but later bytes could change it to `12` or make it invalid. An incomplete number such as `1e` contributes no value, while a number before an unfinished container tail can appear provisionally.
+
+Wait for the producer's final document, require `Complete`, and validate through the ordinary Model API before taking consequential actions. Required fields and defaults follow existing Model rules; partial snapshots do not create missing required fields or guarantee a valid model.
+
+Input defaults to caps of 1 MiB and 64 nested containers, including incomplete input. `snapshot_with_limits(data, Limits { max_input_bytes, max_depth })` accepts lower per-call limits; values above those hard ceilings return `InvalidLimits`. Each call reparses the accumulated buffer and allocates a snapshot. This is not a zero-copy or incremental parser; repeatedly parsing prefixes can take quadratic total work. Errors omit input data, but successful values and their Debug output may contain secrets.
+
+The parser dependency is pinned to jiter 0.17.0. Its raw-number and container cursor primitives perform token/grammar parsing. No new JSON lexer is implemented. Truncated strings are intentionally excluded because that version can classify an already-invalid short Unicode escape as EOF. No general parser compatibility or Pydantic parity is claimed.

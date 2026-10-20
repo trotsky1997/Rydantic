@@ -53,15 +53,21 @@
             "group": "Models",
             "pages": [
               "models/validation",
+              "models/settings",
               "models/structure",
               "models/borrowed",
               "models/lifecycle",
               "models/async",
               "models/streaming",
+              "models/partial-json",
               "models/schema",
               "models/dates-decimal",
               "domain-types"
             ]
+          },
+          {
+            "group": "AI",
+            "pages": ["integrations/ai"]
           },
           {
             "group": "HTTP",

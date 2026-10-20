@@ -34,6 +34,7 @@ struct User {
 | **SQL with SQLx** | Model metadata, validated CRUD, queries, and migration planning for SQLite, PostgreSQL, and MySQL. |
 | **Native Cap'n Proto** | Generate schemas and official Rust bindings, or connect an existing protocol. |
 | **More model shapes** | Borrowed strings, enums, generics, recursive models, async validators, and streaming JSON. |
+| **RydanticAI** | Independently versioned `rydantic-ai`: typed agents and tools, resumable graphs, and an authenticated Responses gateway. |
 
 Integrations are opt-in Cargo features. The default `derive` feature covers the core model API.
 
@@ -77,6 +78,8 @@ Continue with [validation rules](https://rydantic.mintlify.site/models/validatio
 
 ## Choose your integrations
 
+For AI applications, add the separate `rydantic-ai` crate. It connects to pi's Codex OAuth session through the included local Responses bridge, validates typed outputs and tool arguments, and provides graph checkpoints and gateway routing/budgets. See the [RydanticAI guide](https://rydantic.mintlify.site/integrations/ai) and [crate README](crates/rydantic-ai/README.md).
+
 Enable features on the version you selected:
 
 ```toml
@@ -99,9 +102,9 @@ See the [complete feature reference](https://rydantic.mintlify.site/reference/fe
 | Channel | Version | Use it for |
 | --- | --- | --- |
 | **Stable** | `0.6.0` | Published API, with [versioned source documentation](https://github.com/trotsky1997/Rydantic/tree/v0.6.0) and [Rust API reference](https://docs.rs/rydantic/0.6.0/rydantic/). |
-| **Source candidate** | `0.7.0-beta.1` | Testing the next release, including the explicit Cap'n Proto derive contract and migration fixes. |
+| **Source candidate** | `0.7.0-beta.3` | Testing bounded partial JSON snapshots, retaining settings and the beta.1 derive contract and migration protections. |
 
-A version in this branch is **not a publication announcement**. Check [published versions](https://crates.io/crates/rydantic/versions) before installing a candidate. Once published, opt in exactly with `rydantic = "=0.7.0-beta.1"`. The guides follow the working source; use the versioned links above for stable behavior.
+A version in this branch is **not a publication announcement**. Check [published versions](https://crates.io/crates/rydantic/versions) before installing a candidate. Once published, opt in exactly with `rydantic = "=0.7.0-beta.3"`. The guides follow the working source; use the versioned links above for stable behavior.
 
 > **Breaking upgrade:** 0.7.0-beta.1 removes automatic `Model` derive insertion inside `#[rydantic::capnp_models]`. Add an explicit `#[derive(rydantic::Model)]` to every model struct and enum, including nested models. The beta also rejects unsupported custom SQLite index layouts before a table rebuild. Read the [changelog and migration guidance](https://github.com/trotsky1997/Rydantic/blob/main/CHANGELOG.md) before upgrading.
 

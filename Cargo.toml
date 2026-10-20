@@ -1,9 +1,9 @@
 [workspace]
-members = ["crates/rydantic", "crates/rydantic-derive", "fixtures/renamed", "fixtures/capnp", "fixtures/auto-capnp"]
+members = ["crates/rydantic", "crates/rydantic-derive", "crates/rydantic-ai", "crates/rydantic-codegen", "fixtures/renamed", "fixtures/capnp", "fixtures/auto-capnp"]
 resolver = "2"
 
 [workspace.package]
-version = "0.7.0-beta.1"
+version = "0.7.0-beta.3"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/trotsky1997/Rydantic"
