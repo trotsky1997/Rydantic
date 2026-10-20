@@ -91,9 +91,7 @@ pub fn integer_text(number: &Number) -> Option<String> {
     let text = text.trim_start_matches('-');
     let (mantissa, exponent) = text
         .split_once(['e', 'E'])
-        .map_or(Some((text, 0i64)), |(m, e)| {
-            e.parse::<i64>().ok().map(|e| (m, e))
-        })?;
+        .map_or((text, None), |(m, e)| (m, Some(e)));
     let decimals = mantissa.split_once('.').map_or(0, |(_, f)| f.len() as i64);
     let mut digits: String = mantissa
         .chars()
@@ -103,6 +101,9 @@ pub fn integer_text(number: &Number) -> Option<String> {
     if digits.is_empty() {
         return Some("0".into());
     }
+    // Number already guarantees valid JSON syntax. Zero is independent of its
+    // exponent, which may exceed i64 even though the result fits every integer.
+    let exponent = exponent.map_or(Some(0i64), |e| e.parse::<i64>().ok())?;
     let scale = exponent.checked_sub(decimals)?;
     if scale < 0 {
         let remove = usize::try_from(scale.checked_neg()?).ok()?;
