@@ -525,7 +525,7 @@ fn compiler_command(
     // Preserve PATH lookup for bare names, but resolve relative executable paths
     // before the child changes into the temporary schema directory.
     let compiler = if compiler.is_relative() && compiler.components().count() > 1 {
-        std::env::current_dir()?.join(compiler)
+        std::path::absolute(compiler)?
     } else {
         compiler.to_path_buf()
     };
@@ -634,11 +634,40 @@ mod tests {
 
     #[test]
     fn compiler_paths_resolve_relative_to_the_calling_process() {
-        let cwd = std::env::current_dir().unwrap();
         let working_dir = tempfile::tempdir().unwrap();
         for compiler in ["tools/capnp", "./capnp", "../tools/capnp"] {
             let command = compiler_command(compiler.as_ref(), working_dir.path()).unwrap();
-            assert_eq!(command.get_program(), cwd.join(compiler).as_os_str());
+            assert_eq!(
+                command.get_program(),
+                std::path::absolute(compiler).unwrap().as_os_str()
+            );
+            assert!(std::path::Path::new(command.get_program()).is_absolute());
+        }
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn compiler_paths_resolve_windows_drive_and_root_relative_paths() {
+        use std::path::{Component, Prefix};
+        let cwd = std::env::current_dir().unwrap();
+        let drive = match cwd.components().next().unwrap() {
+            Component::Prefix(prefix) => match prefix.kind() {
+                Prefix::Disk(drive) | Prefix::VerbatimDisk(drive) => drive as char,
+                _ => panic!("Windows regression test requires a drive-based working directory"),
+            },
+            _ => panic!("Windows working directory must have a prefix"),
+        };
+        let working_dir = tempfile::tempdir().unwrap();
+        for compiler in [
+            format!(r"{drive}:tools\capnp.exe"),
+            r"\tools\capnp.exe".into(),
+        ] {
+            let command = compiler_command(compiler.as_ref(), working_dir.path()).unwrap();
+            assert!(std::path::Path::new(command.get_program()).is_absolute());
+            assert_eq!(
+                command.get_program(),
+                std::path::absolute(&compiler).unwrap().as_os_str()
+            );
         }
     }
 

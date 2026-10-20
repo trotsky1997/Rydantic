@@ -76,6 +76,20 @@ jobs:
           cargo run --locked --quiet -p rydantic --example sqlite_api --features axum,sqlx -- --smoke
           cargo run --locked --quiet -p rydantic --example database_api --features axum,sqlx -- --smoke
 
+  compiler-paths-windows:
+    name: Compiler paths / Windows
+    runs-on: windows-latest
+    env:
+      RUSTUP_TOOLCHAIN: 1.98.1
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install the tested Rust toolchain
+        run: rustup toolchain install 1.98.1 --profile minimal
+      - name: Test compiler path resolution
+        run: cargo test -p rydantic-derive --features capnp --locked compiler_paths
+
   databases:
     name: PostgreSQL 18 and MySQL 8.4
     runs-on: ubuntu-latest
