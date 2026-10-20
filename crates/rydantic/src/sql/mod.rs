@@ -1,6 +1,8 @@
 //! SQLModel-style SQLite, PostgreSQL and MySQL persistence backed by SQLx and Tokio.
 //!
 //! ```
+//! # #[cfg(feature = "sqlite")]
+//! # fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! use rydantic::{Model, SqlModel, sqlx::sqlite::SqlitePoolOptions};
 //! #[derive(Debug, PartialEq, Model, SqlModel)]
 //! struct Note {
@@ -18,18 +20,25 @@
 //! assert_eq!(Note::get(&pool, &1).await?.as_ref(), Some(&stored));
 //! # Ok(()) }
 //! # tokio::runtime::Runtime::new()?.block_on(run())?;
+//! # Ok(()) }
+//! # #[cfg(feature = "sqlite")]
+//! # example()?;
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 mod backend;
 mod ddl;
+mod migration;
 mod parameter;
 mod query;
 mod table;
 use crate::{Context, ValidationError, ValidationErrors};
 pub use backend::{Dialect, SqlBackend};
+pub use migration::{
+    MigrationChange, MigrationOptions, MigrationPlan, MigrationReport, SqlDefault,
+};
 pub use parameter::{AutoKey, Key, SqlParameter, SqlType, SqlValue};
 pub use query::Select;
-use sqlx::{pool::PoolConnection, Database, SqliteConnection};
+use sqlx::{pool::PoolConnection, Database};
 pub use table::{SqlModel, SqlRow};
 
 // SQLite extended result codes store their primary result in the low byte.
@@ -46,7 +55,8 @@ pub trait ValidationConnection {
 impl<DB: Database> ValidationConnection for PoolConnection<DB> {
     const RELEASES_POOL_SLOT: bool = true;
 }
-impl ValidationConnection for &mut SqliteConnection {
+#[cfg(feature = "sqlite")]
+impl ValidationConnection for &mut sqlx::SqliteConnection {
     const RELEASES_POOL_SLOT: bool = false;
 }
 #[cfg(feature = "postgres")]
@@ -74,6 +84,11 @@ pub enum SqlError {
     Database(sqlx::Error),
     NotFound,
     InvalidColumn(String),
+    /// A migration could not be planned or applied safely.
+    Migration {
+        code: &'static str,
+        message: String,
+    },
 }
 impl std::fmt::Display for SqlError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -82,6 +97,7 @@ impl std::fmt::Display for SqlError {
             Self::Database(e) => e.fmt(f),
             Self::NotFound => f.write_str("row not found"),
             Self::InvalidColumn(name) => write!(f, "unknown model column: {name}"),
+            Self::Migration { code, message } => write!(f, "{code}: {message}"),
         }
     }
 }
@@ -154,6 +170,10 @@ pub struct Column {
     pub references: Option<Reference>,
     /// Optional bounded text/binary length used by MySQL schema generation.
     pub length: Option<usize>,
+    /// Previous database name, used once when the current name is absent.
+    pub rename_from: Option<&'static str>,
+    /// A constant database default, also used to backfill added required fields.
+    pub default: Option<SqlDefault>,
 }
 impl Column {
     /// MySQL requires bounded text/binary columns for keys and indexes.
@@ -263,7 +283,7 @@ impl ::axum::response::IntoResponse for SqlError {
                     "database constraint violation",
                 )
             }
-            Self::Database(_) => (
+            Self::Database(_) | Self::Migration { .. } => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "sql_error",
                 "database operation failed",
@@ -294,5 +314,16 @@ macro_rules! __rydantic_mysql { ($($item:tt)*) => { $($item)* }; }
 #[macro_export]
 #[cfg(not(feature = "mysql"))]
 macro_rules! __rydantic_mysql {
+    ($($item:tt)*) => {};
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(feature = "sqlite")]
+macro_rules! __rydantic_sqlite { ($($item:tt)*) => { $($item)* }; }
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "sqlite"))]
+macro_rules! __rydantic_sqlite {
     ($($item:tt)*) => {};
 }

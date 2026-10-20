@@ -1,0 +1,5 @@
+error: SQL identifiers must contain ASCII letters, digits or underscores and start with a letter or underscore
+ --> tests/ui-sql/rename_from_identifier.rs:6:25
+  |
+6 |     #[sql(rename_from = "name; DROP TABLE users")]
+  |                         ^^^^^^^^^^^^^^^^^^^^^^^^

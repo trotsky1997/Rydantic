@@ -1,0 +1,5 @@
+error[E0080]: evaluation panicked: SQL default must match the column storage type
+ --> tests/ui-sql/default_type.rs:7:12
+  |
+7 |     value: i64,
+  |            ^^^ evaluation of `_` failed here

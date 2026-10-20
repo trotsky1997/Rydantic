@@ -1,4 +1,4 @@
-#![cfg(feature = "sqlx")]
+#![cfg(feature = "sqlite")]
 use rydantic::{
     sqlx::{self, sqlite::SqlitePoolOptions, SqlitePool},
     Model, SqlError, SqlModel, ValidationError, Value,

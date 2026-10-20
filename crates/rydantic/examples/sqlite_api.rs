@@ -1,4 +1,4 @@
-//! Run with `cargo run -p rydantic --example sqlite_api --features axum,sqlx`.
+//! Run with `cargo run -p rydantic --example sqlite_api --features axum,sqlite`.
 use rydantic::{
     axum::{
         framework::{
@@ -71,7 +71,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .max_connections(1)
         .connect(&url)
         .await?;
-    User::create_table(&pool).await?;
+    User::migrate(&pool).await?;
     if std::env::args().any(|arg| arg == "--smoke") {
         use rydantic::axum::framework::{body::Body, http::Request};
         use tower::ServiceExt;
