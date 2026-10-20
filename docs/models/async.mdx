@@ -29,3 +29,11 @@ Asynchronous field validators return `Result<(), ValidationError>`; container va
 Models with asynchronous rules, and their parent models, use `parse_json_async`/`parse_value_async`, `validate_async`, and `dump_async`/`dump_json_async`. Synchronous parsing, Serde, and synchronous dump return `async_validation_required`. Owned models can use `parse_validated_json_async`/`AsyncValidated::new`; their read-only results support Serde serialization. Borrowed models also support asynchronous parsing, validation, and dumping.
 
 Generated asynchronous support requires field types to implement `AsyncCheck`, which requires `Sync`. A synchronous custom type can provide an empty `impl AsyncCheck for MyType {}`; custom types use this trait to define asynchronous traversal. Types with asynchronous rules must expose the corresponding metadata through `JsonType::async_required`/`BorrowType::async_required`. The library itself has no executor dependency. The `asynchronous` example uses Tokio as a development dependency.
+
+## Ordering, failures and cancellation
+
+Async traversal is sequential, not concurrent. A nested value's async checks finish before its enclosing field callback; a model callback runs only if its fields have no async errors. An error in one sibling does not prevent checking the next sibling. Any synchronous error prevents the entire async phase from starting. Collection traversal follows the collection's iteration order; do not rely on a stable order for `HashMap` entries.
+
+An untagged enum selects its first synchronously valid branch, then checks that branch asynchronously. An async failure does not cause a retry with another branch.
+
+Dropping a pending generated validation future stops later callbacks and leaves its caller-supplied `Context` usable, without leaking nested path segments. Errors already absorbed from completed children remain. Errors still held by an incomplete child may be discarded when that child is dropped, including errors from completed grandchildren inside it. This is not rollback of callback side effects, a timeout mechanism or a guarantee that external I/O is undone. Custom `AsyncCheck` implementations must also leave their context usable when cancelled.
