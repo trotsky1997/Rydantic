@@ -34,6 +34,21 @@ The parsing pipeline is: read input or produce a default → before callback →
 
 Numeric strings require explicit `coerce`. A JSON number such as `25.0` is accepted for an integer, while `25.5` fails, following JSON Schema's definition of mathematical integers. Range comparisons preserve 128-bit integer precision, and extremely large exponents are processed with bounded work. Floating-point values follow Rust's IEEE 754 representations; NaN, infinity, and values outside the target type's range fail validation.
 
+## Construction versus revalidation
+
+`before(Value) -> Result<Value, ValidationError>` transforms construction input, not an already constructed Rust value. Its output still has to decode into the declared field type. Defaults also pass through this construction pipeline; a `before` callback cannot bypass type checks.
+
+`validate(&T) -> Result<(), ValidationError>` is a typed check, not a transformer. Model callbacks take `&Self` and return `Result<(), ValidationErrors>`. `validate()` and dump methods recheck existing values without rerunning `before`, trimming or changing case. Use parsing to construct normalized values; do not expect dumping to repair an invalid or unnormalized instance.
+
+The current field-callback gates differ between construction and revalidation:
+
+- Parsing skips a field's custom check if decoding or that field's built-in constraints fail.
+- Revalidation skips the custom check when validation of the field's type or nested value fails. If that succeeds, built-in constraints and the custom check both run, even if a built-in constraint reports an error.
+- For example, a `String` with `min_length = 3` and a rejecting custom check produces only `too_short` when parsing `"x"`, but both errors when validating the directly constructed Rust value. Both entry points reject it; the difference is callback execution and diagnostics, not validation bypass.
+- Independent sibling errors accumulate, and a model's custom check runs only when all of its field checks succeed. A single model callback may return multiple errors.
+
+These synchronous rules also govern the synchronous phase of the async entry points. Callbacks with side effects should not assume identical invocation counts between parse, validate and dump.
+
 ## Missing fields and null
 
 | Declaration | May be omitted | Accepts null |
@@ -70,6 +85,19 @@ struct Window {
     end: u32,
 }
 ```
+
+Each hook attribute accepts one callback path. Compose several checks using an ordinary Rust function with explicit control flow:
+
+```rust
+fn valid_end(value: &u32) -> Result<(), ValidationError> {
+    even(value)?;
+    if *value <= 100 { Ok(()) }
+    else { Err(ValidationError::custom("end must be <= 100")) }
+}
+// Use #[model(validate = valid_end)].
+```
+
+Here `?` stops this callback at its first failure; it does not stop validation of independent sibling fields. `Context` is the error/path collector for lower-level type implementations, not a per-call application-data argument to these callbacks. Cross-field checks belong in a model callback, which receives the fully constructed model. There is no `plain` or `wrap` hook that suppresses or retries the generated validation pipeline.
 
 Custom error paths are automatically prefixed with the parent path when nested. `ValidationErrors::errors()` returns an error slice, and `to_json()` returns structured JSON. Each error includes `loc`, `code`, `message`, `stage`, and constraint parameters; `pointer()` returns an escaped JSON Pointer.
 
