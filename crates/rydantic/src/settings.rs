@@ -179,6 +179,10 @@ impl Settings {
     ) -> Result<Self, SettingsError> {
         check_prefix(prefix)?;
         let text = read_file(path.as_ref())?;
+        // Validate before lines()/trim(), which otherwise preserve or erase bare CR.
+        if text.split("\r\n").any(|part| part.contains('\r')) {
+            return Err(SettingsError::Syntax);
+        }
         let mut pairs = Vec::new();
         for line in text.lines() {
             let line = line.trim();

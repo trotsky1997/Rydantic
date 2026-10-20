@@ -534,3 +534,34 @@ fn aliases_and_explicit_coercion_use_existing_model_rules() {
         .load::<Aliased>()
         .is_err());
 }
+
+#[test]
+fn dotenv_rejects_bare_carriage_returns_before_trimming() {
+    let tmp = Temp::new();
+    for input in [
+        "APP_VALUE=ok\rBROKEN",
+        "APP_VALUE=ok\r",
+        "# comment\r",
+        "APP_VALUE='a\rb'",
+        "APP_VALUE=\r\r\n",
+    ] {
+        assert_eq!(
+            Settings::new()
+                .dotenv_file(tmp.file("bare-cr.env", input), "APP_", ValueMode::String)
+                .unwrap_err(),
+            SettingsError::Syntax
+        );
+    }
+    assert_eq!(
+        text(
+            Settings::new()
+                .dotenv_file(
+                    tmp.file("escaped.env", r#"APP_VALUE="a\rb""#),
+                    "APP_",
+                    ValueMode::String
+                )
+                .unwrap()
+        ),
+        "a\rb"
+    );
+}
