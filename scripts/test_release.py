@@ -1,6 +1,9 @@
 import importlib.util
 import io
 import json
+import hashlib
+import os
+import subprocess
 from pathlib import Path
 import tempfile
 import unittest
@@ -67,6 +70,16 @@ class ReleaseTests(unittest.TestCase):
         with patch.object(release, "get_json", return_value={"workflow_runs": [good]}):
             release.require_successful_ci("sha", "token")
 
+    def test_preflight_checks_source_and_dispatch_ci(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "output"
+            env = {"GITHUB_REPOSITORY": release.REPOSITORY, "GITHUB_REF": "refs/heads/main",
+                   "GITHUB_SHA": "tooling-sha", "GH_TOKEN": "test", "GITHUB_OUTPUT": str(output)}
+            with patch.dict(os.environ, env), patch.object(release, "validate_manifests", return_value="0.7.0-beta.1"), patch.object(release, "run", return_value="source-sha"), patch.object(release.subprocess, "run"), patch.object(release, "require_successful_ci") as ci, patch.object(release, "registry_version", return_value=None):
+                release.preflight(Path(directory), "v0.7.0-beta.1")
+                self.assertEqual([c.args[0] for c in ci.call_args_list], ["source-sha", "tooling-sha"])
+                self.assertIn("sha=source-sha", output.read_text())
+
     def test_duplicate_never_uploads(self):
         with patch.object(release, "validate_manifests", return_value="0.7.0"), patch.object(release, "registry_version", return_value={}), patch.object(release.subprocess, "run") as run:
             with self.assertRaisesRegex(ValueError, "duplicate"):
@@ -79,13 +92,14 @@ class ReleaseTests(unittest.TestCase):
             archive = root / "target/package/rydantic-0.7.0.crate"
             archive.parent.mkdir(parents=True)
             archive.write_bytes(b"package")
-            with patch.object(release, "validate_manifests", return_value="0.7.0"), patch.object(release, "registry_version", return_value=None), patch.object(release.subprocess, "run") as run, patch.object(release, "wait_for_publication") as observe:
+            with patch.object(release, "validate_manifests", return_value="0.7.0"), patch.object(release, "registry_version", return_value=None), patch.object(release.subprocess, "run") as run, patch.object(release, "wait_for_publication") as observe, patch.object(release, "package_checksum", return_value="checksum") as package:
                 run.return_value.returncode = 1
                 release.publish(root, "v0.7.0", "rydantic")
                 self.assertEqual(run.call_count, 2)  # One dry run, one upload.
                 self.assertIn("--dry-run", run.call_args_list[0].args[0])
                 self.assertNotIn("--dry-run", run.call_args_list[1].args[0])
                 observe.assert_called_once()
+                package.assert_called_once_with(root, "rydantic", "0.7.0")
 
     def test_publication_checks_checksum_and_yank(self):
         for info in [{"checksum": "wrong"}, {"checksum": "ok", "yanked": True}]:
@@ -102,6 +116,35 @@ class ReleaseTests(unittest.TestCase):
         with patch.object(release, "registry_version", return_value={"checksum": "ok", "yanked": False}), patch.object(release.urllib.request, "urlopen", return_value=response):
             release.wait_for_publication("rydantic", "0.7.0", "ok", attempts=1)
 
+
+
+class RealCargoPackagingTests(unittest.TestCase):
+    def test_real_package_checksum_with_default_and_overridden_target(self):
+        # Real Cargo, no registry upload, dependencies or registry network.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "source"
+            root.mkdir()
+            (root / "src").mkdir()
+            (root / "src/lib.rs").write_text("pub fn answer() -> u8 { 42 }\n")
+            (root / "Cargo.toml").write_text(
+                '[package]\nname = "release-checksum-fixture"\nversion = "0.1.0"\n'
+                'edition = "2021"\nlicense = "MIT"\ndescription = "No-upload regression"\n')
+            env = dict(os.environ, CARGO_NET_OFFLINE="true")
+            env.pop("CARGO_TARGET_DIR", None)
+            with patch.dict(os.environ, env, clear=True):
+                subprocess.run(["cargo", "generate-lockfile", "--offline"], cwd=root, check=True)
+                for mode in ["default", "environment", "config"]:
+                    target = None if mode == "default" else Path(directory) / mode
+                    os.environ.pop("CARGO_TARGET_DIR", None)
+                    if mode == "config":
+                        (root / ".cargo").mkdir()
+                        (root / ".cargo/config.toml").write_text(f'[build]\ntarget-dir = "{target}"\n')
+                    if mode == "environment":
+                        os.environ["CARGO_TARGET_DIR"] = str(target)
+                    checksum = release.package_checksum(root, "release-checksum-fixture", "0.1.0")
+                    archive = (target or root / "target") / "package/release-checksum-fixture-0.1.0.crate"
+                    self.assertEqual(checksum, hashlib.sha256(archive.read_bytes()).hexdigest())
+                    self.assertEqual(checksum, release.package_checksum(root, "release-checksum-fixture", "0.1.0"))
 
 if __name__ == "__main__":
     unittest.main()

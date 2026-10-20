@@ -79,6 +79,8 @@ def preflight(root, tag):
         raise ValueError("Checkout does not match the selected tag")
     subprocess.run(["git", "merge-base", "--is-ancestor", sha, "origin/main"], check=True)
     require_successful_ci(sha, os.environ["GH_TOKEN"])
+    if os.environ["GITHUB_SHA"] != sha:
+        require_successful_ci(os.environ["GITHUB_SHA"], os.environ["GH_TOKEN"])
     for crate in CRATES:
         if registry_version(crate, version) is not None:
             raise ValueError(f"{crate} {version} already exists; do not republish. Inspect any partial release before recovery.")
@@ -106,15 +108,26 @@ def wait_for_publication(crate, version, checksum, attempts=30):
     raise RuntimeError(f"Publication outcome not confirmed for {crate} {version}; inspect registry before any retry")
 
 
+def package_checksum(root, crate, version):
+    # cargo publish --dry-run uses a temporary archive location on Cargo 1.98.
+    # Explicit packaging has a documented target/package output; metadata honors
+    # CARGO_TARGET_DIR and .cargo/config.toml rather than guessing workspace/target.
+    subprocess.run(["cargo", "package", "--locked", "-p", crate], cwd=root, check=True)
+    metadata = json.loads(subprocess.check_output(
+        ["cargo", "metadata", "--format-version", "1", "--no-deps", "--locked"],
+        cwd=root, text=True))
+    archive = Path(metadata["target_directory"]) / "package" / f"{crate}-{version}.crate"
+    return hashlib.sha256(archive.read_bytes()).hexdigest()
+
+
 def publish(root, tag, crate):
     version = validate_manifests(root, tag)
     if registry_version(crate, version) is not None:
         raise ValueError(f"{crate} {version} already exists; refusing a duplicate upload")
-    subprocess.run(["cargo", "publish", "--locked", "--dry-run", "-p", crate], check=True)
-    archive = root / "target/package" / f"{crate}-{version}.crate"
-    checksum = hashlib.sha256(archive.read_bytes()).hexdigest()
+    subprocess.run(["cargo", "publish", "--locked", "--dry-run", "-p", crate], cwd=root, check=True)
+    checksum = package_checksum(root, crate, version)
     # Even an error may mean the server accepted the upload. Observe, never blindly resend.
-    outcome = subprocess.run(["cargo", "publish", "--locked", "-p", crate])
+    outcome = subprocess.run(["cargo", "publish", "--locked", "-p", crate], cwd=root)
     print(f"cargo publish exit status: {outcome.returncode}; verifying registry outcome")
     wait_for_publication(crate, version, checksum)
 
