@@ -533,5 +533,12 @@ mod tests {
             assert_eq!(terminal[index]["id"], event["item"]["id"]);
             assert_eq!(terminal[index]["call_id"], event["item"]["call_id"]);
         }
+        let request = crate::ModelRequest::new("model", "compute");
+        let mut replay = super::super::replay::Replay::default();
+        replay.record("client", &request, &response);
+        let mut next = request.clone();
+        next.input.extend(terminal.as_array().unwrap().clone());
+        replay.restore("client", &mut next);
+        assert_eq!(&next.input[1..], response.output());
     }
 }

@@ -74,6 +74,7 @@ pub(super) fn groups(input: &[Value]) -> Vec<Group> {
                 }
                 i += 1;
             }
+            calls.sort_by(|a, b| a["id"].as_str().cmp(&b["id"].as_str()));
             out.push(Group {
                 start,
                 end: i,
