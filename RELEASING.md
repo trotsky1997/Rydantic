@@ -77,3 +77,16 @@ regressions for version/pin checks, CI selection, registry error handling,
 duplicate prevention, and publication verification. They run in CI. They do not
 exercise OIDC or upload packages; only a real authorized release validates the
 end-to-end registry path.
+
+### Repairing publishing tooling without changing release source
+
+The workflow and helper are loaded from the immutable main dispatch commit,
+while package source is checked out separately at the verified immutable tag.
+Both commits must have successful main-push CI. This lets a reviewed tooling
+repair publish an existing tested tag without retagging or changing its package
+source. No permissions or credentials are added by this separation.
+
+The helper explicitly runs `cargo package --locked` and hashes its archive under
+Cargo metadata's `target_directory`, including configured target overrides. It
+does not assume `cargo publish --dry-run` retains an archive at that location.
+Real no-network Cargo fixture tests cover default and overridden target paths.
