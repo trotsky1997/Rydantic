@@ -96,3 +96,22 @@ See [fixtures/auto-capnp](https://github.com/trotsky1997/Rydantic/tree/main/fixt
 cargo run -p rydantic-auto-capnp-fixture
 cargo test -p rydantic-auto-capnp-fixture
 ```
+
+## Conditional compilation
+
+`capnp_models` lets Rust evaluate `cfg` and `cfg_attr` in the consuming crate before
+collecting its models and generating the schema. Disabled inline modules, models,
+fields, enum variants, aliases and imports are omitted. This includes nested
+`cfg_attr` and consumer features or target predicates; predicates are not evaluated
+in the procedural macro's host environment. Active declarations still have to meet
+all of the normal model restrictions. Out-of-line modules (`mod file;`) are not
+supported, including inside a disabled declaration on stable Rust.
+
+**Wire compatibility warning:** the exported schema describes only the active
+configuration. Conditional fields or variants can change implicit ordinals and the
+wire layout. A shared namespace or file ID does not make different configurations
+compatible. Use separate schema identities for distinct protocols, or use an explicit
+schema-first protocol when different builds must exchange stored or network data.
+Keep and review the exported schema before deploying a changed configuration, and
+back up existing data before any incompatible migration. This feature does not
+migrate or preserve data automatically.

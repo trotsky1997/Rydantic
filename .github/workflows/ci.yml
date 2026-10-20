@@ -75,6 +75,8 @@ jobs:
         run: cargo fmt --all -- --check
       - name: Test models, schema parity, compile diagnostics and documentation
         run: cargo test --workspace --all-features --locked
+      - name: Test automatic schema without consumer feature
+        run: cargo test -p rydantic-auto-capnp-fixture --lib --locked
       - name: Verify exact stable agent Skill consumer
         run: cargo test --manifest-path skills/rydantic/assets/stable-0.6.0/Cargo.toml --locked
       - name: Clippy

@@ -543,6 +543,70 @@ fn compile(schema: &str, rd: &Tokens, span: Span) -> syn::Result<Vec<Item>> {
     Rebase { depth: 0 }.visit_file_mut(&mut file);
     Ok(file.items)
 }
+/// Derive input is cfg-normalized by rustc, including items inside a discriminant.
+/// The temporary enum is discarded; only the normalized original module is emitted.
+/// Do not evaluate cfg predicates in the proc-macro host environment: they belong
+/// to the consuming crate and target.
+pub(super) fn prepare(args: Tokens, input: Tokens) -> syn::Result<Tokens> {
+    options(args.clone())?;
+    let module: ItemMod = syn::parse2(input)?;
+    if module.content.is_none() {
+        return Err(syn::Error::new(
+            module.span(),
+            "capnp_models requires an inline module containing the model definitions",
+        ));
+    }
+    let rd = root_path()?;
+    let temporary = syn::Ident::new("__RydanticCapnpConfiguration", Span::mixed_site());
+    Ok(quote! {
+        #[derive(#rd::__RydanticCapnpConfigured)]
+        #[#rd::__rydantic_capnp_discard]
+        #[__rydantic_capnp_options(#args)]
+        enum #temporary { Configured = { #module } }
+    })
+}
+
+pub(super) fn configured(input: Tokens) -> syn::Result<Tokens> {
+    let input: DeriveInput = syn::parse2(input)?;
+    let args = input
+        .attrs
+        .iter()
+        .find(|attr| attr.path().is_ident("__rydantic_capnp_options"))
+        .ok_or_else(|| {
+            syn::Error::new(input.span(), "internal capnp_models configuration missing")
+        })?
+        .parse_args::<Tokens>()?;
+    let Data::Enum(data) = &input.data else {
+        return Err(syn::Error::new(
+            input.span(),
+            "internal capnp_models wrapper must be an enum",
+        ));
+    };
+    let block = data
+        .variants
+        .first()
+        .and_then(|v| v.discriminant.as_ref())
+        .and_then(|(_, expr)| {
+            if let syn::Expr::Block(block) = expr {
+                Some(block)
+            } else {
+                None
+            }
+        })
+        .ok_or_else(|| syn::Error::new(input.span(), "internal capnp_models module missing"))?;
+    // An outer cfg may remove the complete module.
+    if block.block.stmts.is_empty() {
+        return Ok(Tokens::new());
+    }
+    if let [syn::Stmt::Item(Item::Mod(module))] = block.block.stmts.as_slice() {
+        return expand(args, quote!(#module));
+    }
+    Err(syn::Error::new(
+        block.span(),
+        "internal capnp_models wrapper contains unexpected items",
+    ))
+}
+
 pub(super) fn expand(args: Tokens, input: Tokens) -> syn::Result<Tokens> {
     let options = options(args)?;
     let mut module: ItemMod = syn::parse2(input)?;

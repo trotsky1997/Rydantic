@@ -50,6 +50,9 @@ pub use capnp_support::CapnpSchema;
 pub use capnp_support::{CapnpEnum, CapnpModel};
 #[cfg(all(feature = "capnp", feature = "derive"))]
 pub use rydantic_derive::capnp_models;
+#[doc(hidden)]
+#[cfg(all(feature = "capnp", feature = "derive"))]
+pub use rydantic_derive::{__RydanticCapnpConfigured, __rydantic_capnp_discard};
 #[cfg(feature = "dynamic")]
 mod dynamic;
 mod error;

@@ -4,6 +4,9 @@ version.workspace = true
 edition.workspace = true
 publish = false
 
+[features]
+cfg-fixture = []
+
 [dependencies]
 rd = { package = "rydantic", path = "../../crates/rydantic", features = ["capnp", "chrono", "decimal"] }
 
