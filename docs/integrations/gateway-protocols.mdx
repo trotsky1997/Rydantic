@@ -3,7 +3,7 @@ title: "Gateway protocols"
 description: "Use Responses, Chat Completions or Messages clients with any supported upstream protocol."
 ---
 
-RydanticAI 0.5.0 serves three standard API frontends. A client selects its wire protocol by endpoint; the model alias selects the upstream route. These choices are independent.
+RydanticAI 0.6.0 serves three standard API frontends. A client selects its wire protocol by endpoint; the model alias selects the upstream route. These choices are independent.
 
 | Frontend endpoint | Responses upstream | Chat Completions upstream | Messages upstream |
 | --- | --- | --- | --- |
@@ -11,7 +11,7 @@ RydanticAI 0.5.0 serves three standard API frontends. A client selects its wire 
 | `POST /v1/chat/completions` | JSON + SSE | JSON + SSE | JSON + SSE |
 | `POST /v1/messages` | JSON + SSE | JSON + SSE | JSON + SSE |
 
-All nine combinations support text, client function tools, tool-result continuations, structured output mappings and token accounting. Agent validation correction, `Partial<T>` and `Iterable<T>` also work through every frontend.
+All nine combinations support text, [URL/Base64 image inputs](/integrations/images), client function tools, tool-result continuations, structured output mappings and token accounting. Agent validation correction, `Partial<T>` and `Iterable<T>` also work through every frontend.
 
 ## Configure routes
 
@@ -105,7 +105,7 @@ Tool definitions, tool choice, parallel tool settings, output token limits, temp
 
 JSON Schema maps between `text.format`, `response_format.json_schema` and `output_config.format`. The upstream model must support its schema subset. Rydantic Agent runtime validation remains available through every frontend. JSON object mode is supported by Responses and Chat Completions; Messages uses JSON Schema or instruction-based output.
 
-The gateway implements text and client function tools. Unsupported parameters, multimodal content and model-specific reasoning controls fail explicitly where they cannot be represented. Stored responses are disabled. The gateway relays tool calls; the client application executes handlers and returns tool results with the original call IDs.
+The gateway implements text, ordered user image inputs and client function tools. Unsupported media, parameters and model-specific reasoning controls fail explicitly where they cannot be represented. Stored responses are disabled. The gateway relays tool calls; the client application executes handlers and returns tool results with the original call IDs.
 
 Chat system and developer messages retain their roles and conversation order for Chat and Responses upstreams. Messages upstreams combine leading system/developer instructions into their top-level system field and reject interleaved instruction messages.
 
@@ -125,4 +125,4 @@ Replay is process-local and bounded to 128 entries and 8 MiB of serialized data,
 
 ## Verification
 
-The test suite covers all nine JSON/SSE combinations, multi-turn tools, partial/iterable validation, authentication, usage, cache isolation, failure terminals, cancellation and bounded replay. CI also runs 27 cases through pinned official Python SDKs with strict response validation, using loopback fixtures and no live provider credentials.
+The test suite covers all nine JSON/SSE combinations, multi-turn tools, partial/iterable validation, authentication, usage, cache isolation, failure terminals, cancellation and bounded replay. CI also runs 63 cases through pinned official Python SDKs with strict response validation, using loopback fixtures and no live provider credentials.

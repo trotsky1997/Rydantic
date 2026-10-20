@@ -62,6 +62,23 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(wire)
 
+PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC'
+IMAGE_URL = 'https://example.com/fixture.png?signature=opaque-test-reference'
+
+def image_content(api, kind):
+    reference = IMAGE_URL if kind == 'url' else 'data:image/png;base64,' + PNG
+    if api == 'responses':
+        image = {'type': 'input_image', 'image_url': reference, 'detail': 'auto'}
+        text_type = 'input_text'
+    elif api == 'chat_completions':
+        image = {'type': 'image_url', 'image_url': {'url': reference, 'detail': 'auto'}}
+        text_type = 'text'
+    else:
+        source = {'type': 'url', 'url': IMAGE_URL} if kind == 'url' else {'type': 'base64', 'media_type': 'image/png', 'data': PNG}
+        image = {'type': 'image', 'source': source}
+        text_type = 'text'
+    return [{'type': text_type, 'text': 'SDK image before'}, image, {'type': text_type, 'text': 'SDK image after'}]
+
 def main():
     with tempfile.TemporaryDirectory(prefix='rydantic-gateway-sdk-') as directory:
         WORK = Path(directory)
@@ -126,6 +143,33 @@ def main():
                 call = next((i for i in r.content if i.type == 'tool_use'))
                 assert call.input == {'a': 19, 'b': 23}
                 checks.append(['anthropic_messages', source, 'tool-stream'])
+                for kind in ['url', 'base64']:
+                    for streaming in [False, True]:
+                        for front in apis:
+                            before = len(SEEN)
+                            parts = image_content(front, kind)
+                            if front == 'responses':
+                                if streaming:
+                                    with oa.responses.stream(model=source, input=[{'role': 'user', 'content': parts}]) as stream:
+                                        list(stream)
+                                        text = stream.get_final_response().output_text
+                                else:
+                                    text = oa.responses.create(model=source, input=[{'role': 'user', 'content': parts}]).output_text
+                            elif front == 'chat_completions':
+                                response = oa.chat.completions.create(model=source, messages=[{'role': 'user', 'content': parts}], stream=streaming)
+                                text = ''.join(c.choices[0].delta.content or '' for c in response if c.choices) if streaming else response.choices[0].message.content
+                            elif streaming:
+                                with an.messages.stream(model=source, max_tokens=256, messages=[{'role': 'user', 'content': parts}]) as stream:
+                                    text = ''.join(stream.text_stream)
+                            else:
+                                text = an.messages.create(model=source, max_tokens=256, messages=[{'role': 'user', 'content': parts}]).content[0].text
+                            assert text == 'SDK hello'
+                            assert len(SEEN) == before + 1
+                            upstream_api, request = SEEN[-1]
+                            history = request['input'] if source == 'responses' else request['messages']
+                            forwarded = next(m['content'] for m in history if m.get('role') == 'user')
+                            assert upstream_api == source and forwarded == image_content(source, kind)
+                            checks.append([front, source, 'image-' + kind + ('-sse' if streaming else '-json')])
             receipt = {'openai_sdk': openai.__version__, 'anthropic_sdk': anthropic.__version__, 'strict_response_validation': True, 'passed_cases': len(checks), 'cases': checks, 'real_model_traffic': False}
             print(json.dumps(receipt))
         finally:

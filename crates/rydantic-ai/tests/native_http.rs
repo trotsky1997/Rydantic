@@ -403,8 +403,7 @@ async fn unsupported_input_and_reasoning_fail_before_network_dispatch() {
             Err(Error::Configuration(_))
         ));
         let mut request = ModelRequest::new("m", "x");
-        request.input[0]["content"] =
-            json!([{"type":"input_image","image_url":"https://example.com/image.png"}]);
+        request.input[0]["content"] = json!([{"type":"input_audio","data":"AA==","format":"wav"}]);
         assert!(matches!(
             model.complete(request, RunContext::default()).await,
             Err(Error::Configuration(_))

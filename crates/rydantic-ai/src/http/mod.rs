@@ -210,8 +210,8 @@ impl HttpProvider {
         };
         let body = serde_json::to_vec(&body)
             .map_err(|_| Error::Configuration("invalid provider request".into()))?;
-        if body.len() > 1024 * 1024 {
-            return Err(Error::Limit("provider request exceeds 1 MiB".into()));
+        if body.len() > crate::content::MAX_REQUEST_BYTES {
+            return Err(Error::Limit("provider request exceeds 16 MiB".into()));
         }
         let call = self
             .client

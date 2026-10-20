@@ -5,7 +5,7 @@ Typed Rust agents, explicit workflow graphs and a three-protocol HTTP gateway, b
 ```toml
 [dependencies]
 rydantic = "0.7.0-beta.3"
-rydantic-ai = "0.5.0"
+rydantic-ai = "0.6.0"
 ```
 
 `rydantic-ai` has its own version and release lifecycle inside the Rydantic workspace. The core `rydantic` crate does not depend on it. Disable default features for graphs and custom providers without HTTP dependencies.
@@ -22,7 +22,7 @@ Connect using `BASEURL` and an optional `APIKEY`. `BASEURL` includes the API pre
 | Chat Completions | `ChatCompletionsProvider` | `/chat/completions` | `Authorization: Bearer APIKEY` |
 | Anthropic Messages | `AnthropicMessagesProvider` | `/messages` | `x-api-key: APIKEY` |
 
-Each provider supports streamed text, typed client tools, validation correction, `Partial<T>`, `Iterable<T>`, usage accounting, cancellation and deadlines. Messages requests also include `anthropic-version: 2023-06-01`.
+Each provider supports URL/Base64 image input, streamed text, typed client tools, validation correction, `Partial<T>`, `Iterable<T>`, usage accounting, cancellation and deadlines. Messages requests also include `anthropic-version: 2023-06-01`.
 
 Use `HttpProvider::from_env(Api::ChatCompletions)?` for protocol selection at runtime, or the named provider constructors for a fixed protocol. Constructors take `(base_url, Option<String>)`; `from_env()` reads `BASEURL` and `APIKEY` for named providers. No login flow or credential storage is part of the SDK.
 
@@ -58,6 +58,19 @@ println!("{}", result.output.answer);
 Run `cargo run -p rydantic-ai --example provider` for a typed tool-call round trip. Set `BASEURL`, `MODEL`, optional `APIKEY`, and `API` to `responses`, `chat_completions` or `anthropic_messages` (default: `responses`). Agent limits bound model calls, tool calls, validation retries and observed token usage. Cancellation and the absolute deadline cover model calls, validation and tool handlers. Tools execute sequentially; execution errors stop the run and are never automatically replayed. Handlers own transactional/idempotency behavior for external side effects. Prompt content is not written to tracing spans; operations, tool names and usage are recorded with standard `tracing`.
 
 Synchronous validators cannot be interrupted within a poll. Ordinary runs and partial streams recheck cancellation and the deadline after successful final validation, rejecting a late result instead of accepting it.
+
+## Image inputs
+
+All three providers and gateway frontends support ordered user text/image input, HTTP(S) image URLs and Base64 PNG/JPEG/GIF/WebP images. `Agent::run`, `stream_partial`, `stream_iterable` and `ModelRequest::new` accept a `Prompt` or a string:
+
+```rust
+use rydantic_ai::{Image, Prompt};
+let prompt = Prompt::new("Describe this image.")
+    .image(Image::url("https://example.com/photo.png")?);
+let result = agent.run(prompt, dependencies, context).await?;
+```
+
+Use `Image::from_bytes("image/png", &bytes)?` or `Image::base64("image/png", encoded_data)?` for embedded images. Serialized HTTP requests are limited to 16 MiB, Base64 data to 10 MiB per image and images to 64 per request. `ImageDetail::Auto` is portable; non-auto OpenAI detail controls are preserved for Responses/Chat and rejected for Messages. Image identity and part order are included in native history replay. See the [image input guide](https://rydantic.mintlify.site/integrations/images) and the `vision` example.
 
 ## Structured output streaming
 
@@ -145,11 +158,11 @@ Client and global policies each use their own reservation size and cost estimate
 
 ## Independent releases
 
-RydanticAI uses tags such as `rydantic-ai-v0.5.0`. Its version is read from this package manifest and is independent of the core workspace version. A maintainer with the repository's GitHub identity and a local Cargo publishing credential can run from a clean repository checkout:
+RydanticAI uses tags such as `rydantic-ai-v0.6.0`. Its version is read from this package manifest and is independent of the core workspace version. A maintainer with the repository's GitHub identity and a local Cargo publishing credential can run from a clean repository checkout:
 
 ```sh
-python3 scripts/release_ai.py preflight --tag rydantic-ai-v0.5.0
-python3 scripts/release_ai.py publish --tag rydantic-ai-v0.5.0
+python3 scripts/release_ai.py preflight --tag rydantic-ai-v0.6.0
+python3 scripts/release_ai.py publish --tag rydantic-ai-v0.6.0
 ```
 
 The release script requires an existing remote tag on tested main history, successful exact-commit main-push CI, an unpublished registry version and a package containing no installed Node dependencies or credential files. It performs one upload attempt and verifies the registry checksum and sparse index, including after an uncertain upload exit status. It publishes only `rydantic-ai`. Use Python 3.11 or newer.

@@ -1,5 +1,5 @@
 //! Strict request decoding into the shared text/function-tool model.
-use crate::{http, Api, Error, ModelRequest, Result, ToolDefinition};
+use crate::{content, http, Api, Error, ModelRequest, Result, ToolDefinition};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::collections::HashSet;
@@ -281,7 +281,7 @@ fn chat(wire: Chat) -> Result<Decoded> {
         )?;
         match string(&message,"role")? {
             "system" | "developer" => request.input.push(json!({"role":message["role"],"content":text(&message["content"])?})),
-            "user"=>request.input.push(json!({"role":"user","content":text(&message["content"])?})),
+            "user"=>request.input.push(json!({"role":"user","content":content::decode(&message["content"], content::Format::Chat)?.responses()})),
             "tool"=>request.input.push(json!({"type":"function_call_output","call_id":string(&message,"tool_call_id")?,"output":text(&message["content"])?})),
             "assistant"=> {
                 let mut message=message;
@@ -355,6 +355,9 @@ fn messages(wire: Messages) -> Result<Decoded> {
                     fields(block, &["type", "text"])?;
                     block["text"].as_str().ok_or_else(bad)?;
                 }
+                "image" if role == "user" => {
+                    content::decode(&json!([block]), content::Format::Messages)?;
+                }
                 "thinking" if role == "assistant" => {
                     fields(block, &["type", "thinking", "signature"])?;
                     string(block, "signature")?;
@@ -376,14 +379,14 @@ fn messages(wire: Messages) -> Result<Decoded> {
         match role {
             "assistant" => request.input.extend(http::messages_message(content)?),
             "user" => {
-                let mut user = String::new();
-                let mut saw_text = false;
+                let mut user = Vec::new();
+                let mut saw_content = false;
                 for block in blocks {
-                    if block["type"] == "text" {
-                        saw_text = true;
-                        user.push_str(block["text"].as_str().ok_or_else(bad)?);
+                    if matches!(block["type"].as_str(), Some("text" | "image")) {
+                        saw_content = true;
+                        user.push(block.clone());
                     } else {
-                        if saw_text {
+                        if saw_content {
                             return Err(bad());
                         }
                         let output = match block.get("content") {
@@ -403,8 +406,8 @@ fn messages(wire: Messages) -> Result<Decoded> {
                         request.input.push(json!({"type":"function_call_output","call_id":string(block,"tool_use_id")?,"output":encoded,"_rydantic_tool_result":block}));
                     }
                 }
-                if saw_text {
-                    request.input.push(json!({"role":"user","content":user}));
+                if saw_content {
+                    request.input.push(json!({"role":"user","content":content::decode(&json!(user), content::Format::Messages)?.responses()}));
                 }
             }
             _ => return Err(bad()),

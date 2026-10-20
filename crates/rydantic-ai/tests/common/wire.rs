@@ -79,6 +79,7 @@ pub async fn fixture(replies: Vec<Reply>) -> (Server, Captured) {
                 .route("/v1/chat/completions", post(handler))
                 .route("/v1/messages", post(handler))
                 .route("/v1/responses", post(handler))
+                .layer(axum::extract::DefaultBodyLimit::max(16 * 1024 * 1024))
                 .with_state(state),
         )
         .await,

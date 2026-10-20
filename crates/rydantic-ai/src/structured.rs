@@ -4,7 +4,7 @@
 //! model. [`Iterable`] validates each complete element once before emission.
 //! Items and snapshots belong to an attempt until its `Complete` event; a reset
 //! invalidates all results from that attempt. Dropping a stream cancels its task.
-use crate::{Agent, BoxFuture, Error, Result, RunContext, RunResult};
+use crate::{Agent, BoxFuture, Error, Prompt, Result, RunContext, RunResult};
 use rydantic::{partial_json, AsyncCheck, Model, ValidationError, ValidationErrors};
 use serde::Deserialize;
 use serde_json::{value::RawValue, Value};
@@ -190,7 +190,7 @@ where
 {
     pub fn stream_partial(
         &self,
-        prompt: impl Into<String>,
+        prompt: impl Into<Prompt>,
         deps: Arc<D>,
         context: RunContext,
     ) -> Result<Partial<T>> {
@@ -198,7 +198,7 @@ where
     }
     pub fn stream_partial_with_options(
         &self,
-        prompt: impl Into<String>,
+        prompt: impl Into<Prompt>,
         deps: Arc<D>,
         context: RunContext,
         options: StreamOptions,
@@ -217,7 +217,7 @@ where
     }
     pub fn stream_iterable(
         &self,
-        prompt: impl Into<String>,
+        prompt: impl Into<Prompt>,
         deps: Arc<D>,
         context: RunContext,
     ) -> Result<Iterable<T>> {
@@ -225,7 +225,7 @@ where
     }
     pub fn stream_iterable_with_options(
         &self,
-        prompt: impl Into<String>,
+        prompt: impl Into<Prompt>,
         deps: Arc<D>,
         context: RunContext,
         options: StreamOptions,
@@ -246,7 +246,7 @@ where
     }
     fn spawn_stream<P: OutputMode + 'static, E: Send + 'static>(
         &self,
-        prompt: String,
+        prompt: Prompt,
         deps: Arc<D>,
         mut context: RunContext,
         mode: P,

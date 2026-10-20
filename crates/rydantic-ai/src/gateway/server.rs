@@ -33,7 +33,7 @@ pub fn router(gateway: Gateway) -> Router {
         .route("/v1/responses", post(responses))
         .route("/v1/chat/completions", post(chat))
         .route("/v1/messages", post(messages))
-        .layer(DefaultBodyLimit::max(1024 * 1024))
+        .layer(DefaultBodyLimit::max(crate::content::MAX_REQUEST_BYTES))
         .with_state(Server {
             gateway,
             replay: Arc::new(Mutex::new(Replay::default())),

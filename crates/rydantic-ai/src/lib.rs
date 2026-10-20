@@ -6,6 +6,7 @@
 //! Graphs and custom providers work without default features.
 
 mod agent;
+mod content;
 mod context;
 mod error;
 pub mod gateway;
@@ -19,6 +20,7 @@ pub mod structured;
 mod tool;
 
 pub use agent::{Agent, AgentLimits, RunResult};
+pub use content::{Image, ImageDetail, Prompt};
 pub use context::{BoxFuture, RunContext};
 pub use error::{Error, Result};
 #[cfg(feature = "http")]

@@ -1,5 +1,5 @@
 use crate::structured::{OutputMode, Plain, ResetReason};
-use crate::{Error, ModelProvider, ModelRequest, Result, RunContext, Tool, Usage};
+use crate::{Error, ModelProvider, ModelRequest, Prompt, Result, RunContext, Tool, Usage};
 use rydantic::{AsyncCheck, Model};
 use serde_json::{json, Value};
 use std::{
@@ -93,7 +93,7 @@ where
     }
     pub async fn run(
         &self,
-        prompt: impl Into<String>,
+        prompt: impl Into<Prompt>,
         deps: Arc<D>,
         context: RunContext,
     ) -> Result<RunResult<O>> {
@@ -104,7 +104,7 @@ where
     }
     pub(crate) async fn run_inner<P: OutputMode>(
         &self,
-        prompt: String,
+        prompt: Prompt,
         deps: Arc<D>,
         context: RunContext,
         mut mode: P,

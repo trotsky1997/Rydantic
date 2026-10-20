@@ -1,0 +1,109 @@
+---
+title: "Image inputs"
+description: "Send ordered text and images through Responses, Chat Completions and Anthropic Messages."
+---
+
+RydanticAI 0.6.0 supports user image inputs in all three providers and gateway frontends. URL references and embedded Base64 images work across all nine frontend/upstream combinations, with JSON or SSE output. Select a vision-capable upstream model.
+
+## Typed Rust prompts
+
+`Prompt` keeps text and image parts in order. `Agent::run`, `stream_partial`, `stream_iterable` and `ModelRequest::new` accept a `Prompt` or a string.
+
+```rust
+use rydantic_ai::{Image, Prompt};
+
+let prompt = Prompt::new("Compare these images.")
+    .image(Image::url("https://example.com/first.png")?)
+    .text("Second image:")
+    .image(Image::from_bytes("image/png", &image_bytes)?);
+
+let result = agent.run(prompt, dependencies, context).await?;
+```
+
+Use `Image::base64("image/png", encoded_data)?` for existing Base64 data. `Image::from_bytes` encodes a byte slice. The library performs no file reads or image downloads. `Image` Debug output redacts URL references and encoded image data.
+
+For a runnable example, set `BASEURL`, `APIKEY`, `MODEL` and optional `API` (`responses`, `chat_completions` or `anthropic_messages`), then run:
+
+```sh
+cargo run -p rydantic-ai --example vision -- photo.png image/png
+```
+
+## Native wire formats
+
+The gateway accepts each protocol's standard image shape. The route's `api` selects the upstream independently of the frontend endpoint. Existing gateway authentication, budgets and model aliases apply.
+
+<Tabs>
+  <Tab title="Responses">
+
+```json
+{
+  "model": "vision",
+  "input": [{
+    "role": "user",
+    "content": [
+      {"type": "input_text", "text": "Describe this image."},
+      {"type": "input_image", "image_url": "https://example.com/photo.png", "detail": "auto"}
+    ]
+  }]
+}
+```
+
+Send to `POST /v1/responses`. An embedded image uses `image_url: "data:image/png;base64,..."`.
+
+  </Tab>
+  <Tab title="Chat Completions">
+
+```json
+{
+  "model": "vision",
+  "messages": [{
+    "role": "user",
+    "content": [
+      {"type": "text", "text": "Describe this image."},
+      {"type": "image_url", "image_url": {"url": "https://example.com/photo.png", "detail": "auto"}}
+    ]
+  }]
+}
+```
+
+Send to `POST /v1/chat/completions`. The nested `image_url.url` also accepts a Base64 data URL.
+
+  </Tab>
+  <Tab title="Messages">
+
+```json
+{
+  "model": "vision",
+  "max_tokens": 256,
+  "messages": [{
+    "role": "user",
+    "content": [
+      {"type": "image", "source": {"type": "url", "url": "https://example.com/photo.png"}},
+      {"type": "text", "text": "Describe this image."}
+    ]
+  }]
+}
+```
+
+Send to `POST /v1/messages`. Embedded images use `source: {"type": "base64", "media_type": "image/png", "data": "..."}`. Translation preserves the original order of image and text parts.
+
+  </Tab>
+</Tabs>
+
+## Details and limits
+
+The portable format supports PNG, JPEG, GIF and WebP. HTTP(S) image URLs and signed query strings are retained. Base64 syntax, media types, content fields and image counts are validated before upstream dispatch; the upstream decodes pixels and enforces its model-specific image limits.
+
+The SDK and gateway bound the serialized request to **16 MiB**, Base64 data to **10 MiB per image**, and images to **64 across all user turns**. Existing output/SSE limits remain in effect. Images can appear in the initial user prompt or later user turns. Provider file IDs, audio, video and image generation are outside the portable image-input API.
+
+`ImageDetail::Auto` works with all three protocols. Responses and Chat Completions also preserve `Low`, `High` and `Original`, subject to model support. Messages uses its own preprocessing and rejects explicit non-auto OpenAI detail controls. Use `Auto` for routes that can target Messages.
+
+## Multi-turn tools and structured output
+
+Images remain in conversation history across tool calls, output-validation corrections, `Partial<T>` and `Iterable<T>` attempts. Return text tool results with their original call IDs. Image inputs use the same gateway usage accounting and cancellation behavior as text inputs.
+
+Native tool history is scoped to the authenticated client, model alias and complete visible conversation prefix. Replay identity includes SHA-256 digests of image references/data, detail settings and content order, so changing an image cannot recover another image's cached assistant history. Digests keep large user images out of the replay cache payload. The existing 128-entry, 8 MiB, 30-minute process-local replay bounds apply.
+
+The Rust suite covers all nine image routes, mixed content, large Base64 requests, tools, image-scoped replay, invalid input and image detail. CI also runs **63 strict official Python SDK cases**, including URL and Base64 image inputs through every JSON/SSE combination with loopback fixtures.
+
+See [gateway protocols](/integrations/gateway-protocols) and [API providers](/integrations/api-providers) for authentication, routing and provider configuration. Native formats follow the [OpenAI vision guide](https://developers.openai.com/api/docs/guides/images-vision) and [Anthropic vision guide](https://platform.claude.com/docs/en/build-with-claude/vision).

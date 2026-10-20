@@ -3,7 +3,7 @@ title: "API providers"
 description: "Connect Responses, Chat Completions and Anthropic Messages with BASEURL and APIKEY."
 ---
 
-RydanticAI 0.5.0 supports three upstream protocols. They share typed Agent output, client tools, validation correction, [Partial and Iterable streams](/integrations/structured-output), token usage, deadlines and cancellation.
+RydanticAI 0.6.0 supports three upstream protocols. They share typed Agent output, client tools, validation correction, [Partial and Iterable streams](/integrations/structured-output), token usage, deadlines and cancellation.
 
 | Protocol | Rust provider | Path appended to BASEURL | APIKEY header |
 | --- | --- | --- | --- |
@@ -67,7 +67,7 @@ let provider = AnthropicMessagesProvider::from_env()?.with_capabilities(Capabili
 
 Native schema support depends on the selected model and its accepted schema subset. Rydantic retains its runtime constraints even when a provider requires instruction-based output. Set `native_json_schema: false` on any provider that lacks native schema support, and `output_token_limit: false` when an endpoint has no request token limit. Messages requires a token limit; direct requests without one use 2048, while Agents use their configured output-token limit.
 
-The shared `ModelRequest` uses Responses-shaped text and function-tool history. Chat Completions and Messages adapters convert that history to their native request shapes. These adapters support text and client function tools; unsupported multimodal input and Responses-specific reasoning request settings fail before dispatch. Use Responses for its native request features.
+The shared `ModelRequest` uses Responses-shaped text, images and function-tool history. Chat Completions and Messages adapters convert that history to their native request shapes. All three support ordered user text/image parts, HTTP(S) image URLs and Base64 images. Use [`Prompt` and `Image`](/integrations/images) with Agents and structured streams. Unsupported media and Responses-specific reasoning request settings fail before dispatch.
 
 ## Native tools and history
 
@@ -81,7 +81,7 @@ All providers request streaming and also accept complete JSON responses from com
 
 `Partial<T>` and `Iterable<T>` consume normalized text events. Previews remain provisional until successful protocol completion and validation. Missing terminal markers, refusals, truncation and malformed tool fragments stop the run. Tools execute only after a complete, accepted provider response.
 
-Chat Completions requires final prompt/completion usage. Messages updates cumulative counters and counts input tokens together with cache creation/read tokens. Usage is checked for overflow before Agent and gateway budget accounting. HTTP bodies are bounded at 16 MiB, individual SSE events and assembled text/tool fields at 1 MiB, and outgoing requests at 1 MiB. Deadline, cancellation and bounded event backpressure apply throughout transfer.
+Chat Completions requires final prompt/completion usage. Messages updates cumulative counters and counts input tokens together with cache creation/read tokens. Usage is checked for overflow before Agent and gateway budget accounting. HTTP bodies are bounded at 16 MiB, individual SSE events and assembled text/tool fields at 1 MiB, and outgoing requests at 16 MiB. Deadline, cancellation and bounded event backpressure apply throughout transfer.
 
 ## Gateway upstreams
 
