@@ -58,6 +58,8 @@ println!("{}", result.output.answer);
 
 Run `cargo run -p rydantic-ai --example pi_codex` for a real typed tool-call round trip. Set `RYDANTIC_AI_MODEL` to a model returned by the bridge's `/v1/models` endpoint. Agent limits bound model calls, tool calls, validation retries and observed token usage. Cancellation and the absolute deadline cover model calls, validation and tool handlers. Tools execute sequentially; execution errors stop the run and are never automatically replayed. Handlers own transactional/idempotency behavior for external side effects. Prompt content is not written to tracing spans; operations, tool names and usage are recorded with standard `tracing`.
 
+Synchronous validators cannot be interrupted within a poll. Ordinary runs and partial streams recheck cancellation and the deadline after successful final validation, rejecting a late result instead of accepting it.
+
 ## Structured output streaming
 
 `Agent::stream_partial()` returns `Partial<T>`: a typed stream of provisional JSON snapshots followed by a fully validated final model. `Agent::stream_iterable()` returns `Iterable<T>`: complete, runtime-validated elements from an object with an `items` array. The object envelope supports native JSON Schema providers. Neither streaming mode requires `T: Clone` or HTTP transport.
