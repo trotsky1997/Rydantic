@@ -52,11 +52,19 @@ jobs:
       - name: Check optional runtime features without derive
         run: cargo check -p rydantic --no-default-features --features chrono,decimal,capnp --lib --locked
       - name: Check framework integrations without derive
-        run: cargo check -p rydantic --no-default-features --features axum,sqlx --lib --locked
+        run: cargo check -p rydantic --no-default-features --features axum,sqlite --lib --locked
+      - name: Check driver-free SQL metadata and SQLite runtime
+        run: |
+          cargo check -p rydantic --no-default-features --features sqlx --lib --locked
+          cargo check -p rydantic --no-default-features --features sqlite --lib --locked
       - name: Check individual server database features without derive
         run: |
           cargo check -p rydantic --no-default-features --features postgres --lib --locked
           cargo check -p rydantic --no-default-features --features mysql --lib --locked
+      - name: Compile HTTP servers with one database driver
+        run: |
+          cargo check -p rydantic --no-default-features --features derive,axum,postgres --example database_api --locked
+          cargo check -p rydantic --no-default-features --features derive,axum,mysql --example database_api --locked
       - name: Build documentation
         env:
           RUSTDOCFLAGS: -D warnings
@@ -73,8 +81,23 @@ jobs:
           cargo run --locked --quiet -p rydantic-capnp-fixture
           cargo run --locked --quiet -p rydantic-auto-capnp-fixture
           cargo run --locked --quiet -p rydantic --example auto_capnp --features capnp
-          cargo run --locked --quiet -p rydantic --example sqlite_api --features axum,sqlx -- --smoke
-          cargo run --locked --quiet -p rydantic --example database_api --features axum,sqlx -- --smoke
+          cargo run --locked --quiet -p rydantic --example sqlite_api --features axum,sqlite -- --smoke
+          cargo run --locked --quiet -p rydantic --example database_api --features axum,sqlite -- --smoke
+          cargo run --locked --quiet -p rydantic --example automatic_migrations --features sqlite
+
+  compiler-paths-windows:
+    name: Compiler paths / Windows
+    runs-on: windows-latest
+    env:
+      RUSTUP_TOOLCHAIN: 1.98.1
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install the tested Rust toolchain
+        run: rustup toolchain install 1.98.1 --profile minimal
+      - name: Test compiler path resolution
+        run: cargo test -p rydantic-derive --features capnp --locked compiler_paths
 
   databases:
     name: PostgreSQL 18 and MySQL 8.4
@@ -114,3 +137,5 @@ jobs:
         run: rustup toolchain install 1.98.1 --profile minimal
       - name: Test native SQL drivers, transactions and real HTTP routes
         run: cargo test -p rydantic --all-features --test server_databases --locked -- --include-ignored
+      - name: Test automatic model migrations on real server databases
+        run: cargo test -p rydantic --all-features --test migrations --locked -- --include-ignored

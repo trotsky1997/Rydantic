@@ -1,0 +1,5 @@
+error: SQL default requires a string, boolean, integer or finite float literal
+ --> tests/ui-sql/default_expression.rs:6:21
+  |
+6 |     #[sql(default = String::new())]
+  |                     ^^^^^^^^^^^^^

@@ -496,6 +496,22 @@ impl VisitMut for Rebase {
         syn::visit_mut::visit_path_mut(self, path);
     }
 }
+fn compiler_command(
+    compiler: &std::ffi::OsStr,
+    working_dir: &std::path::Path,
+) -> std::io::Result<Command> {
+    let compiler = std::path::Path::new(compiler);
+    // Preserve PATH lookup for bare names, but resolve relative executable paths
+    // before the child changes into the temporary schema directory.
+    let compiler = if compiler.is_relative() && compiler.components().count() > 1 {
+        std::path::absolute(compiler)?
+    } else {
+        compiler.to_path_buf()
+    };
+    let mut command = Command::new(compiler);
+    command.current_dir(working_dir);
+    Ok(command)
+}
 fn compile(schema: &str, rd: &Tokens, span: Span) -> syn::Result<Vec<Item>> {
     let temp = tempfile::Builder::new()
         .prefix("rydantic-capnp-")
@@ -504,7 +520,7 @@ fn compile(schema: &str, rd: &Tokens, span: Span) -> syn::Result<Vec<Item>> {
     std::fs::write(temp.path().join("rydantic.capnp"), schema)
         .map_err(|e| syn::Error::new(span, e))?;
     let compiler = std::env::var_os("RYDANTIC_CAPNP_COMPILER").unwrap_or_else(|| "capnp".into());
-    let result=Command::new(compiler).current_dir(temp.path()).args(["compile","-o-","rydantic.capnp"]).output().map_err(|e|syn::Error::new(span,format!("cannot execute the official capnp compiler: {e}; install capnproto or set RYDANTIC_CAPNP_COMPILER")))?;
+    let result=compiler_command(&compiler, temp.path()).and_then(|mut command| command.args(["compile","-o-","rydantic.capnp"]).output()).map_err(|e|syn::Error::new(span,format!("cannot execute the official capnp compiler: {e}; install capnproto or set RYDANTIC_CAPNP_COMPILER")))?;
     if !result.status.success() {
         return Err(syn::Error::new(
             span,
@@ -601,6 +617,76 @@ mod tests {
                 .filter(|attr| attr.path().is_ident("derive"));
             assert_eq!(quote!(#(#actual)*).to_string(), derives.to_string());
         }
+    }
+
+    #[test]
+    fn compiler_paths_preserve_absolute_paths_and_path_lookup() {
+        let working_dir = tempfile::tempdir().unwrap();
+        let absolute = std::env::current_dir().unwrap().join("tools/capnp");
+        for compiler in [std::ffi::OsStr::new("capnp"), absolute.as_os_str()] {
+            let command = compiler_command(compiler, working_dir.path()).unwrap();
+            assert_eq!(command.get_program(), compiler);
+            assert_eq!(command.get_current_dir(), Some(working_dir.path()));
+        }
+    }
+
+    #[test]
+    fn compiler_paths_resolve_relative_to_the_calling_process() {
+        let working_dir = tempfile::tempdir().unwrap();
+        for compiler in ["tools/capnp", "./capnp", "../tools/capnp"] {
+            let command = compiler_command(compiler.as_ref(), working_dir.path()).unwrap();
+            assert_eq!(
+                command.get_program(),
+                std::path::absolute(compiler).unwrap().as_os_str()
+            );
+            assert!(std::path::Path::new(command.get_program()).is_absolute());
+        }
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn compiler_paths_resolve_windows_drive_and_root_relative_paths() {
+        use std::path::{Component, Prefix};
+        let cwd = std::env::current_dir().unwrap();
+        let drive = match cwd.components().next().unwrap() {
+            Component::Prefix(prefix) => match prefix.kind() {
+                Prefix::Disk(drive) | Prefix::VerbatimDisk(drive) => drive as char,
+                _ => panic!("Windows regression test requires a drive-based working directory"),
+            },
+            _ => panic!("Windows working directory must have a prefix"),
+        };
+        let working_dir = tempfile::tempdir().unwrap();
+        for compiler in [
+            format!(r"{drive}:tools\capnp.exe"),
+            r"\tools\capnp.exe".into(),
+        ] {
+            let command = compiler_command(compiler.as_ref(), working_dir.path()).unwrap();
+            assert!(std::path::Path::new(command.get_program()).is_absolute());
+            assert_eq!(
+                command.get_program(),
+                std::path::absolute(&compiler).unwrap().as_os_str()
+            );
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn relative_compiler_runs_from_the_schema_directory() {
+        use std::os::unix::fs::PermissionsExt;
+        let cwd = std::env::current_dir().unwrap();
+        let tools = tempfile::tempdir_in(&cwd).unwrap();
+        let executable = tools.path().join("capnp");
+        std::fs::write(&executable, "#!/bin/sh\ncat rydantic.capnp\n").unwrap();
+        std::fs::set_permissions(&executable, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let working_dir = tempfile::tempdir().unwrap();
+        std::fs::write(working_dir.path().join("rydantic.capnp"), "schema input").unwrap();
+        let relative = executable.strip_prefix(&cwd).unwrap();
+        let output = compiler_command(relative.as_os_str(), working_dir.path())
+            .unwrap()
+            .output()
+            .unwrap();
+        assert!(output.status.success());
+        assert_eq!(output.stdout, b"schema input");
     }
 
     fn schema(input: Tokens) -> syn::Result<String> {

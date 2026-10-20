@@ -7,12 +7,14 @@ pub(super) fn check_identifiers<T: SqlModel, DB: SqlBackend>() -> Result<(), Sql
         Dialect::MySql => 64,
     };
     for name in std::iter::once(T::TABLE).chain(T::COLUMNS.iter().flat_map(|column| {
-        std::iter::once(column.name).chain(
-            column
-                .references
-                .into_iter()
-                .flat_map(|reference| [reference.table, reference.column]),
-        )
+        std::iter::once(column.name)
+            .chain(column.rename_from)
+            .chain(
+                column
+                    .references
+                    .into_iter()
+                    .flat_map(|reference| [reference.table, reference.column]),
+            )
     })) {
         if name.len() > limit {
             return Err(field_error(
@@ -25,7 +27,7 @@ pub(super) fn check_identifiers<T: SqlModel, DB: SqlBackend>() -> Result<(), Sql
     Ok(())
 }
 
-fn index_name<T: SqlModel>(column: &Column) -> String {
+pub(super) fn index_name<T: SqlModel>(column: &Column) -> String {
     let name = format!("rydantic_{}_{}_{}", T::TABLE.len(), T::TABLE, column.name);
     if name.len() <= 63 {
         return name;
@@ -35,9 +37,12 @@ fn index_name<T: SqlModel>(column: &Column) -> String {
     });
     format!("rydantic_{hash:016x}")
 }
-fn declaration(column: &Column, dialect: Dialect) -> String {
+pub(super) fn declaration(column: &Column, dialect: Dialect) -> String {
     match (dialect, column.sql_type) {
-        (Dialect::Sqlite, kind) => kind.declaration().into(),
+        (Dialect::Sqlite, SqlType::Integer | SqlType::Boolean) => "INTEGER".into(),
+        (Dialect::Sqlite, SqlType::Real) => "REAL".into(),
+        (Dialect::Sqlite, SqlType::Text) => "TEXT".into(),
+        (Dialect::Sqlite, SqlType::Blob) => "BLOB".into(),
         (_, SqlType::Integer) => "BIGINT".into(),
         (_, SqlType::Boolean) => "BOOLEAN".into(),
         (Dialect::Postgres, SqlType::Real) => "DOUBLE PRECISION".into(),
@@ -78,6 +83,9 @@ pub(super) fn table<T: SqlModel, DB: SqlBackend>() -> String {
         }
         if column.unique && !column.primary_key {
             definition.push_str(" UNIQUE");
+        }
+        if let Some(default) = column.default {
+            definition.push_str(&format!(" DEFAULT {}", default.sql(dialect)));
         }
         if let Some(reference) = column.references {
             let clause = format!(
