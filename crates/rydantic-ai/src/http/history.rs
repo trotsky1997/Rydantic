@@ -1,6 +1,6 @@
 //! Canonical text/tool history and same-protocol native message replay.
 use super::{field, Api};
-use crate::{Error, ModelRequest, ModelResponse, Result, Usage};
+use crate::{content, Error, ModelRequest, ModelResponse, Result, Usage};
 use serde_json::{json, Value};
 use std::collections::HashSet;
 
@@ -9,6 +9,12 @@ const NATIVE: &str = "_rydantic_native";
 pub(super) fn responses_request(request: &ModelRequest, preserve_native: bool) -> Result<Value> {
     let mut body = serde_json::to_value(request)
         .map_err(|_| Error::Configuration("invalid request".into()))?;
+    for item in body["input"].as_array_mut().expect("serialized input") {
+        if item["role"] == "user" {
+            item["content"] =
+                content::decode(&item["content"], content::Format::Responses)?.responses();
+        }
+    }
     if !preserve_native {
         for item in body["input"].as_array_mut().expect("serialized input") {
             if let Some(object) = item.as_object_mut() {
@@ -121,7 +127,8 @@ pub(crate) fn chat(request: &ModelRequest) -> Result<Vec<Value>> {
             Some("message") | None => {
                 let role = item["role"].as_str().ok_or_else(configuration)?;
                 if !matches!(role, "user" | "assistant" | "system" | "developer") { return Err(configuration()); }
-                messages.push(json!({"role":role,"content":text(&item["content"])?}));
+                let body = if role == "user" { content::chat(&item["content"])? } else { json!(text(&item["content"])?) };
+                messages.push(json!({"role":role,"content":body}));
             }
             _ => return Err(configuration()),
         }
@@ -199,6 +206,10 @@ pub(crate) fn messages(request: &ModelRequest) -> Result<(String, Vec<Value>)> {
             Some("reasoning") => (),
             Some("message") | None => {
                 let role = item["role"].as_str().ok_or_else(configuration)?;
+                if role == "user" {
+                    append_message(&mut messages, role, content::messages(&item["content"])?)?;
+                    continue;
+                }
                 let content = text(&item["content"])?;
                 if role == "assistant" && content.is_empty() {
                     continue;

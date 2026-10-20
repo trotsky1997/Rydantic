@@ -2092,20 +2092,23 @@ dependencies = [
 
 [[package]]
 name = "rydantic-ai"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "axum",
+ "base64 0.22.1",
  "futures-util",
  "reqwest",
  "rydantic",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "thiserror",
  "tokio",
  "tokio-stream",
  "tokio-util",
  "tracing",
  "tracing-subscriber",
+ "url",
 ]
 
 [[package]]

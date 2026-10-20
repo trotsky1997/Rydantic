@@ -1,4 +1,4 @@
-use crate::{BoxFuture, Error, Result, RunContext};
+use crate::{content, BoxFuture, Error, Prompt, Result, RunContext};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
@@ -82,10 +82,10 @@ pub struct ModelRequest {
 }
 
 impl ModelRequest {
-    pub fn new(model: impl Into<String>, prompt: impl Into<String>) -> Self {
+    pub fn new(model: impl Into<String>, prompt: impl Into<Prompt>) -> Self {
         Self {
             model: model.into(),
-            input: vec![json!({"role":"user", "content":prompt.into()})],
+            input: vec![json!({"role":"user", "content":prompt.into().responses()})],
             instructions: None,
             tools: vec![],
             text: None,
@@ -132,12 +132,13 @@ impl ModelRequest {
                 return Err(Error::Configuration("tool_choice requires tools".into()));
             }
         }
+        content::validate_input(&self.input)?;
         if serde_json::to_vec(self)
             .map_err(|e| Error::Protocol(e.to_string()))?
             .len()
-            > 1024 * 1024
+            > content::MAX_REQUEST_BYTES
         {
-            return Err(Error::Limit("request exceeds 1 MiB".into()));
+            return Err(Error::Limit("request exceeds 16 MiB".into()));
         }
         Ok(())
     }

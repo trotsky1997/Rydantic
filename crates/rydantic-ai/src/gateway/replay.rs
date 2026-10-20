@@ -84,7 +84,7 @@ pub(super) fn groups(input: &[Value]) -> Vec<Group> {
             let visible = if item["type"] == "function_call_output" {
                 json!({"role":"tool","id":item["call_id"],"output":arguments(&item["output"])})
             } else {
-                json!({"role":item["role"],"text":plain(&item["content"])})
+                json!({"role":item["role"],"content":crate::content::fingerprint(&item["content"])})
             };
             i += 1;
             out.push(Group {

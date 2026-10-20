@@ -4,6 +4,10 @@ description: "Release history and the current migration path."
 icon: "tag"
 ---
 
+## RydanticAI 0.6.0
+
+All three providers and gateway frontends support ordered user image inputs across the nine protocol combinations, including URL references and Base64 images. Typed `Prompt` / `Image` builders work with Agents, Partial and Iterable output. Requests are bounded to 16 MiB with image-specific validation, and replay identity includes compact image digests. The release also carries the multi-turn replay fixes from main. See [image inputs](/integrations/images).
+
 ## RydanticAI 0.5.0
 
 The independently versioned [rydantic-ai crate](https://crates.io/crates/rydantic-ai/0.5.0) adds native gateway frontends for `/v1/chat/completions` and `/v1/messages`. [Gateway protocols](/integrations/gateway-protocols) covers all nine frontend/upstream combinations, JSON and SSE, tools, structured output mappings, usage, authentication and bounded native history replay.
