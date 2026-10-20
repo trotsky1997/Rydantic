@@ -839,3 +839,201 @@ async fn replay_is_bound_to_client_model_and_conversation_prefix() {
     }
     assert!(seen[3].2.to_string().contains("opaque-signature"));
 }
+
+fn replay_turn(call_id: &str, call_first: bool) -> Value {
+    let mut turn = native(
+        Api::Responses,
+        "first",
+        Some((call_id, json!({"a":19,"b":23}))),
+    );
+    turn["output"][0]["id"] = json!(format!("reasoning_{call_id}"));
+    turn["output"][1]["id"] = json!(format!("message_{call_id}_1"));
+    turn["output"].as_array_mut().unwrap().insert(2, json!({"id":format!("message_{call_id}_2"),"type":"message","role":"assistant","content":[{"type":"output_text","text":"second"}]}));
+    if call_first {
+        let call = turn["output"].as_array_mut().unwrap().pop().unwrap();
+        turn["output"].as_array_mut().unwrap().insert(1, call);
+    }
+    turn
+}
+fn assert_replayed(input: &Value, turn: &Value) {
+    let original = turn["output"].as_array().unwrap();
+    assert!(
+        input
+            .as_array()
+            .unwrap()
+            .windows(original.len())
+            .any(|window| window == original.as_slice()),
+        "original output was not replayed: {input}"
+    );
+}
+fn append_public_turn(body: &mut Value, front: Api, raw: &Value, call_id: &str) {
+    match front {
+        Api::Responses => {
+            let input = body["input"].as_array_mut().unwrap();
+            input.extend(raw["output"].as_array().unwrap().clone());
+            input.push(json!({"type":"function_call_output","call_id":call_id,"output":"42"}));
+        }
+        Api::ChatCompletions => {
+            let messages = body["messages"].as_array_mut().unwrap();
+            messages.push(raw["choices"][0]["message"].clone());
+            messages.push(json!({"role":"tool","tool_call_id":call_id,"content":"42"}));
+        }
+        Api::AnthropicMessages => {
+            let messages = body["messages"].as_array_mut().unwrap();
+            messages.push(json!({"role":"assistant","content":raw["content"]}));
+            messages.push(json!({"role":"user","content":[{"type":"tool_result","tool_use_id":call_id,"content":"42"}]}));
+        }
+    }
+}
+#[tokio::test]
+async fn all_frontends_replay_projected_multi_message_json_turns() {
+    for front in all() {
+        for call_first in [false, true] {
+            let first = replay_turn("call-1", call_first);
+            let second = replay_turn("call-2", call_first);
+            let (upstream, seen) = fixture(vec![
+                json_reply(first.clone()),
+                json_reply(second.clone()),
+                json_reply(native(Api::Responses, "done", None)),
+            ])
+            .await;
+            let gateway = setup(provider(Api::Responses, &upstream.base), 10);
+            let server = serve(gateway::router(gateway.clone())).await;
+            let mut body = request(front, false);
+            for call_id in ["call-1", "call-2"] {
+                let response = post(&server.base, front, &body, KEY).await;
+                assert!(response.status().is_success());
+                let raw: Value = response.json().await.unwrap();
+                assert_eq!(text(front, &raw), "firstsecond");
+                append_public_turn(&mut body, front, &raw, call_id);
+            }
+            assert!(post(&server.base, front, &body, KEY)
+                .await
+                .status()
+                .is_success());
+            let seen = seen.lock().unwrap();
+            assert_replayed(&seen[1].2["input"], &first);
+            assert_replayed(&seen[2].2["input"], &first);
+            assert_replayed(&seen[2].2["input"], &second);
+            assert_eq!(gateway.snapshot("app").unwrap().tokens, 24);
+        }
+    }
+}
+#[tokio::test]
+async fn all_frontends_replay_projected_multi_message_stream_turns() {
+    for front in all() {
+        for call_first in [false, true] {
+            let first = replay_turn("call-1", call_first);
+            let second = replay_turn("call-2", call_first);
+            // Buffered upstream replies also exercise the gateway's SSE projection.
+            let (upstream, seen) = fixture(vec![
+                json_reply(first.clone()),
+                json_reply(second.clone()),
+                json_reply(native(Api::Responses, r#"{"value":42}"#, None)),
+            ])
+            .await;
+            let gateway = setup(provider(Api::Responses, &upstream.base), 10);
+            let server = serve(gateway::router(gateway.clone())).await;
+            let client =
+                Arc::new(HttpProvider::new(front, &server.base, Some(KEY.into())).unwrap());
+            let tool =
+                TypedTool::<(), Add, Answer, _>::new("add", "Add", |args: Add, _, _| async move {
+                    Ok(Answer {
+                        value: args.a + args.b,
+                    })
+                })
+                .unwrap();
+            let result = Agent::<(), Answer>::new(client, "public-model")
+                .tool(tool)
+                .unwrap()
+                .run("compute", Arc::new(()), RunContext::default())
+                .await
+                .unwrap();
+            assert_eq!(result.output.value, 42);
+            assert_eq!(result.tool_calls, 2);
+            assert_eq!(result.model_calls, 3);
+            let seen = seen.lock().unwrap();
+            assert_replayed(&seen[1].2["input"], &first);
+            assert_replayed(&seen[2].2["input"], &first);
+            assert_replayed(&seen[2].2["input"], &second);
+            assert_eq!(gateway.snapshot("app").unwrap().tokens, 24);
+        }
+    }
+}
+fn parallel_replay_turn(round: usize) -> (Value, Reply) {
+    let mut raw = native(
+        Api::Responses,
+        "",
+        Some((&format!("call-{round}-first"), json!({"a":19,"b":23}))),
+    );
+    raw["output"].as_array_mut().unwrap().push(json!({"id":format!("fc-{round}-second"),"type":"function_call","call_id":format!("call-{round}-second"),"name":"add","arguments":"{\"a\":20,\"b\":22}"}));
+    raw["output"][0]["id"] = json!(format!("reasoning-{round}"));
+    let mut body = String::new();
+    data(
+        &mut body,
+        json!({"type":"response.created","response":{"id":"parallel","status":"in_progress","output":[]}}),
+    );
+    for index in [3, 2] {
+        let item = &raw["output"][index];
+        let mut start = item.clone();
+        start["arguments"] = json!("");
+        data(
+            &mut body,
+            json!({"type":"response.output_item.added","output_index":index,"item":start}),
+        );
+        data(
+            &mut body,
+            json!({"type":"response.function_call_arguments.delta","output_index":index,"item_id":item["id"],"delta":item["arguments"]}),
+        );
+        data(
+            &mut body,
+            json!({"type":"response.output_item.done","output_index":index,"item":item}),
+        );
+    }
+    data(
+        &mut body,
+        json!({"type":"response.completed","response":raw}),
+    );
+    (
+        raw,
+        Reply {
+            content_type: "text/event-stream",
+            body,
+        },
+    )
+}
+#[tokio::test]
+async fn all_frontends_replay_actual_parallel_tool_stream_order() {
+    for front in all() {
+        let (first, first_wire) = parallel_replay_turn(1);
+        let (second, second_wire) = parallel_replay_turn(2);
+        let (upstream, seen) = fixture(vec![
+            first_wire,
+            second_wire,
+            json_reply(native(Api::Responses, r#"{"value":42}"#, None)),
+        ])
+        .await;
+        let gateway = setup(provider(Api::Responses, &upstream.base), 10);
+        let server = serve(gateway::router(gateway.clone())).await;
+        let client = Arc::new(HttpProvider::new(front, &server.base, Some(KEY.into())).unwrap());
+        let tool =
+            TypedTool::<(), Add, Answer, _>::new("add", "Add", |args: Add, _, _| async move {
+                Ok(Answer {
+                    value: args.a + args.b,
+                })
+            })
+            .unwrap();
+        let result = Agent::<(), Answer>::new(client, "public-model")
+            .tool(tool)
+            .unwrap()
+            .run("compute", Arc::new(()), RunContext::default())
+            .await
+            .unwrap();
+        assert_eq!(result.output.value, 42);
+        assert_eq!(result.tool_calls, 4);
+        let seen = seen.lock().unwrap();
+        assert_replayed(&seen[1].2["input"], &first);
+        assert_replayed(&seen[2].2["input"], &first);
+        assert_replayed(&seen[2].2["input"], &second);
+    }
+}

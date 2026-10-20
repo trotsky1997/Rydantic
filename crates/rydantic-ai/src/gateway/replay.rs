@@ -144,7 +144,17 @@ impl Replay {
             .into_iter()
             .map(|g| g.visible)
             .collect();
-        visible.extend(groups(response.output()).into_iter().map(|g| g.visible));
+        // Key the same assistant projection that public frontends return, not
+        // the upstream item boundaries/order hidden from those clients.
+        let (Ok(text), Ok(calls)) = (response.text(), response.tool_calls()) else {
+            return;
+        };
+        let mut projected = vec![json!({"role":"assistant","content":text})];
+        projected.extend(calls.into_iter().map(|call| {
+            json!({"type":"function_call","call_id":call.call_id,"name":call.name,"arguments":call.arguments})
+        }));
+        // Use the same call-identity normalization as incoming public history.
+        visible.extend(groups(&projected).into_iter().map(|group| group.visible));
         let scope = (
             client.to_owned(),
             request.model.clone(),
@@ -187,6 +197,117 @@ mod tests {
         let mut next = request.clone();
         next.input.push(json!({"type":"message","role":"assistant","content":[{"type":"output_text","text":"working","annotations":[]}]}));
         next
+    }
+    #[test]
+    fn projected_multi_turn_replay_keeps_scope_and_prefix_isolation() {
+        let turn = |index| {
+            ModelResponse::from_value(json!({"status":"completed","output":[
+                {"type":"reasoning","id":format!("opaque-{index}"),"encrypted_content":"opaque"},
+                {"type":"message","role":"assistant","content":[{"type":"output_text","text":"first"}]},
+                {"type":"function_call","id":format!("original-{index}"),"call_id":format!("call-{index}"),"name":"add","arguments":"{}"},
+                {"type":"message","role":"assistant","content":[{"type":"output_text","text":"second"}]}
+            ],"usage":{"input_tokens":1,"output_tokens":1}})).unwrap()
+        };
+        let append = |request: &mut ModelRequest, index| {
+            request.input.extend([
+                json!({"role":"assistant","content":"firstsecond"}),
+                json!({"type":"function_call","call_id":format!("call-{index}"),"name":"add","arguments":"{}"}),
+                json!({"type":"function_call_output","call_id":format!("call-{index}"),"output":"42"}),
+            ]);
+        };
+        let mut replay = Replay::default();
+        let mut visible = ModelRequest::new("model", "compute");
+        replay.record("app", &visible, &turn(1));
+        append(&mut visible, 1);
+        replay.record("app", &visible, &turn(2));
+        append(&mut visible, 2);
+        for case in [
+            "control",
+            "client",
+            "model",
+            "instructions",
+            "prompt",
+            "first_call",
+            "second_call",
+            "tool_result",
+        ] {
+            let mut next = visible.clone();
+            match case {
+                "model" => next.model = "other".into(),
+                "instructions" => next.instructions = Some("other".into()),
+                "prompt" => next.input[0]["content"] = json!("other"),
+                "first_call" => next.input[2]["call_id"] = json!("other"),
+                "second_call" => next.input[5]["call_id"] = json!("other"),
+                "tool_result" => next.input[3]["output"] = json!("other"),
+                _ => (),
+            }
+            replay.restore(if case == "client" { "other" } else { "app" }, &mut next);
+            for index in [1, 2] {
+                let expected = case == "control"
+                    || (index == 1 && matches!(case, "second_call" | "tool_result"));
+                let original = turn(index);
+                assert_eq!(
+                    next.input
+                        .windows(original.output().len())
+                        .any(|window| window == original.output()),
+                    expected,
+                    "{case}: turn {index}"
+                );
+            }
+        }
+    }
+    #[test]
+    fn projected_parallel_calls_match_identity_but_not_changed_or_duplicate_calls() {
+        let request = ModelRequest::new("model", "compute");
+        let response = ModelResponse::from_value(json!({"status":"completed","output":[
+            {"type":"reasoning","id":"opaque","encrypted_content":"opaque"},
+            {"type":"message","role":"assistant","content":[{"type":"output_text","text":"first"}]},
+            {"type":"function_call","id":"original-a","call_id":"call-a","name":"add","arguments":"{\"a\":1}"},
+            {"type":"message","role":"assistant","content":[{"type":"output_text","text":"second"}]},
+            {"type":"function_call","id":"original-b","call_id":"call-b","name":"add","arguments":"{\"a\":2}"}
+        ],"usage":{"input_tokens":1,"output_tokens":1}})).unwrap();
+        let mut replay = Replay::default();
+        replay.record("app", &request, &response);
+        let mut visible = request.clone();
+        visible.input.extend([
+            json!({"role":"assistant","content":"firstsecond"}),
+            json!({"type":"function_call","call_id":"call-b","name":"add","arguments":"{\"a\":2}"}),
+            json!({"type":"function_call","call_id":"call-a","name":"add","arguments":"{\"a\":1}"}),
+        ]);
+        for case in [
+            "reversed",
+            "original_order",
+            "name",
+            "arguments",
+            "call_id",
+            "duplicate_id",
+            "missing_call",
+            "extra_call",
+        ] {
+            let mut next = visible.clone();
+            match case {
+                "original_order" => next.input.swap(2, 3),
+                "name" => next.input[2]["name"] = json!("other"),
+                "arguments" => next.input[2]["arguments"] = json!("{\"a\":3}"),
+                "call_id" => next.input[2]["call_id"] = json!("other"),
+                "duplicate_id" => next.input[2]["call_id"] = json!("call-a"),
+                "missing_call" => {
+                    next.input.pop();
+                }
+                "extra_call" => next.input.push(
+                    json!({"type":"function_call","call_id":"extra","name":"add","arguments":"{}"}),
+                ),
+                _ => (),
+            }
+            replay.restore("app", &mut next);
+            assert_eq!(
+                next.input
+                    .windows(response.output().len())
+                    .any(|window| window == response.output()),
+                matches!(case, "reversed" | "original_order"),
+                "{case}"
+            );
+        }
     }
     #[test]
     fn replay_limits_entries_and_expires_native_history() {

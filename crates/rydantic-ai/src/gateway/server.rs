@@ -177,6 +177,8 @@ async fn handle(
     if !client.models().contains(&decoded.request.model) {
         return failure(api, Error::UnknownRoute);
     }
+    // Replay keys must retain the visible prefix even after native restoration.
+    let visible_request = decoded.request.clone();
     match server.replay.lock() {
         Ok(mut replay) => replay.restore(&client.id, &mut decoded.request),
         Err(_) => return failure(api, Error::Protocol("replay storage unavailable".into())),
@@ -194,7 +196,7 @@ async fn handle(
             Err(error) => return failure(api, error),
         };
         if let Ok(mut replay) = server.replay.lock() {
-            replay.record(&client.id, &decoded.request, &response);
+            replay.record(&client.id, &visible_request, &response);
         }
         return Json(public).into_response();
     }
@@ -202,6 +204,7 @@ async fn handle(
         server,
         client,
         decoded.request,
+        visible_request,
         view,
         decoded.include_usage,
         RunContext::default(),
@@ -223,6 +226,7 @@ fn streaming(
     server: Server,
     client: GatewayClient,
     request: ModelRequest,
+    visible_request: ModelRequest,
     view: View,
     include_usage: bool,
     context: RunContext,
@@ -257,7 +261,7 @@ fn streaming(
             }
             let frames = output.finish(&response)?;
             if let Ok(mut replay) = server.replay.lock() {
-                replay.record(&client.id, &request, &response);
+                replay.record(&client.id, &visible_request, &response);
             }
             send(&context, &sender, frames).await
         }
@@ -379,6 +383,7 @@ mod tests {
                     server.clone(),
                     client,
                     ModelRequest::new("model", "x"),
+                    ModelRequest::new("model", "x"),
                     View::new(api, "model".into()),
                     true,
                     RunContext::with_timeout(Duration::from_millis(120)),
@@ -412,6 +417,7 @@ mod tests {
             let response = streaming(
                 server,
                 client,
+                ModelRequest::new("model", "x"),
                 ModelRequest::new("model", "x"),
                 View::new(api, "model".into()),
                 true,
