@@ -23,14 +23,6 @@ const values = {
 };
 for (const [name, value] of Object.entries(values))
   html = html.replaceAll(`{{${name}}}`, value);
-// Link directly to readable source pages until a Mintlify deployment is connected.
-if (site.docs === `${site.repository}/tree/main/docs`) {
-  html = html.replace(
-    /href="[^"]+" data-docs-path="([^"]+)"/g,
-    (_, path) =>
-      `href="${site.repository}/blob/main/docs/${path}.mdx" data-docs-path="${path}"`,
-  );
-}
 await writeFile(new URL("index.html", output), html);
 await writeFile(new URL(".nojekyll", output), "");
 await writeFile(
