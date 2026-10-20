@@ -24,6 +24,15 @@ struct User {
 }
 ```
 
+## Coding Agent toolkit (P0)
+
+The portable [Rydantic Skill](skills/rydantic/SKILL.md) includes an exact stable
+0.6.0 consumer recipe and adoption guidance. The unpublished [CLI](crates/rydantic-cli/README.md)
+provides offline `doctor`, `explain` and versioned JSON diagnostics, not validation
+or code generation. The [three-arm evaluation harness](evals/rydantic-agent/README.md)
+keeps harness smoke tests separate from actual Agent trials; no measured Agent
+improvement is claimed. Nothing is installed or executed automatically.
+
 ## What you get
 
 | Capability | What it does |

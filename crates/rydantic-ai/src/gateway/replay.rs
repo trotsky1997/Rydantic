@@ -74,6 +74,7 @@ pub(super) fn groups(input: &[Value]) -> Vec<Group> {
                 }
                 i += 1;
             }
+            calls.sort_by(|a, b| a["id"].as_str().cmp(&b["id"].as_str()));
             out.push(Group {
                 start,
                 end: i,
@@ -148,11 +149,12 @@ impl Replay {
         let (Ok(text), Ok(calls)) = (response.text(), response.tool_calls()) else {
             return;
         };
-        let calls: Vec<_> = calls
-            .into_iter()
-            .map(|call| json!({"id":call.call_id,"name":call.name,"arguments":arguments(&json!(call.arguments))}))
-            .collect();
-        visible.push(json!({"role":"assistant","text":text,"calls":calls}));
+        let mut projected = vec![json!({"role":"assistant","content":text})];
+        projected.extend(calls.into_iter().map(|call| {
+            json!({"type":"function_call","call_id":call.call_id,"name":call.name,"arguments":call.arguments})
+        }));
+        // Use the same call-identity normalization as incoming public history.
+        visible.extend(groups(&projected).into_iter().map(|group| group.visible));
         let scope = (
             client.to_owned(),
             request.model.clone(),
@@ -252,6 +254,59 @@ mod tests {
                     "{case}: turn {index}"
                 );
             }
+        }
+    }
+    #[test]
+    fn projected_parallel_calls_match_identity_but_not_changed_or_duplicate_calls() {
+        let request = ModelRequest::new("model", "compute");
+        let response = ModelResponse::from_value(json!({"status":"completed","output":[
+            {"type":"reasoning","id":"opaque","encrypted_content":"opaque"},
+            {"type":"message","role":"assistant","content":[{"type":"output_text","text":"first"}]},
+            {"type":"function_call","id":"original-a","call_id":"call-a","name":"add","arguments":"{\"a\":1}"},
+            {"type":"message","role":"assistant","content":[{"type":"output_text","text":"second"}]},
+            {"type":"function_call","id":"original-b","call_id":"call-b","name":"add","arguments":"{\"a\":2}"}
+        ],"usage":{"input_tokens":1,"output_tokens":1}})).unwrap();
+        let mut replay = Replay::default();
+        replay.record("app", &request, &response);
+        let mut visible = request.clone();
+        visible.input.extend([
+            json!({"role":"assistant","content":"firstsecond"}),
+            json!({"type":"function_call","call_id":"call-b","name":"add","arguments":"{\"a\":2}"}),
+            json!({"type":"function_call","call_id":"call-a","name":"add","arguments":"{\"a\":1}"}),
+        ]);
+        for case in [
+            "reversed",
+            "original_order",
+            "name",
+            "arguments",
+            "call_id",
+            "duplicate_id",
+            "missing_call",
+            "extra_call",
+        ] {
+            let mut next = visible.clone();
+            match case {
+                "original_order" => next.input.swap(2, 3),
+                "name" => next.input[2]["name"] = json!("other"),
+                "arguments" => next.input[2]["arguments"] = json!("{\"a\":3}"),
+                "call_id" => next.input[2]["call_id"] = json!("other"),
+                "duplicate_id" => next.input[2]["call_id"] = json!("call-a"),
+                "missing_call" => {
+                    next.input.pop();
+                }
+                "extra_call" => next.input.push(
+                    json!({"type":"function_call","call_id":"extra","name":"add","arguments":"{}"}),
+                ),
+                _ => (),
+            }
+            replay.restore("app", &mut next);
+            assert_eq!(
+                next.input
+                    .windows(response.output().len())
+                    .any(|window| window == response.output()),
+                matches!(case, "reversed" | "original_order"),
+                "{case}"
+            );
         }
     }
     #[test]

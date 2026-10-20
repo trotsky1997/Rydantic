@@ -1,0 +1,13 @@
+[package]
+name = "rydantic-skill-stable-contracts"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+# Independent consumer: never resolve through monorepo path dependencies.
+[workspace]
+
+[dependencies]
+rydantic = { version = "=0.6.0", features = ["dynamic"] }
+# Core's macro dependency is a semver range; pin the example's macro track too.
+rydantic-derive = "=0.6.0"

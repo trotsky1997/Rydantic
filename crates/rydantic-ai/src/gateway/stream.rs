@@ -368,7 +368,7 @@ impl Output {
         if calls.iter().any(|c| !ids.insert(&c.call_id)) {
             return Err(bad());
         }
-        let public = self.view.response(response)?;
+        let mut public = self.view.response(response)?;
         if !self.observed.is_empty() && self.observed != text {
             return Err(bad());
         }
@@ -479,9 +479,66 @@ impl Output {
                 out.push(self.frame(json!({"type":"message_stop"})));
             }
             Api::Responses => {
+                let mut items = vec![self.view.text_item(&text, "completed")];
+                for (index, tool) in self.tools.iter().enumerate() {
+                    items.push(self.view.response_item(
+                        &ToolCall {
+                            call_id: tool.id.clone(),
+                            name: tool.name.clone(),
+                            arguments: tool.args.clone(),
+                        },
+                        index,
+                        "completed",
+                    ));
+                }
+                public["output"] = json!(items);
                 out.push(self.frame(json!({"type":"response.completed","response":public})))
             }
         }
         Ok(out)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parallel_tool_arrival_order_keeps_terminal_item_indices_consistent() {
+        let mut output = Output::new(View::new(Api::Responses, "model".into()), false);
+        let mut frames = Vec::new();
+        for (index, id) in [(1, "second"), (0, "first")] {
+            frames.extend(output.observe(json!({"type":"provider.event","api":"chat_completions","event":{"choices":[{"delta":{"tool_calls":[{"index":index,"id":id,"function":{"name":"add","arguments":"{}"}}]},"finish_reason":null}]}})).unwrap());
+        }
+        frames.extend(output.observe(json!({"type":"provider.event","api":"chat_completions","event":{"choices":[{"delta":{},"finish_reason":"tool_calls"}]}})).unwrap());
+        let response = ModelResponse::from_value(json!({"status":"completed","output":[
+            {"type":"function_call","call_id":"first","name":"add","arguments":"{}"},
+            {"type":"function_call","call_id":"second","name":"add","arguments":"{}"}
+        ],"usage":{"input_tokens":1,"output_tokens":2}}))
+        .unwrap();
+        frames.extend(output.finish(&response).unwrap());
+        let events: Vec<_> = frames
+            .iter()
+            .filter_map(|frame| match frame {
+                Frame::Json { value, .. } => Some(value),
+                Frame::Done => None,
+            })
+            .collect();
+        let terminal = &events.last().unwrap()["response"]["output"];
+        for event in events.iter().filter(|event| {
+            event["type"] == "response.output_item.added"
+                || event["type"] == "response.output_item.done"
+        }) {
+            let index = event["output_index"].as_u64().unwrap() as usize;
+            assert_eq!(terminal[index]["id"], event["item"]["id"]);
+            assert_eq!(terminal[index]["call_id"], event["item"]["call_id"]);
+        }
+        let request = crate::ModelRequest::new("model", "compute");
+        let mut replay = super::super::replay::Replay::default();
+        replay.record("client", &request, &response);
+        let mut next = request.clone();
+        next.input.extend(terminal.as_array().unwrap().clone());
+        replay.restore("client", &mut next);
+        assert_eq!(&next.input[1..], response.output());
     }
 }

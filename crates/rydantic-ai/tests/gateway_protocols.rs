@@ -960,3 +960,80 @@ async fn all_frontends_replay_projected_multi_message_stream_turns() {
         }
     }
 }
+fn parallel_replay_turn(round: usize) -> (Value, Reply) {
+    let mut raw = native(
+        Api::Responses,
+        "",
+        Some((&format!("call-{round}-first"), json!({"a":19,"b":23}))),
+    );
+    raw["output"].as_array_mut().unwrap().push(json!({"id":format!("fc-{round}-second"),"type":"function_call","call_id":format!("call-{round}-second"),"name":"add","arguments":"{\"a\":20,\"b\":22}"}));
+    raw["output"][0]["id"] = json!(format!("reasoning-{round}"));
+    let mut body = String::new();
+    data(
+        &mut body,
+        json!({"type":"response.created","response":{"id":"parallel","status":"in_progress","output":[]}}),
+    );
+    for index in [3, 2] {
+        let item = &raw["output"][index];
+        let mut start = item.clone();
+        start["arguments"] = json!("");
+        data(
+            &mut body,
+            json!({"type":"response.output_item.added","output_index":index,"item":start}),
+        );
+        data(
+            &mut body,
+            json!({"type":"response.function_call_arguments.delta","output_index":index,"item_id":item["id"],"delta":item["arguments"]}),
+        );
+        data(
+            &mut body,
+            json!({"type":"response.output_item.done","output_index":index,"item":item}),
+        );
+    }
+    data(
+        &mut body,
+        json!({"type":"response.completed","response":raw}),
+    );
+    (
+        raw,
+        Reply {
+            content_type: "text/event-stream",
+            body,
+        },
+    )
+}
+#[tokio::test]
+async fn all_frontends_replay_actual_parallel_tool_stream_order() {
+    for front in all() {
+        let (first, first_wire) = parallel_replay_turn(1);
+        let (second, second_wire) = parallel_replay_turn(2);
+        let (upstream, seen) = fixture(vec![
+            first_wire,
+            second_wire,
+            json_reply(native(Api::Responses, r#"{"value":42}"#, None)),
+        ])
+        .await;
+        let gateway = setup(provider(Api::Responses, &upstream.base), 10);
+        let server = serve(gateway::router(gateway.clone())).await;
+        let client = Arc::new(HttpProvider::new(front, &server.base, Some(KEY.into())).unwrap());
+        let tool =
+            TypedTool::<(), Add, Answer, _>::new("add", "Add", |args: Add, _, _| async move {
+                Ok(Answer {
+                    value: args.a + args.b,
+                })
+            })
+            .unwrap();
+        let result = Agent::<(), Answer>::new(client, "public-model")
+            .tool(tool)
+            .unwrap()
+            .run("compute", Arc::new(()), RunContext::default())
+            .await
+            .unwrap();
+        assert_eq!(result.output.value, 42);
+        assert_eq!(result.tool_calls, 4);
+        let seen = seen.lock().unwrap();
+        assert_replayed(&seen[1].2["input"], &first);
+        assert_replayed(&seen[2].2["input"], &first);
+        assert_replayed(&seen[2].2["input"], &second);
+    }
+}

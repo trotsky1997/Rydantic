@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+/plan.json
+/results/
+/evidence/
+/pins/
