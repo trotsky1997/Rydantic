@@ -1,3 +1,7 @@
+# Unreleased
+
+- Add individually optional phone, country and currency domain wrappers with strict string validation, Serde support and explicit local Schema rules. Country codes use an ISO 3166-1 snapshot; currency codes include catalogued legacy/fund/special codes, not a current-tender guarantee. Phone JSON is canonical E.164 and extensions are rejected. See `docs/domain-types.mdx` for provenance and limitations.
+
 # Rydantic 0.7.0-beta.1
 
 Source candidate, not a publication announcement. Check crates.io and GitHub Releases for published artifacts. Stable remains 0.6.0.

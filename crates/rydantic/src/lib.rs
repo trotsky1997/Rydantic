@@ -38,6 +38,8 @@ mod dates;
 #[cfg(feature = "decimal")]
 mod decimal;
 mod direct;
+#[cfg(any(feature = "phone", feature = "country", feature = "currency"))]
+pub mod domain;
 #[cfg(feature = "capnp")]
 pub use capnp;
 #[cfg(feature = "capnp")]

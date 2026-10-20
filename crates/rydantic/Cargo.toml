@@ -20,6 +20,9 @@ derive = ["dep:rydantic-derive"]
 dynamic = ["dep:jsonschema"]
 chrono = ["dep:chrono"]
 decimal = ["dep:rust_decimal"]
+phone = ["dep:phonenumber"]
+country = ["dep:rust_iso3166"]
+currency = ["dep:iso_currency"]
 capnp = ["dep:capnp", "rydantic-derive?/capnp"]
 axum = ["dep:axum"]
 sqlx = ["dep:sqlx", "dep:sha2"]
@@ -32,6 +35,9 @@ serde.workspace = true
 serde_json.workspace = true
 regex.workspace = true
 email_address = "0.2"
+phonenumber = { version = "=0.3.10", optional = true }
+rust_iso3166 = { version = "=0.2.0", default-features = false, optional = true }
+iso_currency = { version = "=0.7.1", default-features = false, optional = true }
 rydantic-derive = { version = "=0.7.0-beta.1", path = "../rydantic-derive", optional = true }
 jsonschema = { workspace = true, optional = true }
 

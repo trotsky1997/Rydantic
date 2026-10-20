@@ -59,7 +59,8 @@
               "models/async",
               "models/streaming",
               "models/schema",
-              "models/dates-decimal"
+              "models/dates-decimal",
+              "domain-types"
             ]
           },
           {
