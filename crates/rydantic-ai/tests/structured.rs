@@ -458,6 +458,157 @@ async fn tool_continuation_resets_items_before_the_next_model_call() {
     assert_eq!(result.tool_calls, 1);
 }
 
+fn counted_tool_agent(provider: Arc<Streaming>, calls: Arc<AtomicUsize>) -> Agent<(), Answer> {
+    #[derive(Model)]
+    struct Args {
+        a: i64,
+        b: i64,
+    }
+    let tool = rydantic_ai::TypedTool::<(), Args, Answer, _>::new(
+        "add",
+        "add",
+        move |args: Args, _, _| {
+            calls.fetch_add(1, Ordering::SeqCst);
+            async move {
+                Ok(Answer {
+                    value: args.a + args.b,
+                })
+            }
+        },
+    )
+    .unwrap();
+    Agent::new(provider, "mock").tool(tool).unwrap()
+}
+
+fn text_and_tool(text: &str) -> ModelResponse {
+    response_items(vec![
+        json!({"type":"message","content":[{"type":"output_text","text":text}]}),
+        call("add", r#"{"a":1,"b":2}"#),
+    ])
+}
+
+async fn finish_test_stream(
+    agent: &Agent<(), Answer>,
+    iterable: bool,
+    options: StreamOptions,
+) -> Result<()> {
+    if iterable {
+        agent
+            .stream_iterable_with_options("list", Arc::new(()), RunContext::default(), options)?
+            .collect()
+            .await
+            .map(|_| ())
+    } else {
+        agent
+            .stream_partial_with_options("one", Arc::new(()), RunContext::default(), options)?
+            .finish()
+            .await
+            .map(|_| ())
+    }
+}
+
+#[tokio::test]
+async fn mismatched_tool_turns_fail_before_tool_execution() {
+    for iterable in [false, true] {
+        let calls = Arc::new(AtomicUsize::new(0));
+        let final_text = if iterable {
+            r#"{"items":[{"value":3}]}"#
+        } else {
+            r#"{"value":3}"#
+        };
+        let provider = Arc::new(Streaming::new(vec![
+            Plan {
+                chunks: vec![r#"{"value":111}"#.into()],
+                response: Ok(text_and_tool(r#"{"value":222}"#)),
+                gate: None,
+            },
+            Plan::text(final_text),
+        ]));
+        let agent = counted_tool_agent(provider.clone(), calls.clone());
+        assert!(matches!(
+            finish_test_stream(&agent, iterable, StreamOptions::default()).await,
+            Err(Error::Protocol(_))
+        ));
+        assert_eq!(calls.load(Ordering::SeqCst), 0);
+        assert_eq!(provider.requests.lock().unwrap().len(), 1);
+    }
+}
+
+#[tokio::test]
+async fn buffered_tool_turns_obey_byte_and_depth_limits_before_execution() {
+    let cases = [
+        (
+            format!(r#"{{"value":"{}"}}"#, "x".repeat(1024)),
+            StreamOptions {
+                max_output_bytes: 64,
+                ..Default::default()
+            },
+        ),
+        (
+            format!("{}0{}", "[".repeat(65), "]".repeat(65)),
+            StreamOptions::default(),
+        ),
+    ];
+    for iterable in [false, true] {
+        for (text, options) in &cases {
+            let calls = Arc::new(AtomicUsize::new(0));
+            let final_text = if iterable {
+                r#"{"items":[{"value":3}]}"#
+            } else {
+                r#"{"value":3}"#
+            };
+            let provider = Arc::new(Streaming::new(vec![
+                Plan {
+                    chunks: vec![],
+                    response: Ok(text_and_tool(text)),
+                    gate: None,
+                },
+                Plan::text(final_text),
+            ]));
+            let agent = counted_tool_agent(provider.clone(), calls.clone());
+            assert!(matches!(
+                finish_test_stream(&agent, iterable, *options).await,
+                Err(Error::Limit(_))
+            ));
+            assert_eq!(calls.load(Ordering::SeqCst), 0);
+            assert_eq!(provider.requests.lock().unwrap().len(), 1);
+        }
+    }
+}
+
+#[tokio::test]
+async fn consistent_tool_turn_text_need_not_validate_as_the_final_model() {
+    for iterable in [false, true] {
+        for buffered in [false, true] {
+            let calls = Arc::new(AtomicUsize::new(0));
+            let provisional = "I will call add.";
+            let final_text = if iterable {
+                r#"{"items":[{"value":3}]}"#
+            } else {
+                r#"{"value":3}"#
+            };
+            let provider = Arc::new(Streaming::new(vec![
+                Plan {
+                    chunks: if buffered {
+                        vec![]
+                    } else {
+                        vec![provisional.into()]
+                    },
+                    response: Ok(text_and_tool(provisional)),
+                    gate: None,
+                },
+                Plan::text(final_text),
+            ]));
+            let agent = counted_tool_agent(provider.clone(), calls.clone());
+            finish_test_stream(&agent, iterable, StreamOptions::default())
+                .await
+                .unwrap();
+            assert_eq!(calls.load(Ordering::SeqCst), 1);
+            assert_eq!(provider.requests.lock().unwrap().len(), 2);
+        }
+    }
+}
+
 #[tokio::test]
 async fn resource_limits_and_stream_final_mismatches_fail_explicitly() {
     let options = StreamOptions {
