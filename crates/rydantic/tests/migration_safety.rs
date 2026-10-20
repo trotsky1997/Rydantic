@@ -148,3 +148,47 @@ async fn descending_index_is_not_silently_recreated_as_ascending() {
         })
     ));
 }
+
+#[tokio::test]
+async fn descending_primary_key_preserves_null_identifiers_and_rowids() {
+    let pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect("sqlite::memory:")
+        .await
+        .unwrap();
+    sqlx::query("CREATE TABLE names (id INTEGER PRIMARY KEY DESC, name TEXT NOT NULL UNIQUE)")
+        .execute(&pool)
+        .await
+        .unwrap();
+    sqlx::query("INSERT INTO names (rowid, id, name) VALUES (99, NULL, 'Alice')")
+        .execute(&pool)
+        .await
+        .unwrap();
+    let schema_before: Vec<(String, String)> =
+        sqlx::query_as("SELECT name, sql FROM sqlite_schema WHERE sql IS NOT NULL ORDER BY name")
+            .fetch_all(&pool)
+            .await
+            .unwrap();
+    let result = Names::migrate(&pool).await;
+    assert!(
+        matches!(
+            result,
+            Err(rydantic::SqlError::Migration {
+                code: "migration_unsupported",
+                ..
+            })
+        ),
+        "{result:?}"
+    );
+    let schema_after: Vec<(String, String)> =
+        sqlx::query_as("SELECT name, sql FROM sqlite_schema WHERE sql IS NOT NULL ORDER BY name")
+            .fetch_all(&pool)
+            .await
+            .unwrap();
+    assert_eq!(schema_before, schema_after);
+    let ids: (i64, Option<i64>) = sqlx::query_as("SELECT rowid, id FROM names WHERE name='Alice'")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(ids, (99, None));
+}
