@@ -1,3 +1,7 @@
+# Unreleased
+
+- Add an opt-in, bounded `partial-json` snapshot API using jiter raw numeric bytes and serde_json arbitrary precision. Recover incomplete containers, numbers and literals; reject all incomplete strings/keys. Strict streaming and Model required-field semantics are unchanged. No publication or version bump is included.
+
 # Rydantic 0.7.0-beta.1
 
 Source candidate, not a publication announcement. Check crates.io and GitHub Releases for published artifacts. Stable remains 0.6.0.

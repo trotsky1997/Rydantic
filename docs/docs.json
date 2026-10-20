@@ -58,6 +58,7 @@
               "models/lifecycle",
               "models/async",
               "models/streaming",
+              "models/partial-json",
               "models/schema",
               "models/dates-decimal"
             ]
