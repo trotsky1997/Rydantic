@@ -1,0 +1,110 @@
+# Rydantic CLI (P0, unpublished)
+
+Thin, static, offline discovery and exact-version explanations for Coding Agents.
+This crate is `publish = false`. It links no Rydantic validation/codegen engine and
+never starts Cargo, rustup, a shell, a build script, a proc macro or project code.
+It makes no network requests and writes no files. Running the executable is
+read-only; building it with Cargo is a separate, explicit code-execution step.
+
+From a prepared repository checkout:
+
+```sh
+cargo run -p rydantic-cli --frozen -- capabilities --format json --protocol-version 1
+cargo run -p rydantic-cli --frozen -- doctor --workspace . --format json
+cargo run -p rydantic-cli --frozen -- explain RD_LOCAL_RULES_REQUIRED --core-version 0.6.0 --format json
+```
+
+Do not run `cargo install rydantic-cli`: there is no registry release. No global
+installation, credentials or telemetry are needed. `--offline` is accepted for
+clarity, but all commands are always offline. It is not an OS sandbox.
+
+## Commands and limits
+
+- `capabilities`: reports protocol/CLI/knowledge versions, linked engines (all
+  null), available commands, supported limits and explicit unsupported features.
+- `doctor --workspace DIR [--package NAME] [--schema FILE]`: reads DIR/Cargo.toml,
+  explicit workspace member manifests and DIR/Cargo.lock. Schema paths are
+  relative to the current working directory, not DIR. Only local-rule annotation
+  presence is inspected; neither schema validity nor portability is established.
+- `explain CODE --core-version VERSION`: consults bundled exact 0.6.0 knowledge.
+- `explain --diagnostics FILE --input-format envelope|validation-errors|cargo
+  --core-version VERSION`: explicitly reads CLI v1 envelopes, Rydantic error
+  arrays, or Cargo NDJSON. Cargo compiler diagnostics are unknown rather than
+  attributed to Rydantic using text matching. Unknown input codes are replaced
+  by `unknown` so callback-controlled content is not echoed.
+
+All commands accept `--format text|json`, `--protocol-version 1`, `--offline`.
+Repeated/unknown/inapplicable options and stray arguments fail. Text mode is a
+pretty-printed version of the same envelope. P0 does **not** implement `--resolve`,
+`--config`, Cargo invocation, validation, codegen, schema diff or typed adapters.
+It reports presence of root Cargo/toolchain configuration files without reading
+or executing them. A present `rydantic.toml` produces an unsupported-config
+warning; it is not silently interpreted. Explicit `--config` is an error.
+
+Each file is bounded to 1 MiB; schema files to 64 KiB; JSON nesting to 64;
+explain to 100 diagnostics; workspace member entries and direct Rydantic
+records to 256 each. Files must be regular files; no stdin streams. JSON
+syntax, duplicate object keys, reserved serde_json object members and trailing content are rejected before inspection.
+TOML syntax errors are rejected, but this is not a complete Cargo manifest validator.
+
+## Discovery evidence, never guessed resolution
+
+`declared_dependencies` records direct declarations, renames, feature lists,
+optional/default declarations, dependency kind and unevaluated target predicates.
+`locked_dependencies` records **all** recorded Rydantic versions and source kinds.
+Potential matching lock versions are only candidates, never a resolved package
+association. Sources/URLs are redacted. No claim is made about lock freshness,
+transitive packages, feature activation, target selection or actual Rust APIs.
+`resolution`, `build`, `tests` remain `unknown`; resolved/verified feature sets are
+null. `project_code_executed` is false.
+
+The bundled feature set is grounded in the published 0.6.0 package. An exact
+`=0.6.0` registry declaration can be checked against that release's feature set
+(unless a patch/replace/alternative registry or root Cargo config makes that inference unknown).
+A range such as `0.6` is not upgraded to exact knowledge merely because a possibly
+stale lockfile contains 0.6.0. Path/git dependencies, unknown versions and patched
+sources receive unknown knowledge. Requested invalid stable features fail with 3.
+This check describes the declared release, not proof of the code Cargo would load.
+
+Full workspace discovery remains incomplete in P0; `explicit_manifest_reads_complete` only describes the explicit reads. Workspace globs and external/parent member paths (including escaping symlinks) are not expanded. Exclusions
+are not evaluated, and their presence marks discovery incomplete; explicit
+listed manifests may still be inspected. Auto-members via path dependencies,
+ancestor workspaces and inherited external-workspace dependencies are not resolved.
+Use an explicit workspace root and package. Unknown package selection fails with
+5; incomplete discovery and absent lockfiles are warnings, not fake verification.
+
+## Protocol v1
+
+`protocol-v1.schema.json` defines the envelope. JSON mode emits exactly one object
+and newline on stdout, including controlled errors. No banners or stderr parsing
+are required. Diagnostic codes, severity, stage and next-action kinds are machine
+fields; human messages are not stable matching keys. No timestamps or absolute
+input paths are included. Consumers must handle unknown additive fields/codes.
+OS termination and stdout failure cannot guarantee a complete envelope.
+
+Exit meanings: 0 success; 1 check failed (reserved); 2 invalid invocation/input;
+3 unsupported protocol/version/feature; 4 read/output I/O; 5 package/environment
+unavailable; 6 execution failure (reserved); 7 resource limit; 8 policy conflict
+(reserved); 70 internal error. Unknown diagnostic codes under a supported version
+return success with `known: false`; an unsupported core version returns 3 and
+no speculative explanation. Warnings do not turn static discovery into failure.
+
+Schema text, diagnostic messages, params, locations, Cargo rendered diagnostics,
+config contents and unknown codes are not echoed. Manifest package/alias names,
+version requirements and requested feature names are discovery data and **are**
+reported: do not treat discovery output as globally secret-free. Errors use
+fixed messages and never quote parser input or raw OS paths.
+
+## Test
+
+```sh
+cargo test -p rydantic-cli --locked --offline
+cargo clippy -p rydantic-cli --all-targets --locked --offline -- -D warnings
+```
+
+The process tests disable PATH (no implicit Cargo/rustup), exercise protocol,
+unknown options/versions/codes, rename/inheritance/target facts, multiple/stale
+locks, exact-version feature rejection, explicit formats, duplicate/invalid and
+bounded input, deterministic output, privacy markers and no generated project
+files. They use synthetic temporary projects, not application code. Linux is
+tested locally; cross-platform execution must be reported separately.

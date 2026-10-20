@@ -1,0 +1,95 @@
+{
+  "knowledge_version": 1,
+  "core_version": "0.6.0",
+  "source": "https://docs.rs/crate/rydantic/0.6.0/source/Cargo.toml",
+  "features": [
+    "axum",
+    "capnp",
+    "chrono",
+    "decimal",
+    "default",
+    "derive",
+    "dynamic",
+    "mysql",
+    "postgres",
+    "sqlite",
+    "sqlx"
+  ],
+  "default_features": [
+    "derive"
+  ],
+  "explanations": {
+    "RD_LOCAL_RULES_REQUIRED": {
+      "message": "Schema local rules require the actual typed Rust model. Structural validation does not run defaults, normalization, coercion or callbacks.",
+      "next_action": {
+        "kind": "test_typed_model"
+      }
+    },
+    "RD_FEATURE_UNAVAILABLE": {
+      "message": "The requested feature is not present in this exact published version. Review the feature and version choice without silently upgrading.",
+      "next_action": {
+        "kind": "review_version_choice"
+      }
+    },
+    "RD_VERSION_UNKNOWN": {
+      "message": "This version is outside the packaged knowledge. Inspect its exact published API before suggesting a repair.",
+      "next_action": {
+        "kind": "inspect_exact_version"
+      }
+    },
+    "missing": {
+      "message": "A required input field is missing. Missing, explicit null and a default are distinct; test the actual model and preserve the intended requirement.",
+      "next_action": {
+        "kind": "test_missing_null_default"
+      }
+    },
+    "custom": {
+      "message": "A user validator rejected the value. The CLI cannot infer the callback's business rule; inspect and test the actual callback.",
+      "next_action": {
+        "kind": "inspect_validator"
+      }
+    },
+    "json_schema": {
+      "message": "A dynamic JSON Schema assertion failed. This does not establish typed callback execution, normalization, default insertion or format enforcement.",
+      "next_action": {
+        "kind": "inspect_schema_assertion"
+      }
+    },
+    "greater_than_equal": {
+      "message": "The value must meet an inclusive lower bound. Preserve the intended bound and test below, at and above it on the actual model.",
+      "next_action": {
+        "kind": "test_typed_boundary"
+      }
+    },
+    "less_than_equal": {
+      "message": "The value must meet an inclusive upper bound. Preserve the intended bound and test below, at and above it on the actual model.",
+      "next_action": {
+        "kind": "test_typed_boundary"
+      }
+    },
+    "too_short": {
+      "message": "The value is shorter than the configured minimum length. Test the actual type and boundary without removing the requirement.",
+      "next_action": {
+        "kind": "test_typed_boundary"
+      }
+    },
+    "too_long": {
+      "message": "The value exceeds the configured maximum length. Test the actual type and boundary without removing the requirement.",
+      "next_action": {
+        "kind": "test_typed_boundary"
+      }
+    },
+    "extra_forbidden": {
+      "message": "An input object contains an unknown field. Check input aliases and the intended contract; do not silently enable ignoring extra fields.",
+      "next_action": {
+        "kind": "test_typed_boundary"
+      }
+    },
+    "email": {
+      "message": "The typed email constraint rejected the string. Test the actual model; a JSON Schema format annotation alone is not proof of equivalent enforcement.",
+      "next_action": {
+        "kind": "test_typed_boundary"
+      }
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/trotsky1997/Rydantic/rydantic.cli.v1.schema.json",
+  "title": "Rydantic CLI v1 envelope",
+  "type": "object",
+  "required": ["schema_version", "tool", "command", "ok", "status", "data", "diagnostics", "artifacts"],
+  "properties": {
+    "schema_version": {"const": "rydantic.cli/v1"},
+    "tool": {"type": "object", "required": ["name", "version"], "properties": {"name": {"const": "rydantic"}, "version": {"type": "string"}}},
+    "command": {"type": "string"},
+    "ok": {"type": "boolean"},
+    "status": {"enum": ["success", "failed"]},
+    "data": {"type": "object"},
+    "diagnostics": {"type": "array", "items": {"type": "object", "required": ["code", "severity", "stage", "message", "retryable"], "properties": {
+      "code": {"type": "string"}, "severity": {"enum": ["error", "warning", "info"]}, "stage": {"type": "string"}, "message": {"type": "string"}, "retryable": {"type": "boolean"}, "params": {"type": "object"}, "next_action": {"type": "object", "required": ["kind"], "properties": {"kind": {"type": "string"}}}
+    }}},
+    "artifacts": {"type": "array"}
+  },
+  "allOf": [
+    {"if": {"properties": {"ok": {"const": true}}}, "then": {"properties": {"status": {"const": "success"}}}, "else": {"properties": {"status": {"const": "failed"}}}}
+  ]
+}
