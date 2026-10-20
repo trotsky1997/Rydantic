@@ -155,13 +155,16 @@ where
                 let text = response.text()?;
                 match context.wait(mode.finish(&text, &context)).await {
                     Ok(output) => {
+                        // A ready validator can cancel or overrun the deadline
+                        // within a single poll, without yielding to the wait.
+                        context.check()?;
                         return Ok(RunResult {
                             output,
                             usage,
                             history: request.input,
                             model_calls,
                             tool_calls,
-                        })
+                        });
                     }
                     Err(Error::Validation(errors)) => {
                         mode.reset(ResetReason::Validation(errors.clone()), &context)
