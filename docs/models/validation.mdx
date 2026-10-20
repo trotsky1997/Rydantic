@@ -1,0 +1,86 @@
+---
+title: "Fields and validation"
+description: "Supported types, normalization, constraints, missing values and custom rules."
+icon: "check"
+---
+
+Supported types include `String`, borrowed `&str` and `Cow<str>`, `bool`, signed and unsigned 8/16/32/64/128-bit integers, `isize`, `usize`, `f32`, `f64`, `Option<T>`, `Box<T>`, `Vec<T>`, `[T; N]`, string-keyed `BTreeMap` and `HashMap`, `serde_json::Value`, source-preserving `Box<RawValue>`, and nested, recursive, and generic models.
+
+| Field attribute | Behavior |
+| --- | --- |
+| `trim`, `lowercase`, `uppercase` | Normalize strings through a fixed pipeline |
+| `coerce` | Convert numeric strings to numbers, `"true"`/`"false"` to booleans, and numbers/booleans to strings |
+| `min_length`, `max_length` | Count Unicode scalar values in strings, collection elements, or map entries |
+| `ge`, `gt`, `le`, `lt` | Apply numeric bounds using number literals or exact decimal strings |
+| `pattern = "..."` | Use Rust regex syntax; patterns are checked at compile time and cached at runtime |
+| `email` | Validate email addresses with `email_address` |
+| `default` | Use the field type's `Default::default()` |
+| `default = expression` | Use an explicit default; string literals can be used directly for String fields |
+| `default_factory = path` | Call a factory whenever the field is missing |
+| `required` | Require the field to appear in the input, including Option fields |
+| `rename = "..."` | Set both input and output names |
+| `validation_alias`, `serialization_alias` | Set input and output names separately |
+| `exclude` | Omit the field from output and the output schema; input rules still apply |
+| `before = path` | Transform the raw JSON value before type decoding |
+| `validate = path` | Run a custom validator after constructing the typed field |
+| `description = "..."` | Add a schema description; field documentation comments are also read automatically |
+| `flatten` | Merge a named model or string-keyed map into the current JSON object |
+| `extra` | Capture unknown fields in a map, together with container-level `extra = "allow"` |
+| `async_validate = path` | Await an asynchronous field validator |
+
+Container attributes: `extra = "forbid"` (default), `extra = "ignore"`, `extra = "allow"`, `title = "..."`, `validate = path`, `async_validate = path`, and `tag = "..."` or `untagged` for enums.
+
+The parsing pipeline is: read input or produce a default → before callback → type decoding and explicit coercion → trim → case conversion → field constraints → custom field validation → custom model validation. Defaults follow the same pipeline. Errors from independent fields are collected together; a parent model's custom validator runs after all its fields succeed.
+
+Numeric strings require explicit `coerce`. A JSON number such as `25.0` is accepted for an integer, while `25.5` fails, following JSON Schema's definition of mathematical integers. Range comparisons preserve 128-bit integer precision, and extremely large exponents are processed with bounded work. Floating-point values follow Rust's IEEE 754 representations; NaN, infinity, and values outside the target type's range fail validation.
+
+## Missing fields and null
+
+| Declaration | May be omitted | Accepts null |
+| --- | --- | --- |
+| `name: String` | No | No |
+| `name: Option<String>` | Yes, produces None | Yes |
+| `#[model(required)] name: Option<String>` | No | Yes |
+| `#[model(default = "guest")] name: String` | Yes, uses the default | No |
+
+## Custom validation
+
+```rust
+use rydantic::{Model, ValidationError, ValidationErrors, Value};
+
+fn expand(value: Value) -> Result<Value, ValidationError> {
+    if value == "many" { Ok(rydantic::json!(10)) } else { Ok(value) }
+}
+
+fn even(value: &u32) -> Result<(), ValidationError> {
+    if value.is_multiple_of(2) { Ok(()) }
+    else { Err(ValidationError::new("even", "value must be even")) }
+}
+
+fn check_window(value: &Window) -> Result<(), ValidationErrors> {
+    if value.end >= value.start { Ok(()) }
+    else { Err(ValidationError::custom("end must be >= start").at("end").into()) }
+}
+
+#[derive(Model)]
+#[model(validate = check_window)]
+struct Window {
+    start: u32,
+    #[model(before = expand, validate = even)]
+    end: u32,
+}
+```
+
+Custom error paths are automatically prefixed with the parent path when nested. `ValidationErrors::errors()` returns an error slice, and `to_json()` returns structured JSON. Each error includes `loc`, `code`, `message`, `stage`, and constraint parameters; `pointer()` returns an escaped JSON Pointer.
+
+```json
+[
+  {
+    "loc": ["addresses", 0, "city"],
+    "code": "too_short",
+    "message": "length must be >= 2",
+    "stage": "validate",
+    "params": {"actual": 1, "limit": 2}
+  }
+]
+```

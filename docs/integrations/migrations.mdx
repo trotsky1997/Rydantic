@@ -1,0 +1,83 @@
+---
+title: "Automatic migrations"
+description: "Upgrade table schemas from model definitions without writing migration SQL."
+icon: "git-branch"
+---
+
+Call `User::migrate(&pool).await?` at startup to create or upgrade its table. Rydantic compares the live SQLite, PostgreSQL or MySQL catalog with `SqlModel` metadata, generates the upgrade, executes it, and verifies the resulting schema. Tables previously created by `create_table` can be upgraded directly. Matching schemas produce a no-op receipt without adding history rows.
+
+For example, evolve an existing `accounts(id, name)` model:
+
+```rust
+use rydantic::{Model, SqlModel};
+
+#[derive(Debug, Model, SqlModel)]
+#[sql(table = "accounts")]
+struct Account {
+    #[sql(primary_key, auto_increment)]
+    id: Option<i64>,
+    #[sql(rename_from = "name", unique, length = 128)]
+    display_name: String,
+    #[sql(default = true)]
+    enabled: bool,
+    note: Option<String>,
+}
+
+let report = Account::migrate(&pool).await?;
+```
+
+The rename preserves existing values. Old rows receive `enabled = true` and `note = NULL`. On MySQL, keep compatible `length` bounds on the earlier model so adding an index does not also narrow LONGTEXT to VARCHAR. Storage narrowing requires the destructive opt-in below.
+
+SQL defaults accept string, boolean, signed 64-bit integer, and finite float literals matching the column storage type. They remain database defaults for future SQL inserts that omit the field. Model parsing defaults and factories are configured independently with `#[model(default = ...)]`. Making an optional field required also backfills existing NULL values from its SQL default. Adding a required column to a populated table without a SQL default returns `migration_data` before changing its schema.
+
+Preview and apply an exact plan:
+
+```rust
+use rydantic::sql::MigrationOptions;
+
+let plan = Account::migration_plan(&pool).await?; // Read-only.
+for change in plan.changes() {
+    println!("{} (destructive: {})", change.description, change.destructive);
+}
+for statement in plan.statements() {
+    println!("{statement}");
+}
+let report = plan.apply(&pool, MigrationOptions::default()).await?;
+```
+
+`apply` checks the catalog again under the migration lock and returns `migration_stale` if it changed after preview. Plans expose immutable statements and changes. `migrate` plans under the lock to serialize concurrent startups. These operations accept pools so they can manage their own connection and transaction lifecycle.
+
+| Model change | Automatic behavior |
+| --- | --- |
+| New table | Create columns, defaults, keys, indexes and foreign keys |
+| Added optional field | Preserve rows and initialize NULL or its SQL default |
+| Added required field | Backfill its SQL default; a missing default is allowed on an empty table |
+| `rename_from` | Rename a previous column when the new name is absent; the annotation can remain across restarts |
+| Nullability/default change | Upgrade constraints/defaults and backfill NULL when a SQL default exists |
+| `index` / `unique` change | Add or remove single-column indexes/uniqueness; conflicting data fails validation by the database |
+| `references` / `on_delete` change | Add, replace or remove a single-column foreign key |
+| MySQL VARCHAR/VARBINARY widening | Upgrade without a destructive opt-in |
+| Removed field or other storage type change | Reject by default with `migration_destructive` |
+
+After inspecting a destructive plan, enable its changes for that invocation:
+
+```rust
+Account::migrate_with(
+    &pool,
+    MigrationOptions { allow_destructive: true },
+).await?;
+```
+
+Storage conversions use database casts and constraints. SQLite checks existing storage classes before type-changing rebuilds and rejects incompatible values. The opt-in permits planned data loss; custom data transformations require separate application logic. Primary-key/identity strategy changes, composite keys/indexes, generated columns and custom foreign-key semantics require an explicit migration. Table renames are outside this per-table API. Apply referenced models before dependent models, and coordinate changes to referenced key types separately.
+
+SQLite uses transactional rebuilds when needed, preserves auto-increment high-water marks and dependent rows, checks foreign-key integrity before commit, and restores the connection's foreign-key setting. Rebuilds reject external triggers, views, CHECK constraints and custom storage options whose definitions are outside the model. PostgreSQL uses a transaction, advisory lock and table lock; schema and history roll back together on failure.
+
+MySQL uses a database-scoped advisory lock and requires strict SQL mode. Structural changes are grouped into one ALTER TABLE where possible. MySQL DDL implicitly commits: a sequence containing a NULL backfill or separate creation statements can leave completed work after a later failure. History records `applying`, `applied` or `failed`; interruption can leave an `applying` entry. After correcting the cause, retry `migrate`, which computes remaining work from the live catalog. See [MySQL's DDL transaction rules](https://dev.mysql.com/doc/refman/8.4/en/implicit-commit.html).
+
+`_rydantic_migrations` stores per-table revisions, SHA-256 target checksums, source/target schema snapshots, change summaries and timestamps. SQLite/PostgreSQL record successful upgrades; MySQL also retains failed attempts. Snapshots include SQL defaults. Automatic upgrades cover SQL metadata; application validation rules continue to run through model parsing and CRUD.
+
+Run the complete old-model-to-new-model example:
+
+```sh
+cargo run -p rydantic --example automatic_migrations --features sqlite
+```

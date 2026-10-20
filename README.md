@@ -12,6 +12,13 @@ One `#[derive(Model)]` declaration provides JSON parsing, explicit type coercion
 
 The workspace contains the `rydantic` runtime, the `rydantic-derive` procedural macros, a renamed-dependency example, and Cap'n Proto integration examples. It has been verified with Rust 1.98.1 and includes Cargo.lock.
 
+## Documentation
+
+- [Project homepage](https://trotsky1997.github.io/Rydantic/)
+- [Guides and tutorials](docs/README.md) — the Mintlify source, organized by topic
+- [Rust API reference](https://docs.rs/rydantic/0.6.0/rydantic/)
+- [Documentation development](docs/README.md#preview-and-validate)
+
 ## Quick start
 
 Add the crates.io dependency to your Cargo.toml:

@@ -1,0 +1,41 @@
+---
+title: "Cargo features"
+description: "Select only the integrations your application needs."
+icon: "puzzle-piece"
+---
+
+The default feature is `derive`. Every integration below is opt-in.
+
+| Feature | Provides |
+| --- | --- |
+| `derive` | `Model`, `SqlModel` and protocol generation macros |
+| `dynamic` | Runtime JSON Schema validation with `DynamicModel` |
+| `chrono` | `chrono` date and time support |
+| `decimal` | `rust_decimal` support |
+| `capnp` | Native and packed Cap’n Proto serialization |
+| `axum` | Axum 0.8 extractors, responses and structured rejections |
+| `sqlx` | Shared SQL metadata and API, with no database driver |
+| `sqlite` | SQL integration and bundled SQLite |
+| `postgres` | SQL integration, PostgreSQL and Rustls TLS |
+| `mysql` | SQL integration, MySQL RSA authentication and Rustls TLS |
+
+## Example configurations
+
+<CodeGroup>
+```toml JSON only
+rydantic = "0.6.0"
+```
+```toml HTTP + PostgreSQL
+rydantic = { version = "0.6.0", features = ["axum", "postgres"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net"] }
+```
+```toml Binary protocol
+rydantic = { version = "0.6.0", features = ["capnp"] }
+```
+</CodeGroup>
+
+Automatic Cap’n Proto binding generation requires the official `capnp` compiler on `PATH`. Use Rust 1.98.1 to match the toolchain tested by this repository.
+
+## API reference
+
+The [Rust API documentation](https://docs.rs/rydantic/0.6.0/rydantic/) lists runtime traits and methods. The [source manifest](https://github.com/trotsky1997/Rydantic/blob/main/crates/rydantic/Cargo.toml) contains the complete dependency and feature definitions.

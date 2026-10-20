@@ -1,0 +1,29 @@
+---
+title: "Borrowed models"
+description: "Borrow strings and slices directly from JSON input."
+icon: "leaf"
+---
+
+Declarations with lifetimes use the same `Model` derive and parse through `BorrowModel`. The input buffer must outlive the model's use.
+
+```rust
+use rydantic::{BorrowModel, Model};
+use std::borrow::Cow;
+
+#[derive(Debug, Model)]
+struct View<'a> {
+    #[model(trim)]
+    name: &'a str,
+    #[model(trim, lowercase)]
+    note: Cow<'a, str>,
+}
+
+let input = String::from(r#"{"name":" Alice ","note":" HELLO\nWORLD "}"#);
+let view = View::parse_json(&input)?;
+assert_eq!(view.name, "Alice");
+assert_eq!(view.note, "hello\nworld");
+```
+
+`&str` references the original, unescaped JSON string. `trim` preserves the borrow by slicing it. Use `Cow<str>` when decoding escapes or changing case may require allocation. Inputs that require allocation for an `&str` field return `borrowed_string` or `borrowed_transform` errors. A `before` callback produces an owned JSON value and works with `Cow` or owned fields.
+
+Borrowed models support nesting, recursion, generics, multiple lifetimes, collections, flattening, Serde `from_str`/`from_slice`, and the read-only `BorrowValidated` wrapper. `parse_slice` borrows from a byte buffer; reader-based entry points work with owned models.

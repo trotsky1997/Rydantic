@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Rydantic — One Rust model. Every boundary.</title>
+    <meta
+      name="description"
+      content="Type-driven data models for Rust. Parse and validate JSON, generate Cap’n Proto bindings, serve Axum APIs and migrate SQL databases from one model."
+    />
+    <meta name="theme-color" content="#f6f8f2" />
+    <meta
+      property="og:title"
+      content="Rydantic — One Rust model. Every boundary."
+    />
+    <meta
+      property="og:description"
+      content="Validation, JSON, Cap’n Proto, HTTP and SQL. Defined together, in Rust."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="{{SITE_URL}}" />
+    <link rel="canonical" href="{{SITE_URL}}" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="header shell">
+      <a class="brand" href="./" aria-label="Rydantic home"
+        ><img src="./favicon.svg" width="32" height="32" alt="" /><span
+          >Rydantic</span
+        ></a
+      >
+      <button
+        class="menu-toggle"
+        aria-expanded="false"
+        aria-controls="navigation"
+      >
+        Menu <span aria-hidden="true">☰</span>
+      </button>
+      <nav id="navigation" aria-label="Main navigation">
+        <a href="#possibilities">Explore</a>
+        <a href="{{DOCS_URL}}" data-docs
+          >Documentation <span aria-hidden="true">↗</span></a
+        >
+        <a href="https://docs.rs/rydantic/{{VERSION}}/rydantic/"
+          >API reference</a
+        >
+        <a class="nav-github" href="{{REPO_URL}}"
+          ><svg
+            viewBox="0 0 24 24"
+            width="17"
+            height="17"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              d="M12 2C6.48 2 2 6.58 2 12.22c0 4.51 2.87 8.34 6.84 9.69.5.09.68-.22.68-.49v-1.74c-2.78.62-3.37-1.21-3.37-1.21-.45-1.18-1.11-1.49-1.11-1.49-.91-.64.07-.63.07-.63 1 .07 1.53 1.05 1.53 1.05.89 1.56 2.34 1.11 2.91.85.09-.66.35-1.11.64-1.36-2.22-.26-4.56-1.14-4.56-5.06 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.28 2.75 1.05a9.4 9.4 0 0 1 5 0c1.91-1.33 2.75-1.05 2.75-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.93-2.34 4.8-4.57 5.05.36.32.68.95.68 1.92v2.63c0 .27.18.59.69.49A10.24 10.24 0 0 0 22 12.22C22 6.58 17.52 2 12 2Z"
+            />
+          </svg>
+          GitHub</a
+        >
+      </nav>
+    </header>
+    <main id="main">
+      <section class="hero shell">
+        <div class="hero-copy">
+          <a class="release" href="{{REPO_URL}}/releases/tag/v{{VERSION}}"
+            ><span class="status-dot" aria-hidden="true"></span> v{{VERSION}}
+            <span class="release-divider">/</span> Model-driven migrations
+            <span aria-hidden="true">↗</span></a
+          >
+          <h1>
+            Your data.<br />One <span class="rust-word">Rust</span><br /><em
+              >model.</em
+            >
+          </h1>
+          <p class="hero-description">
+            From the first JSON request to the last database row. Define your
+            data once. Let your types carry it through.
+          </p>
+          <div class="hero-actions">
+            <a class="button primary" href="{{DOCS_URL}}" data-docs
+              >Start building <span aria-hidden="true">↗</span></a
+            ><a class="text-link" href="#model"
+              >See it in code <span aria-hidden="true">↓</span></a
+            >
+          </div>
+          <div class="install">
+            <code>cargo add rydantic</code
+            ><button
+              data-copy="cargo add rydantic"
+              aria-label="Copy install command"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                aria-hidden="true"
+              >
+                <rect x="8" y="8" width="12" height="12" rx="2" />
+                <path d="M16 8V4H4v12h4" /></svg
+              ><span class="copy-label">Copy</span>
+            </button>
+          </div>
+          <p class="hero-note">
+            Open source · MIT licensed · Available on
+            <a href="https://crates.io/crates/rydantic">crates.io ↗</a>
+          </p>
+        </div>
+        <div class="hero-visual" id="model">
+          <div class="orbit-label">
+            <span aria-hidden="true">✳</span> THE TYPE IS THE CONTRACT
+          </div>
+          <div class="code-window">
+            <div class="window-header">
+              <div class="window-dots" aria-hidden="true">
+                <i></i><i></i><i></i>
+              </div>
+              <span>models/user.rs</span><span class="language-tag">Rust</span>
+            </div>
+            <pre
+              class="hero-code"
+            ><code><span class="kw">use</span> rydantic::{Model, SqlModel};
+
+<span class="attr">#[derive(Debug, Model, SqlModel)]</span>
+<span class="kw">struct</span> <span class="type">User</span> {
+    <span class="attr">#[sql(primary_key, auto_increment)]</span>
+    id: <span class="type">Option&lt;i64&gt;</span>,
+
+    <span class="attr">#[model(trim, min_length = 2)]</span>
+    name: <span class="type">String</span>,
+
+    <span class="attr">#[model(ge = 18)]</span>
+    age: <span class="type">u8</span>,
+}</code></pre>
+            <div class="code-footer">
+              <span
+                ><span class="status-dot" aria-hidden="true"></span> One source
+                of truth</span
+              ><span>user.rs</span>
+            </div>
+          </div>
+          <div class="result-card">
+            <div class="result-icon" aria-hidden="true">✓</div>
+            <div>
+              <span class="result-caption">JSON PARSING EXAMPLE</span
+              ><code
+                ><span class="muted">" Alice "</span>
+                <span aria-hidden="true">→</span> "Alice"</code
+              >
+            </div>
+            <span class="result-badge">normalized</span>
+          </div>
+          <div class="visual-bottom">
+            <span aria-hidden="true">└─</span> Less glue. More Rust.
+          </div>
+        </div>
+      </section>
+      <section class="boundaries shell" aria-label="Supported integrations">
+        <span class="eyebrow">AT HOME IN YOUR STACK</span>
+        <div class="boundary-list">
+          <span><b aria-hidden="true">{ }</b> JSON</span
+          ><span><b aria-hidden="true">◈</b> Cap’n Proto</span
+          ><span><b aria-hidden="true">↗</b> Axum + Tokio</span
+          ><span><b aria-hidden="true">▤</b> SQLx</span
+          ><span><b aria-hidden="true">⤴</b> JSON Schema</span>
+        </div>
+      </section>
+      <section class="possibilities section shell" id="possibilities">
+        <div class="section-intro">
+          <span class="eyebrow">01 / THE WHOLE JOURNEY</span>
+          <h2>One definition.<br />A lot less repetition.</h2>
+          <p>Keep the rules close to your data, wherever it goes next.</p>
+        </div>
+        <div class="feature-grid">
+          <article class="feature">
+            <span class="feature-icon" aria-hidden="true">{✓}</span>
+            <h3>Make valid data the default.</h3>
+            <p>
+              Parse directly into Rust types. Trim strings, apply constraints
+              and collect useful errors with exact field paths. Coercion is an
+              explicit choice.
+            </p>
+            <a
+              href="{{DOCS_URL}}/models/validation"
+              data-docs-path="models/validation"
+              >Explore validation <span aria-hidden="true">↗</span></a
+            >
+          </article>
+          <article class="feature">
+            <span class="feature-icon" aria-hidden="true">◈</span>
+            <h3>Speak JSON. And binary.</h3>
+            <p>
+              Serialize JSON, export input and output schemas, or generate
+              native Cap’n Proto schemas and official Rust bindings from your
+              models.
+            </p>
+            <a
+              href="{{DOCS_URL}}/integrations/capnp"
+              data-docs-path="integrations/capnp"
+              >Explore protocols <span aria-hidden="true">↗</span></a
+            >
+          </article>
+          <article class="feature">
+            <span class="feature-icon" aria-hidden="true">⇄</span>
+            <h3>Meet your application.</h3>
+            <p>
+              Validated Axum requests and responses. SQLx CRUD with independent
+              SQLite, PostgreSQL and MySQL drivers. Add only what you need.
+            </p>
+            <a
+              href="{{DOCS_URL}}/integrations/axum"
+              data-docs-path="integrations/axum"
+              >Explore integrations <span aria-hidden="true">↗</span></a
+            >
+          </article>
+        </div>
+      </section>
+      <section class="workbench-section" id="code">
+        <div class="shell workbench-layout">
+          <div class="workbench-copy">
+            <span class="eyebrow">02 / BUILT TO CONNECT</span>
+            <h2>Your model.<br />More possibilities.</h2>
+            <p>
+              Start with the derive. Add the boundaries your application needs.
+            </p>
+            <div
+              class="code-tabs"
+              role="tablist"
+              aria-label="Integration examples"
+              aria-orientation="vertical"
+            >
+              <button
+                id="tab-json"
+                role="tab"
+                aria-selected="true"
+                aria-controls="example-panel"
+                data-example="json"
+              >
+                01 <span>Parse JSON</span>
+                <span aria-hidden="true">↗</span></button
+              ><button
+                id="tab-capnp"
+                role="tab"
+                aria-selected="false"
+                aria-controls="example-panel"
+                tabindex="-1"
+                data-example="capnp"
+              >
+                02 <span>Generate a protocol</span
+                ><span aria-hidden="true">↗</span></button
+              ><button
+                id="tab-http"
+                role="tab"
+                aria-selected="false"
+                aria-controls="example-panel"
+                tabindex="-1"
+                data-example="http"
+              >
+                03 <span>Serve an API</span
+                ><span aria-hidden="true">↗</span></button
+              ><button
+                id="tab-sql"
+                role="tab"
+                aria-selected="false"
+                aria-controls="example-panel"
+                tabindex="-1"
+                data-example="sql"
+              >
+                04 <span>Persist your data</span
+                ><span aria-hidden="true">↗</span>
+              </button>
+            </div>
+          </div>
+          <div
+            class="workbench"
+            id="example-panel"
+            role="tabpanel"
+            aria-labelledby="tab-json"
+            tabindex="0"
+          >
+            <div class="workbench-title">
+              <span id="example-filename">parse.rs</span
+              ><button id="copy-example" aria-label="Copy example code">
+                Copy code
+              </button>
+            </div>
+            <pre><code id="example-code">use rydantic::Model;
+
+#[derive(Debug, Model)]
+struct User {
+    #[model(trim, min_length = 2)]
+    name: String,
+    #[model(coerce, ge = 18)]
+    age: u8,
+}
+
+let user = User::parse_json(
+    r#"{"name":" Alice ","age":"25"}"#,
+)?;
+assert_eq!(user.name, "Alice");
+assert_eq!(user.age, 25);</code></pre>
+            <div class="example-caption">
+              <span class="status-dot" aria-hidden="true"></span>
+              <p id="example-description">
+                Strict types. Explicit coercion. Normalization at the boundary.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section class="section shell migration-section">
+        <div
+          class="migration-visual"
+          aria-label="Illustration of a model-driven schema change"
+        >
+          <div class="schema-table">
+            <div class="schema-header">
+              <span class="tiny-dot" aria-hidden="true"></span> accounts
+              <span>BEFORE</span>
+            </div>
+            <div class="schema-row">
+              <code>id</code><span>BIGINT</span><b>PK</b>
+            </div>
+            <div class="schema-row removed">
+              <code>name</code><span>TEXT</span><b>↗</b>
+            </div>
+          </div>
+          <div class="migration-arrow">
+            <span aria-hidden="true">↓</span
+            ><code>Account::migrate(&amp;pool).await?</code>
+          </div>
+          <div class="schema-table after">
+            <div class="schema-header">
+              <span class="tiny-dot" aria-hidden="true"></span> accounts
+              <span>AFTER</span>
+            </div>
+            <div class="schema-row">
+              <code>id</code><span>BIGINT</span><b>PK</b>
+            </div>
+            <div class="schema-row added">
+              <code>display_name</code><span>TEXT</span><b>RENAMED</b>
+            </div>
+            <div class="schema-row added">
+              <code>enabled</code><span>BOOL</span><b>DEFAULT true</b>
+            </div>
+          </div>
+          <p class="schema-note">
+            Illustrative schema change · PostgreSQL types shown
+          </p>
+        </div>
+        <div class="migration-copy">
+          <span class="eyebrow">03 / NEW IN {{VERSION}}</span>
+          <h2>Your model evolves.<br />Your tables follow.</h2>
+          <p>
+            Compare your model with the live database schema. Preview the plan,
+            preserve renamed columns and backfill new fields with SQL defaults.
+          </p>
+          <ul class="check-list">
+            <li>Automatic upgrades across three databases</li>
+            <li>Migration history and concurrency locks</li>
+            <li>Explicit opt-in for destructive changes</li>
+          </ul>
+          <a
+            class="text-link"
+            href="{{DOCS_URL}}/integrations/migrations"
+            data-docs-path="integrations/migrations"
+            >See automatic migrations <span aria-hidden="true">↗</span></a
+          >
+        </div>
+      </section>
+      <section class="closing shell">
+        <div>
+          <span class="eyebrow">LESS PLUMBING. MORE BUILDING.</span>
+          <h2>Let your types<br />do the talking.</h2>
+        </div>
+        <div class="closing-actions">
+          <a class="button primary" href="{{DOCS_URL}}" data-docs
+            >Read the documentation <span aria-hidden="true">↗</span></a
+          ><a class="text-link" href="{{REPO_URL}}"
+            >Explore the source on GitHub <span aria-hidden="true">↗</span></a
+          >
+        </div>
+        <span class="closing-mark" aria-hidden="true">R</span>
+      </section>
+    </main>
+    <footer class="footer shell">
+      <a class="brand" href="./"
+        ><img src="./favicon.svg" width="26" height="26" alt="" /><span
+          >Rydantic</span
+        ></a
+      >
+      <p>Rust types, all the way through.</p>
+      <div>
+        <a href="https://crates.io/crates/rydantic">crates.io ↗</a
+        ><a href="{{REPO_URL}}/blob/main/LICENSE">MIT License ↗</a
+        ><a href="{{REPO_URL}}">GitHub ↗</a>
+      </div>
+    </footer>
+    <p class="sr-only" id="copy-status" role="status" aria-live="polite"></p>
+  </body>
+</html>

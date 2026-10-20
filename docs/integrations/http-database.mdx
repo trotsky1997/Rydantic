@@ -1,0 +1,10 @@
+---
+title: "HTTP + database example"
+description: "Run the same validated Axum API against three database backends."
+icon: "route"
+---
+
+The [database_api example](https://github.com/trotsky1997/Rydantic/blob/main/crates/rydantic/examples/database_api.rs) selects SQLite, PostgreSQL or MySQL from `DATABASE_URL` and uses the same model for validated HTTP input, JSON responses, table creation and CRUD:
+
+```sh
+cargo run -p rydantic --example database_api --features axum,sqlite

@@ -1,2 +1,5 @@
 /target/
 **/wip/
+/node_modules/
+/.site/
+/docs/.mintlify/

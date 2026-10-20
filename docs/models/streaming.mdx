@@ -1,0 +1,41 @@
+---
+title: "Streaming JSON"
+description: "Parse sequences, arrays and borrowed records incrementally."
+icon: "layers"
+---
+
+```rust
+use rydantic::{stream, Model};
+use std::io::Cursor;
+
+#[derive(Debug, Model)]
+struct Row { id: u32 }
+
+for row in stream::ndjson::<_, Row>(Cursor::new("{\"id\":1}\n{\"id\":2}\n")) {
+    println!("{}", row?.id);
+}
+
+stream::visit_array::<_, Row, _>(Cursor::new("[{\"id\":1},{\"id\":2}]"), |row| {
+    println!("{}", row?.id);
+    Ok(())
+})?;
+```
+
+| Entry point | Input and error handling |
+| --- | --- |
+| `Model::parse_reader` | Read one JSON document from `Read` |
+| `stream::json_stream` | Read whitespace-separated documents; continue after validation errors and stop after JSON syntax errors |
+| `stream::ndjson` | Read lines from `BufRead`; skip blank lines, continue after syntax/validation errors, and attach `stream_line` |
+| `stream::visit_array` | Visit each element; validation errors include the array index, and a callback error stops reading |
+| `stream::borrow_stream`/`visit_borrowed_array` | Borrow fields from `&str`; returned values remain usable while the input buffer lives |
+| `stream::documents` | Yield `Box<RawValue>` documents for calls to `parse_json_async` inside the loop |
+
+These entry points use synchronous I/O. Sequence and array visitors materialize only the current record, so memory use scales with that record's size. The caller controls the reader's buffering strategy. Asynchronous applications can integrate at the appropriate I/O layer and await validation for each model. Synchronous typed streams return `async_validation_required` for models with asynchronous rules.
+
+Run the examples:
+
+```sh
+cargo run -p rydantic --example borrowed
+cargo run -p rydantic --example streaming
+cargo run -p rydantic --example asynchronous
+```

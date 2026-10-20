@@ -1,0 +1,91 @@
+---
+title: "Existing Cap’n Proto schemas"
+description: "Connect external schema bindings through typed readers and builders."
+icon: "plug"
+---
+
+Existing `.capnp` protocols can use explicit bindings:
+
+```toml
+[dependencies]
+rydantic = { version = "0.6.0", features = ["capnp"] }
+capnp = { version = "0.27", features = ["unaligned"] }
+
+[build-dependencies]
+capnpc = "0.27"
+```
+
+Generate a file ID with `capnp id`, then create `schema/user.capnp`:
+
+```capnp
+@0xc886a6cb051d0cab;
+struct User {
+  name @0 :Text;
+  age @1 :UInt16;
+}
+```
+
+Call the official code generator from `build.rs`; the `capnp` compiler must be installed locally:
+
+```rust
+fn main() {
+    println!("cargo:rerun-if-changed=schema/user.capnp");
+    capnpc::CompilerCommand::new()
+        .src_prefix("schema")
+        .file("schema/user.capnp")
+        .run()
+        .expect("generate Cap'n Proto bindings");
+}
+```
+
+Include the generated bindings at the crate root and connect the model:
+
+```rust
+pub mod user_capnp {
+    include!(concat!(env!("OUT_DIR"), "/user_capnp.rs"));
+}
+use rydantic::{CapnpModel, Model};
+
+#[derive(Debug, Model)]
+#[model(capnp = "user_capnp::user")]
+struct User {
+    #[model(trim, min_length = 2)]
+    name: String,
+    #[model(ge = 18, le = 120)]
+    age: u8,
+}
+
+fn main() -> Result<(), rydantic::ValidationErrors> {
+    let user = User::parse_json(r#"{"name":" Alice ","age":25}"#)?;
+    let bytes = user.dump_capnp()?;
+    assert_eq!(User::parse_capnp(&bytes)?.name, "Alice");
+    let packed = user.dump_capnp_packed()?;
+    assert_eq!(User::parse_capnp_packed(&packed)?.age, 25);
+    Ok(())
+}
+```
+
+| Rust model | Native schema field |
+| --- | --- |
+| Booleans, integers, floats, String | Bool, corresponding numeric types, Text; integer-width conversions check overflow |
+| Nested models, Box | The associated model's Struct |
+| Vec, fixed arrays | List; fixed arrays check length, with nested lists and struct lists supported |
+| Option | A wrapper Struct containing `union { none @0 :Void; some @1 :T; }` |
+| String-keyed maps | `List(Entry)` with `key :Text` and `value :T`; duplicate keys are rejected |
+| `#[model(capnp_data)] Vec<u8>` | Data |
+| `#[model(capnp_text)]` | Text for dates, Decimal, and full-range i128/u128 scalar representations |
+| `#[model(capnp_enum)]` fields | Native Enum; the Rust enum declares `#[model(capnp_enum = "wire_capnp::Role")]` |
+| Data enums | Native unions with unit, single-field, and named group variants; JSON uses `untagged` or a supported `tag` representation |
+| Newtype, tuple, unit structs | Structs containing `value`, `item0`/`item1`, or no fields respectively |
+
+Generated accessors are found using Rust field names by default. `#[model(capnp_name = "fullName")]` selects a protocol field independently; `#[model(capnp_skip, default = "local")]` retains an internal model field. JSON aliases, flattening, extra fields, and exclusion control the JSON representation. The `.capnp` file determines the native field layout.
+
+`parse_capnp` performs model normalization and synchronous validation; `dump_capnp` revalidates the current object. Asynchronous models use `parse_capnp_async`/`dump_capnp_async` and their packed equivalents. `parse_capnp_with_options` accepts the official `ReaderOptions` for traversal and nesting limits; single-message entry points reject trailing data. `from_capnp_reader` accepts an officially generated Reader, and `to_capnp_message` returns a message Builder for use with the official API. `read_capnp`/`write_capnp` are low-level composition interfaces; use the public parsing and output entry points above for full validation.
+
+Native bindings require concrete, owned models. Constructing a Rust model allocates Strings and collections; keep an official Reader when direct message-memory access is needed. Protocol defaults follow Cap'n Proto semantics. Optional values use explicit unions, and `capnp_skip` fields use model defaults. JSON `before` callbacks still receive a field Value, and `capnp_text` mappings for dates and Decimal reuse scalar conversion rules.
+
+See [fixtures/capnp](https://github.com/trotsky1997/Rydantic/tree/main/fixtures/capnp) for a complete schema, officially generated bindings, and an executable example. Run the example and official CLI interoperability tests:
+
+```sh
+cargo run -p rydantic-capnp-fixture
+cargo test -p rydantic-capnp-fixture --test native
