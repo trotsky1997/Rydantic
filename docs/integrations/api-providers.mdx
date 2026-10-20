@@ -1,0 +1,112 @@
+---
+title: "API providers"
+description: "Connect Responses, Chat Completions and Anthropic Messages with BASEURL and APIKEY."
+---
+
+RydanticAI 0.4.0 supports three upstream protocols. They share typed Agent output, client tools, validation correction, [Partial and Iterable streams](/integrations/structured-output), token usage, deadlines and cancellation.
+
+| Protocol | Rust provider | Path appended to BASEURL | APIKEY header |
+| --- | --- | --- | --- |
+| Responses | `ResponsesProvider` | `/responses` | `Authorization: Bearer APIKEY` |
+| Chat Completions | `ChatCompletionsProvider` | `/chat/completions` | `Authorization: Bearer APIKEY` |
+| Anthropic Messages | `AnthropicMessagesProvider` | `/messages` | `x-api-key: APIKEY` |
+
+## Configure an endpoint
+
+`BASEURL` includes the API prefix. Examples are `https://api.openai.com/v1`, `https://api.anthropic.com/v1` and `http://127.0.0.1:8000/v1`. Choose `MODEL` from the endpoint's available models. Set `APIKEY` in the local environment or a server-side secret manager when authentication is required.
+
+```rust
+use rydantic_ai::{Api, HttpProvider};
+
+let provider = HttpProvider::from_env(Api::ChatCompletions)?;
+```
+
+Fixed-protocol applications can use `ResponsesProvider::from_env()`, `ChatCompletionsProvider::from_env()` or `AnthropicMessagesProvider::from_env()`. Explicit constructors accept `(base_url, Option<String>)`:
+
+```rust
+use rydantic_ai::AnthropicMessagesProvider;
+
+let provider = AnthropicMessagesProvider::new(
+    &std::env::var("BASEURL")?,
+    std::env::var("APIKEY").ok(),
+)?;
+```
+
+The SDK has no login flow or credential persistence. HTTPS is required for network endpoints; HTTP is accepted on loopback. BASEURL cannot contain credentials, a query or a fragment. Debug and transport errors redact BASEURL and APIKEY; HTTP errors expose status codes without upstream response bodies. Requests are sent once, and redirects are disabled.
+
+Run the typed tool example with `BASEURL`, `MODEL` and optional `APIKEY` configured locally:
+
+```sh
+API=chat_completions cargo run -p rydantic-ai --example provider
+API=anthropic_messages cargo run -p rydantic-ai --example provider
+API=responses cargo run -p rydantic-ai --example provider
+```
+
+## Typed output and capabilities
+
+Each provider implements `ModelProvider`. Pass it to the same `Agent<Dependencies, Output>` and register the same `TypedTool` handlers. Validation correction and tool argument checks run locally for every protocol.
+
+| Setting | Responses | Chat Completions | Anthropic Messages |
+| --- | --- | --- | --- |
+| Native JSON Schema default | Enabled | Enabled | Disabled |
+| Native schema request field | `text.format` | `response_format.json_schema` | `output_config.format` when enabled |
+| Output token request field | `max_output_tokens` | `max_completion_tokens` | `max_tokens` |
+| Tool schema field | `parameters` | `function.parameters` | `input_schema` |
+| Streaming completion marker | `response.completed` | `[DONE]` after a finish reason and usage | `message_stop` after closed content, stop reason and usage |
+
+Messages uses schema instructions and Rydantic runtime validation by default. Compatible models and schemas can opt into its native JSON Schema subset explicitly:
+
+```rust
+use rydantic_ai::{AnthropicMessagesProvider, Capabilities};
+
+let provider = AnthropicMessagesProvider::from_env()?.with_capabilities(Capabilities {
+    native_json_schema: true,
+    output_token_limit: true,
+});
+```
+
+Native schema support depends on the selected model and its accepted schema subset. Rydantic retains its runtime constraints even when a provider requires instruction-based output. Set `native_json_schema: false` on any provider that lacks native schema support, and `output_token_limit: false` when an endpoint has no request token limit. Messages requires a token limit; direct requests without one use 2048, while Agents use their configured output-token limit.
+
+The shared `ModelRequest` uses Responses-shaped text and function-tool history. Chat Completions and Messages adapters convert that history to their native request shapes. These adapters support text and client function tools; unsupported multimodal input and Responses-specific reasoning request settings fail before dispatch. Use Responses for its native request features.
+
+## Native tools and history
+
+Chat Completions aggregates indexed tool-call deltas and replays assistant `tool_calls` with the corresponding `tool` results. Messages aggregates `input_json_delta`, replays complete assistant content blocks, and groups `tool_result` blocks in the following user message. Thinking signatures and redacted content survive same-protocol tool continuations. Native metadata is retained in the normalized response and history.
+
+Cross-protocol history conversion carries text and function calls. Opaque reasoning content belongs to its originating protocol and is replayed only by that protocol. Direct Responses requests strip the internal replay extension before sending to standard upstreams.
+
+## Streaming and usage
+
+All providers request streaming and also accept complete JSON responses from compatible endpoints. Adapted streams emit normalized `response.output_text.delta` and `response.completed` events. The original Chat Completions and Messages frames are available as `{ type: "provider.event", api, event }` on `RunContext.events`. Responses native events are forwarded directly.
+
+`Partial<T>` and `Iterable<T>` consume normalized text events. Previews remain provisional until successful protocol completion and validation. Missing terminal markers, refusals, truncation and malformed tool fragments stop the run. Tools execute only after a complete, accepted provider response.
+
+Chat Completions requires final prompt/completion usage. Messages updates cumulative counters and counts input tokens together with cache creation/read tokens. Usage is checked for overflow before Agent and gateway budget accounting. HTTP bodies are bounded at 16 MiB, individual SSE events and assembled text/tool fields at 1 MiB, and outgoing requests at 1 MiB. Deadline, cancellation and bounded event backpressure apply throughout transfer.
+
+## Gateway upstreams
+
+The gateway's external endpoints remain `GET /v1/models` and `POST /v1/responses`. Its upstreams support all three protocols through the `api` field:
+
+```json
+{
+  "base_url": "https://api.anthropic.com/v1",
+  "api": "anthropic_messages",
+  "model": "your-messages-model",
+  "api_key_env": "APIKEY"
+}
+```
+
+Omitting `api` selects `responses`. An optional `capabilities` object accepts `native_json_schema` and `output_token_limit`. Upstream API keys remain separate from incoming gateway client keys. See the [gateway configuration and budgets](/integrations/ai).
+
+Use the dedicated gateway constructor for an HTTP gateway client. It preserves native tool-history metadata across the gateway's Responses interface and defaults to local schema validation for mixed upstream routes:
+
+```rust
+use rydantic_ai::ResponsesProvider;
+
+let provider = ResponsesProvider::gateway(
+    &std::env::var("BASEURL")?,
+    std::env::var("APIKEY").ok(),
+)?;
+```
+
+For upstream protocol details, see the official [Chat Completions API](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create), [Messages streaming](https://platform.claude.com/docs/en/build-with-claude/streaming) and [Messages structured output](https://platform.claude.com/docs/en/build-with-claude/structured-outputs) references.

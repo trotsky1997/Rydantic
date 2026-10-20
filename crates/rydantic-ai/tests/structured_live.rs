@@ -9,11 +9,22 @@ struct Person {
 }
 
 #[tokio::test]
-#[ignore = "requires an authorized pi bridge and RYDANTIC_PI_URL; performs real inference"]
-async fn pi_codex_partial_and_iterable_roundtrip() {
-    let base = std::env::var("RYDANTIC_PI_URL").expect("set RYDANTIC_PI_URL after authorization");
-    let model = std::env::var("RYDANTIC_AI_MODEL").unwrap_or_else(|_| "gpt-6-luna".into());
-    let provider = Arc::new(ResponsesProvider::pi_codex(&base).unwrap());
+#[ignore = "requires BASEURL and MODEL; performs real inference"]
+async fn responses_partial_and_iterable_roundtrip() {
+    let base = std::env::var("BASEURL").expect("set BASEURL for the live endpoint");
+    let model = std::env::var("MODEL").expect("set MODEL");
+    let provider = Arc::new(
+        ResponsesProvider::new(&base, std::env::var("APIKEY").ok())
+            .unwrap()
+            .with_capabilities(rydantic_ai::Capabilities {
+                native_json_schema: std::env::var("NATIVE_JSON_SCHEMA")
+                    .map(|v| v == "true")
+                    .unwrap_or(true),
+                output_token_limit: std::env::var("OUTPUT_TOKEN_LIMIT")
+                    .map(|v| v == "true")
+                    .unwrap_or(true),
+            }),
+    );
     let agent = Agent::<(), Person>::new(provider, model);
     let mut partial = agent
         .stream_partial(

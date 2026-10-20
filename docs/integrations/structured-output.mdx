@@ -3,16 +3,16 @@ title: "Structured output streams"
 description: "Stream partial JSON previews and validated list elements with bounded correction, cancellation and usage accounting."
 ---
 
-RydanticAI 0.3.0 provides Instructor-style structured extraction inside the existing Agent API. Define a Rydantic model, then choose a partial-object stream or an iterable-item stream. Model definitions, async checks, tool execution, validation correction, history and usage remain shared with ordinary agent runs.
+RydanticAI 0.4.0 provides Instructor-style structured extraction inside the existing Agent API. Define a Rydantic model, then choose a partial-object stream or an iterable-item stream. Model definitions, async checks, tool execution, validation correction, history and usage remain shared with ordinary agent runs.
 
 ```toml
 [dependencies]
 rydantic = "0.7.0-beta.3"
-rydantic-ai = "0.3.0"
+rydantic-ai = "0.4.0"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ```
 
-Keep the direct `rydantic` dependency for model derive resolution. Custom providers work with `rydantic-ai = { version = "0.3.0", default-features = false }`. Streams start on the current Tokio runtime.
+Keep the direct `rydantic` dependency for model derive resolution. Custom providers work with `rydantic-ai = { version = "0.4.0", default-features = false }`. Streams start on the current Tokio runtime.
 
 ## Partial object previews
 
@@ -118,7 +118,7 @@ Dropping a stream cancels its child task. `stream.cancel()` requests cancellatio
 
 ## Provider integration
 
-The [Responses transport and pi bridge](/integrations/ai) forward native text deltas automatically. Custom providers emit `response.output_text.delta` events through their supplied `RunContext`. Streaming calls set `ModelRequest::stream = true` and retain the caller's original native-event sink.
+The [Responses, Chat Completions and Anthropic Messages providers](/integrations/api-providers) normalize native text deltas automatically. Custom providers emit `response.output_text.delta` events through their supplied `RunContext`. Streaming calls set `ModelRequest::stream = true` and retain the caller's original native-event sink.
 
 Deltas must belong to a single text part per model call and exactly match the text in the completed response. Refusals, incomplete transport termination, text mismatches and resource-limit failures stop the stream. Providers that return only a completed response still work; progress events become available after that response arrives.
 

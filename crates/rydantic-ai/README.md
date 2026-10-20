@@ -5,38 +5,36 @@ Typed Rust agents, explicit workflow graphs and a Responses HTTP gateway, built 
 ```toml
 [dependencies]
 rydantic = "0.7.0-beta.3"
-rydantic-ai = "0.3.0"
+rydantic-ai = "0.4.0"
 ```
 
 `rydantic-ai` has its own version and release lifecycle inside the Rydantic workspace. The core `rydantic` crate does not depend on it. Disable default features for graphs and custom providers without HTTP dependencies.
 
 Declare `rydantic` directly when deriving application models so its derive macro can resolve the model dependency, including renamed dependencies. The requirement above permits compatible published 0.7.0 prereleases.
 
-## pi Codex login and Responses bridge
+## API providers
 
-The included Node bridge uses pi's public `ModelRuntime` SDK for OAuth storage, refresh, model lookup and inference. It forwards native Responses SSE events through `onProviderStreamEvent`; OAuth tokens stay in pi's local credential storage.
+Connect using `BASEURL` and an optional `APIKEY`. `BASEURL` includes the API prefix, such as `https://api.openai.com/v1` or `https://api.anthropic.com/v1`. Choose `MODEL` from the configured endpoint.
 
-From this package's `bridge/` directory (also included in the crate source archive):
+| Protocol | Provider | Appended endpoint | Credential header |
+| --- | --- | --- | --- |
+| Responses | `ResponsesProvider` | `/responses` | `Authorization: Bearer APIKEY` |
+| Chat Completions | `ChatCompletionsProvider` | `/chat/completions` | `Authorization: Bearer APIKEY` |
+| Anthropic Messages | `AnthropicMessagesProvider` | `/messages` | `x-api-key: APIKEY` |
 
-```sh
-npm ci
-npm run login
-npm start
-```
+Each provider supports streamed text, typed client tools, validation correction, `Partial<T>`, `Iterable<T>`, usage accounting, cancellation and deadlines. Messages requests also include `anthropic-version: 2023-06-01`.
 
-Complete the browser authorization yourself. The bridge listens on `127.0.0.1:8787`, rejects browser-origin requests and exposes `GET /health`, `GET /v1/models` and `POST /v1/responses`. It is a local single-user sidecar. Put the authenticated Rust gateway in front of it for network access.
+Use `HttpProvider::from_env(Api::ChatCompletions)?` for protocol selection at runtime, or the named provider constructors for a fixed protocol. Constructors take `(base_url, Option<String>)`; `from_env()` reads `BASEURL` and `APIKEY` for named providers. No login flow or credential storage is part of the SDK.
 
-The gateway executable serves HTTP. For network clients, keep it on loopback or a trusted private interface behind an HTTPS reverse proxy with TLS termination. HTTPS protects bearer keys, prompts and responses in transit; bearer authentication handles client identity. Keep the unauthenticated pi bridge loopback-only. Local processes with access to the sidecar can use the authorized Codex session.
+Responses and Chat Completions request native JSON Schema by default. Messages uses schema instructions and runtime validation by default; supported models and schemas can explicitly enable `Capabilities { native_json_schema: true, output_token_limit: true }` to send `output_config.format`. All three retain Rydantic runtime validation. An endpoint with fewer features can override capabilities explicitly.
 
-TLS termination protects the client-to-proxy connection, not an off-host proxy-to-gateway HTTP connection. Prefer a same-host proxy with the gateway bound to loopback. For an off-host backend, restrict the gateway listener to the proxy and protect that hop with encrypted transport; a private IP alone does not encrypt traffic. Do not expose the plaintext gateway listener directly.
-
-The supported request fields are `model`, `input`, `instructions`, `tools`, `text`, `reasoning`, `tool_choice`, `parallel_tool_calls`, `stream`, `store` and `include`. Requests use `store=false`. Unknown fields fail explicitly. The pi Codex transport has no `max_output_tokens` request parameter; `ResponsesProvider::pi_codex` uses schema instructions plus runtime validation. A native Responses endpoint can use provider JSON Schema and output limits through `ResponsesProvider::new`.
+Requests are sent once with redirects disabled. HTTPS is required for network upstreams; loopback HTTP is supported for local endpoints. Credentials and BASEURL are redacted in Debug and transport errors, and upstream error bodies are omitted. See the [API provider guide](https://rydantic.mintlify.site/integrations/api-providers) for protocol mappings and limits.
 
 ## Typed agents and tools
 
 `Agent<Dependencies, Output>` validates its final `Output: Model + AsyncCheck`. `TypedTool<Dependencies, Arguments, Output, Handler>` derives tool schemas from its argument model, validates arguments before execution, and validates the handler's result. Handlers receive `Arc<Dependencies>` and a cancellation/deadline context.
 
-The provider schema adapter resolves document-root references and gives definitions stable ASCII names. Numeric constraints outside JavaScript's safe integer range are moved into textual descriptions, with every move recorded by `schema::prepare_model_schema::<T>()` in `runtime_constraints`. Full integer bounds remain enforced by Rydantic at runtime. Literal values and field names are preserved. This projection is necessary for pi's JSON transport and Codex tool schema handling.
+The provider schema adapter resolves document-root references and gives definitions stable ASCII names. Numeric constraints outside JavaScript's safe integer range are moved into textual descriptions, with every move recorded by `schema::prepare_model_schema::<T>()` in `runtime_constraints`. Full integer bounds remain enforced by Rydantic at runtime. Literal values and field names are preserved. This projection preserves numeric constraints across JSON-based provider protocols.
 
 Unsafe numeric literals in `const`, `enum`, `default` or `examples` fail preparation explicitly. Tool argument schemas and native structured-output schemas require an object root; instruction-based final outputs can use other model shapes.
 
@@ -49,14 +47,15 @@ use std::sync::Arc;
 struct Answer { answer: String }
 
 # async fn example() -> Result<(), rydantic_ai::Error> {
-let provider = Arc::new(ResponsesProvider::pi_codex("http://127.0.0.1:8787/v1")?);
-let agent = Agent::<(), Answer>::new(provider, "gpt-6-luna");
+let provider = Arc::new(ResponsesProvider::from_env()?);
+let model = std::env::var("MODEL").expect("set MODEL locally");
+let agent = Agent::<(), Answer>::new(provider, model);
 let result = agent.run("What is 19 + 23?", Arc::new(()), RunContext::default()).await?;
 println!("{}", result.output.answer);
 # Ok(()) }
 ```
 
-Run `cargo run -p rydantic-ai --example pi_codex` for a real typed tool-call round trip. Set `RYDANTIC_AI_MODEL` to a model returned by the bridge's `/v1/models` endpoint. Agent limits bound model calls, tool calls, validation retries and observed token usage. Cancellation and the absolute deadline cover model calls, validation and tool handlers. Tools execute sequentially; execution errors stop the run and are never automatically replayed. Handlers own transactional/idempotency behavior for external side effects. Prompt content is not written to tracing spans; operations, tool names and usage are recorded with standard `tracing`.
+Run `cargo run -p rydantic-ai --example provider` for a typed tool-call round trip. Set `BASEURL`, `MODEL`, optional `APIKEY`, and `API` to `responses`, `chat_completions` or `anthropic_messages` (default: `responses`). Agent limits bound model calls, tool calls, validation retries and observed token usage. Cancellation and the absolute deadline cover model calls, validation and tool handlers. Tools execute sequentially; execution errors stop the run and are never automatically replayed. Handlers own transactional/idempotency behavior for external side effects. Prompt content is not written to tracing spans; operations, tool names and usage are recorded with standard `tracing`.
 
 ## Structured output streaming
 
@@ -130,7 +129,7 @@ Return `Transition::Next(key)`, `Transition::End(output)` or `Transition::Pause(
 
 `Gateway` implements ordered model routing and per-client/global admission budgets. A gateway client implements `ModelProvider`, so the same agent can use a direct provider or a gateway. Only explicit HTTP 429/502/503/504 failures permit ordered failover. Transport/protocol failures and partially delivered streams are not replayed.
 
-The `rydantic-ai-gateway` executable exposes authenticated `GET /v1/models` and `POST /v1/responses` endpoints, including SSE. Configure gateway keys and upstream credentials by environment-variable **names** in a JSON config; credential values are excluded from the config file and error responses. See `examples/gateway.json`.
+The `rydantic-ai-gateway` executable exposes authenticated `GET /v1/models` and `POST /v1/responses` endpoints, including SSE. Configure gateway keys and upstream credentials by environment-variable **names** in a JSON config; credential values are excluded from the config file and error responses. See `examples/gateway.json`. Each upstream selects `api`: `responses` (default), `chat_completions` or `anthropic_messages`. The external gateway interface uses Responses. Use `ResponsesProvider::gateway(BASEURL, APIKEY)?` for an HTTP gateway client so opaque native tool-history metadata survives subsequent turns.
 
 ```sh
 cargo run -p rydantic-ai --bin rydantic-ai-gateway -- crates/rydantic-ai/examples/gateway.json
@@ -138,17 +137,17 @@ cargo run -p rydantic-ai --bin rydantic-ai-gateway -- crates/rydantic-ai/example
 
 Set `RYDANTIC_GATEWAY_KEY` to a private random value of at least 16 bytes before starting the example. Each client has an explicit model allowlist. Incoming gateway bearer keys are not forwarded upstream. Disconnecting an SSE consumer cancels the provider request.
 
-Budgets track attempts, observed tokens and optional operator-configured prices in integer micro-USD. Each attempt atomically reserves token/cost capacity against both client and global ledgers before dispatch. Completion reconciles actual usage; failed, aborted or unknown outcomes retain the reservation conservatively. An upstream can exceed the token reservation, producing an overdrawn ledger that blocks later admission. These are admission controls and observed usage accounting, not a provider-side billing ceiling. Dollar limits require pricing on every permitted upstream. Codex subscription usage can use request/token controls without claiming a dollar price. Ledgers are in memory and reset on restart; durable/shared accounting requires an application-provided service in a later deployment.
+Budgets track attempts, observed tokens and optional operator-configured prices in integer micro-USD. Each attempt atomically reserves token/cost capacity against both client and global ledgers before dispatch. Completion reconciles actual usage; failed, aborted or unknown outcomes retain the reservation conservatively. An upstream can exceed the token reservation, producing an overdrawn ledger that blocks later admission. These are admission controls and observed usage accounting, not a provider-side billing ceiling. Dollar limits require pricing on every permitted upstream. Routes without configured prices can use request and token controls. Ledgers are in memory and reset on restart; durable/shared accounting requires an application-provided service in a later deployment.
 
 Client and global policies each use their own reservation size and cost estimate. They are admitted together atomically and reconciled separately, including conservative charges for unknown outcomes.
 
 ## Independent releases
 
-RydanticAI uses tags such as `rydantic-ai-v0.3.0`. Its version is read from this package manifest and is independent of the core workspace version. A maintainer with the repository's GitHub identity and a local Cargo publishing credential can run from a clean repository checkout:
+RydanticAI uses tags such as `rydantic-ai-v0.4.0`. Its version is read from this package manifest and is independent of the core workspace version. A maintainer with the repository's GitHub identity and a local Cargo publishing credential can run from a clean repository checkout:
 
 ```sh
-python3 scripts/release_ai.py preflight --tag rydantic-ai-v0.3.0
-python3 scripts/release_ai.py publish --tag rydantic-ai-v0.3.0
+python3 scripts/release_ai.py preflight --tag rydantic-ai-v0.4.0
+python3 scripts/release_ai.py publish --tag rydantic-ai-v0.4.0
 ```
 
 The release script requires an existing remote tag on tested main history, successful exact-commit main-push CI, an unpublished registry version and a package containing no installed Node dependencies or credential files. It performs one upload attempt and verifies the registry checksum and sparse index, including after an uncertain upload exit status. It publishes only `rydantic-ai`. Use Python 3.11 or newer.
@@ -158,7 +157,6 @@ The release script requires an existing remote tag on tested main history, succe
 ```sh
 cargo test -p rydantic-ai --all-features
 cargo check -p rydantic-ai --no-default-features
-cd crates/rydantic-ai/bridge && npm ci && npm test
 ```
 
-Live provider tests require explicit `RYDANTIC_PI_URL` and are ignored by default. No credentials or live provider traffic are needed for ordinary tests.
+Live Responses tests require explicit `BASEURL` and `MODEL`, with optional `APIKEY`, and are ignored by default. Set `NATIVE_JSON_SCHEMA=false` or `OUTPUT_TOKEN_LIMIT=false` when the configured endpoint requires instruction-based output or lacks a request token limit. Native Chat Completions and Messages tests use HTTP fixtures, including fragmented SSE and tool-history replay. No credentials or live provider traffic are needed for ordinary tests.
