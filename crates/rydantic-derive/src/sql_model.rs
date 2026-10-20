@@ -228,7 +228,9 @@ pub(super) fn expand(input: DeriveInput) -> syn::Result<Tokens> {
                     borrow: false,
                 },
             );
-            reads.push(quote!(#ident:{
+            // field_value emits mixed-site context references. Its enclosing
+            // bindings must share that hygiene and must not shadow callbacks.
+            reads.push(quote_spanned!(Span::mixed_site()=> #ident:{
                 let mut ctx=#rd::Context::new();
                 let value=ctx.at(#location,|__rydantic_ctx|{#value});
                 ctx.finish(value).map_err(|error|#rd::sqlx::Error::Decode(::std::boxed::Box::new(error)))?

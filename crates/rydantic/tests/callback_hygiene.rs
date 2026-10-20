@@ -218,3 +218,36 @@ mod asynchronous {
         );
     }
 }
+
+#[cfg(feature = "sqlite")]
+mod sql_skipped_fields {
+    use super::*;
+    use rydantic::SqlModel;
+
+    fn ctx() -> u32 {
+        1
+    }
+
+    #[derive(Debug, Model, SqlModel)]
+    struct Skipped {
+        #[sql(primary_key)]
+        id: i64,
+        #[sql(skip)]
+        #[model(default_factory = ctx, before = raw, validate = value)]
+        n: u32,
+    }
+
+    #[tokio::test]
+    async fn sql_skip_uses_the_shared_hygienic_default_pipeline() {
+        let db = rydantic::sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        let parsed: Skipped = rydantic::sqlx::query_as("SELECT 7 AS id")
+            .fetch_one(&db)
+            .await
+            .unwrap();
+        assert_eq!((parsed.id, parsed.n), (7, 2));
+    }
+}
