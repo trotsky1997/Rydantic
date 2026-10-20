@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/rydantic", "crates/rydantic-derive", "fixtures/renamed", "fixtures/capnp", "fixtures/auto-capnp"]
+members = ["crates/rydantic", "crates/rydantic-derive", "crates/rydantic-codegen", "fixtures/renamed", "fixtures/capnp", "fixtures/auto-capnp"]
 resolver = "2"
 
 [workspace.package]
