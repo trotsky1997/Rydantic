@@ -1,0 +1,151 @@
+---
+title: "PDF inputs"
+description: "Mix PDFs, images and text with typed prompts and native protocol conversion."
+icon: "file-text"
+---
+
+<Info>
+PDF inputs are available in the development source and are pending the next `rydantic-ai` release. The published 0.6.0 release supports [image inputs](/integrations/images).
+</Info>
+
+Embedded PDF data works across all **nine frontend/upstream combinations** of Responses, Chat Completions and Anthropic Messages, with JSON or SSE output. Select an upstream model that supports PDF processing. Documents can appear alongside images and text in user turns.
+
+## Typed Rust prompts
+
+Use `Pdf::from_bytes` for a byte slice, or `Pdf::base64` for canonical, padded Base64 without a data URL prefix. The SDK encodes and validates attachments without reading files, parsing pages or downloading URLs.
+
+```rust
+use rydantic_ai::{Image, Pdf, Prompt};
+
+let prompt = Prompt::new("Compare the receipt with this screenshot.")
+    .pdf(Pdf::from_bytes("receipt.pdf", &pdf_bytes)?)
+    .text("Screenshot:")
+    .image(Image::from_bytes("image/png", &image_bytes)?)
+    .text("Return the total and explain any differences.");
+
+let result = agent.run(prompt, dependencies, context).await?;
+```
+
+`Agent::run`, `stream_partial`, `stream_iterable` and `ModelRequest::new` accept the same ordered `Prompt`. `Pdf` and `Prompt` Debug output redact PDF names, encoded bytes and URL references.
+
+For a runnable example from the development checkout, configure `BASEURL`, `MODEL`, optional `APIKEY` and `API` (`responses`, `chat_completions` or `anthropic_messages`):
+
+```sh
+cargo run -p rydantic-ai --example pdf -- receipt.pdf
+```
+
+## Native wire formats
+
+Each frontend accepts its protocol's native PDF block. In the examples below, replace `BASE64_PDF_BYTES` with the complete Base64-encoded PDF. The upstream protocol is selected independently by the gateway route.
+
+<Tabs>
+  <Tab title="Responses">
+
+```json
+{
+  "model": "documents",
+  "input": [{
+    "role": "user",
+    "content": [
+      {"type": "input_text", "text": "Extract the invoice total."},
+      {
+        "type": "input_file",
+        "filename": "receipt.pdf",
+        "file_data": "data:application/pdf;base64,BASE64_PDF_BYTES",
+        "detail": "auto"
+      }
+    ]
+  }]
+}
+```
+
+Send to `POST /v1/responses`. `file_data` also accepts raw Base64 PDF data; the adapter normalizes it to an `application/pdf` data URL.
+
+  </Tab>
+  <Tab title="Chat Completions">
+
+```json
+{
+  "model": "documents",
+  "messages": [{
+    "role": "user",
+    "content": [
+      {"type": "text", "text": "Extract the invoice total."},
+      {
+        "type": "file",
+        "file": {
+          "filename": "receipt.pdf",
+          "file_data": "data:application/pdf;base64,BASE64_PDF_BYTES"
+        }
+      }
+    ]
+  }]
+}
+```
+
+Send to `POST /v1/chat/completions`. Raw Base64 is also accepted. Chat Completions requires embedded PDF data for portable routing.
+
+  </Tab>
+  <Tab title="Messages">
+
+```json
+{
+  "model": "documents",
+  "max_tokens": 512,
+  "messages": [{
+    "role": "user",
+    "content": [
+      {
+        "type": "document",
+        "title": "receipt.pdf",
+        "source": {
+          "type": "base64",
+          "media_type": "application/pdf",
+          "data": "BASE64_PDF_BYTES"
+        }
+      },
+      {"type": "text", "text": "Extract the invoice total."}
+    ]
+  }]
+}
+```
+
+Send to `POST /v1/messages`. PDF bytes retain their order alongside text and images. Messages `title` maps to the portable `filename`, and vice versa; omitted names default to `document.pdf`.
+
+  </Tab>
+</Tabs>
+
+## PDF URLs and protocol controls
+
+| Input | Responses | Chat Completions | Messages |
+| --- | --- | --- | --- |
+| Embedded PDF | Supported | Supported | Supported |
+| HTTP(S) PDF URL | Supported | Use embedded data | Supported |
+| Explicit PDF `low` / `high` detail | Supported | Use `auto` | Use `auto` |
+
+`Pdf::url` preserves HTTP(S) URLs and signed query strings. Use `.filename("report.pdf")?` to supply a document name:
+
+```rust
+let pdf = Pdf::url("https://example.com/report.pdf")?
+    .filename("report.pdf")?;
+let prompt = Prompt::new("Summarize this report.").pdf(pdf);
+```
+
+Responses wire input uses `file_url`; Messages uses `source: {"type": "url", "url": "https://example.com/report.pdf"}`. These URL forms convert between Responses and Messages. The SDK and gateway forward references without fetching them. A Chat Completions target rejects a PDF URL before sending an upstream request; supply bytes or Base64 when routes can select that protocol.
+
+`PdfDetail::Auto` works across all three protocols. Responses also supports `PdfDetail::Low` and `PdfDetail::High`, subject to model support. Other protocols reject these explicit controls. Provider file IDs, Messages citations, context and cache controls are outside the portable PDF contract and fail explicitly when supplied.
+
+## Validation, limits and conversation history
+
+- The serialized request is limited to **16 MiB**, including text, tools, images and PDFs.
+- PDF Base64 is limited to **10 MiB per document**, with **16 PDFs across all user turns**. The separate 64-image limit still applies.
+- Inline PDFs require `application/pdf`, canonical Base64 and a `%PDF-x.y` header. The upstream validates the complete document, page limits, encryption and model support.
+- Names are nonempty UTF-8 basenames of at most 255 bytes, with no path separators or control characters. URLs require HTTP(S), a host and no embedded credentials.
+
+PDF bytes, names and part order survive tool continuations and output-validation corrections. Typed `Partial<T>` and `Iterable<T>` output use the same input and validation path. Native assistant reasoning and tool signatures continue to replay only within their originating protocol.
+
+Replay identity includes compact SHA-256 PDF source digests, names, detail and content order. Changing a document cannot recover the previous document's cached assistant history. Large embedded PDFs stay outside the replay cache payload; the existing authenticated-client scoping and 128-entry, 8 MiB, 30-minute bounds apply.
+
+The Rust tests cover all nine JSON/SSE routes, mixed PDF/image/text input, raw and data-URL Base64, native tool continuations, URL routing, detail controls, malformed inputs, and large-document replay. CI runs **89 strict official Python SDK cases**, including 26 PDF cases using loopback fixtures.
+
+See [gateway protocols](/integrations/gateway-protocols) for configuration. Native PDF shapes follow the [OpenAI file-input guide](https://developers.openai.com/api/docs/guides/file-inputs) and [Anthropic PDF guide](https://platform.claude.com/docs/en/build-with-claude/pdf-support).

@@ -1,9 +1,23 @@
 ---
 title: "RydanticAI"
 description: "Build typed agents, resumable graphs and a three-protocol gateway with the independent rydantic-ai crate."
+icon: "bot"
 ---
 
 `rydantic-ai` lives in the same workspace with its own `0.6.0` version and publishing lifecycle. The core Rydantic model crate remains independent of AI transport dependencies.
+
+<div className="rd-guide-map" aria-label="Typed agent workflow"><span>Prompt & tools</span><span aria-hidden="true">→</span><span>Agent</span><span aria-hidden="true">→</span><span>Validated Rust output</span></div>
+
+<CardGroup cols={2}>
+  <Card title="Build your first agent" icon="graduation-cap" href="/tutorials/typed-agent">Learn typed output and bounded correction with a runnable offline project.</Card>
+  <Card title="Run AI examples" icon="code" href="/examples/agents">Try streaming, graph checkpoints and live providers.</Card>
+  <Card title="Connect a model" icon="plug" href="/integrations/api-providers">Choose Responses, Chat Completions or Messages.</Card>
+  <Card title="Stream typed output" icon="braces" href="/integrations/structured-output">Work with Partial and Iterable results.</Card>
+  <Card title="Add images and PDFs" icon="image" href="/integrations/images">Build ordered multimodal prompts.</Card>
+  <Card title="Route through a gateway" icon="network" href="/integrations/gateway-protocols">Translate protocols and apply per-client budgets.</Card>
+</CardGroup>
+
+## Install RydanticAI
 
 ```toml
 [dependencies]
@@ -16,6 +30,8 @@ rydantic-ai = "0.6.0"
 Configure `BASEURL`, `MODEL` and optional `APIKEY`. Select `ResponsesProvider`, `ChatCompletionsProvider` or `AnthropicMessagesProvider`, or use `HttpProvider::from_env(Api::ChatCompletions)` to select a protocol at runtime. Each provider integrates with the same Agent, typed tools and structured output streams.
 
 `BASEURL` includes the API prefix, such as `https://api.openai.com/v1` or `https://api.anthropic.com/v1`. The provider appends `/responses`, `/chat/completions` or `/messages`. See [API providers](/integrations/api-providers) for authentication, capability selection, native history and protocol limits.
+
+Use ordered [`Prompt` image inputs](/integrations/images) with all three providers. The development source also adds [`Pdf` document inputs](/integrations/pdf), including embedded PDF conversion across every protocol combination.
 
 ## Return a validated Rust type
 
@@ -41,7 +57,7 @@ Responses and Chat Completions request native JSON Schema by default. Messages u
 
 ## Structured output streams
 
-RydanticAI 0.6.0 adds `Agent::stream_partial()` and `Agent::stream_iterable()`. `Partial<T>` emits provisional JSON field snapshots and returns a fully validated final `T`. `Iterable<T>` validates complete elements before emission and can collect the accepted attempt into `Vec<T>`, with no `Clone` requirement. Both modes preserve validation correction, tool execution, usage, cancellation and bounded backpressure. See the [structured output guide](/integrations/structured-output).
+Use `Agent::stream_partial()` and `Agent::stream_iterable()` for structured output. `Partial<T>` emits provisional JSON field snapshots and returns a fully validated final `T`. `Iterable<T>` validates complete elements before emission and can collect the accepted attempt into `Vec<T>`, with no `Clone` requirement. Both modes preserve validation correction, tool execution, usage, cancellation and bounded backpressure. See the [structured output guide](/integrations/structured-output).
 
 ## Tools and execution limits
 

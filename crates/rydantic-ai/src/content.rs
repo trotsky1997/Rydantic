@@ -1,6 +1,8 @@
-//! Ordered image/text input shared by agents, HTTP adapters and the gateway.
+//! Ordered text, image and PDF input shared by agents, adapters and the gateway.
+mod pdf;
 use crate::{Error, Result};
 use base64::{engine::general_purpose::STANDARD, Engine};
+pub use pdf::{Pdf, PdfDetail};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 #[cfg(feature = "http")]
@@ -10,6 +12,7 @@ use std::fmt;
 pub(crate) const MAX_REQUEST_BYTES: usize = 16 * 1024 * 1024;
 const MAX_IMAGE_BYTES: usize = 10 * 1024 * 1024;
 const MAX_IMAGES: usize = 64;
+const MAX_PDFS: usize = 16;
 
 /// Image preprocessing for Responses and Chat Completions. Use `Auto` for
 /// portable routing to Messages, which has its own image preprocessing.
@@ -45,7 +48,26 @@ impl fmt::Debug for Image {
     }
 }
 fn invalid() -> Error {
-    Error::Configuration("invalid or unsupported image/text input".into())
+    Error::Configuration("invalid or unsupported text, image or PDF input".into())
+}
+fn http_url(url: String) -> Result<String> {
+    if url.len() > 16 * 1024
+        || url.chars().any(|c| c.is_whitespace() || c.is_control())
+        || !url.split_once("://").is_some_and(|(scheme, _)| {
+            scheme.eq_ignore_ascii_case("https") || scheme.eq_ignore_ascii_case("http")
+        })
+    {
+        return Err(invalid());
+    }
+    let parsed = url::Url::parse(&url).map_err(|_| invalid())?;
+    if !matches!(parsed.scheme(), "http" | "https")
+        || parsed.host_str().is_none()
+        || !parsed.username().is_empty()
+        || parsed.password().is_some()
+    {
+        return Err(invalid());
+    }
+    Ok(url)
 }
 fn media_type(value: &str) -> Result<()> {
     if matches!(
@@ -73,28 +95,8 @@ impl Image {
     /// Reference an HTTP(S) image. The library forwards the reference without
     /// downloading it. Signed URL query strings are preserved.
     pub fn url(url: impl Into<String>) -> Result<Self> {
-        let url = url.into();
-        if url.len() > 16 * 1024
-            || url.chars().any(char::is_whitespace)
-            || url.chars().any(char::is_control)
-        {
-            return Err(invalid());
-        }
-        if !url.split_once("://").is_some_and(|(scheme, _)| {
-            scheme.eq_ignore_ascii_case("https") || scheme.eq_ignore_ascii_case("http")
-        }) {
-            return Err(invalid());
-        }
-        let parsed = url::Url::parse(&url).map_err(|_| invalid())?;
-        if !matches!(parsed.scheme(), "http" | "https")
-            || parsed.host_str().is_none()
-            || !parsed.username().is_empty()
-            || parsed.password().is_some()
-        {
-            return Err(invalid());
-        }
         Ok(Self {
-            url,
+            url: http_url(url.into())?,
             detail: ImageDetail::Auto,
         })
     }
@@ -159,8 +161,9 @@ impl Image {
 enum Part {
     Text(String),
     Image(Image),
+    Pdf(Pdf),
 }
-/// A user prompt with ordered text and images. String prompts convert directly.
+/// A user prompt with ordered text, images and PDFs. Strings convert directly.
 #[derive(Debug, Clone, Default)]
 pub struct Prompt {
     parts: Vec<Part>,
@@ -182,6 +185,10 @@ impl Prompt {
         self.parts.push(Part::Image(image));
         self
     }
+    pub fn pdf(mut self, pdf: Pdf) -> Self {
+        self.parts.push(Part::Pdf(pdf));
+        self
+    }
     pub(crate) fn responses(&self) -> Value {
         match self.parts.as_slice() {
             [] => json!(""),
@@ -192,6 +199,7 @@ impl Prompt {
                     .map(|part| match part {
                         Part::Text(text) => json!({"type":"input_text","text":text}),
                         Part::Image(image) => image.responses(),
+                        Part::Pdf(pdf) => pdf.responses(),
                     })
                     .collect(),
             ),
@@ -201,6 +209,12 @@ impl Prompt {
         self.parts
             .iter()
             .filter(|part| matches!(part, Part::Image(_)))
+            .count()
+    }
+    fn pdfs(&self) -> usize {
+        self.parts
+            .iter()
+            .filter(|part| matches!(part, Part::Pdf(_)))
             .count()
     }
 }
@@ -256,6 +270,17 @@ pub(crate) fn decode(value: &Value, format: Format) -> Result<Prompt> {
                 image.detail = detail(block.get("detail"))?;
                 prompt = prompt.image(image);
             }
+            (Format::Responses, "input_file") => {
+                prompt = prompt.pdf(Pdf::decode_responses(block)?);
+            }
+            #[cfg(feature = "http")]
+            (Format::Chat, "file") => {
+                prompt = prompt.pdf(Pdf::decode_chat(block)?);
+            }
+            #[cfg(feature = "http")]
+            (Format::Messages, "document") => {
+                prompt = prompt.pdf(Pdf::decode_messages(block)?);
+            }
             #[cfg(feature = "http")]
             (Format::Chat, "image_url") => {
                 fields(block, &["type", "image_url"])?;
@@ -285,7 +310,7 @@ pub(crate) fn decode(value: &Value, format: Format) -> Result<Prompt> {
             _ => return Err(invalid()),
         }
     }
-    if prompt.images() > MAX_IMAGES {
+    if prompt.images() > MAX_IMAGES || prompt.pdfs() > MAX_PDFS {
         return Err(invalid());
     }
     Ok(prompt)
@@ -298,15 +323,18 @@ fn detail(value: Option<&Value>) -> Result<ImageDetail> {
 }
 pub(crate) fn validate_input(input: &[Value]) -> Result<()> {
     let mut count = 0usize;
+    let mut pdfs = 0usize;
     for item in input.iter().filter(|item| item["role"] == "user") {
-        count += decode(&item["content"], Format::Responses)?.images();
-        if count > MAX_IMAGES {
+        let prompt = decode(&item["content"], Format::Responses)?;
+        count += prompt.images();
+        pdfs += prompt.pdfs();
+        if count > MAX_IMAGES || pdfs > MAX_PDFS {
             return Err(invalid());
         }
     }
     Ok(())
 }
-/// Compact image identity keeps large prompts inside the replay cache budget.
+/// Compact attachment identity keeps large prompts inside the replay cache budget.
 #[cfg(feature = "http")]
 pub(crate) fn fingerprint(value: &Value) -> Value {
     let Ok(prompt) = decode(value, Format::Responses) else {
@@ -315,12 +343,17 @@ pub(crate) fn fingerprint(value: &Value) -> Value {
     Value::Array(prompt.parts.iter().map(|part| match part {
         Part::Text(text) => json!({"type":"input_text","text":text}),
         Part::Image(image) => json!({"type":"input_image","sha256":format!("{:x}", Sha256::digest(image.url.as_bytes())),"detail":image.detail}),
+        Part::Pdf(pdf) => pdf.fingerprint(),
     }).collect())
 }
 #[cfg(feature = "http")]
 pub(crate) fn chat(value: &Value) -> Result<Value> {
     let prompt = decode(value, Format::Responses)?;
-    if prompt.images() == 0 {
+    if prompt
+        .parts
+        .iter()
+        .all(|part| matches!(part, Part::Text(_)))
+    {
         return Ok(prompt.responses());
     }
     Ok(Value::Array(
@@ -328,12 +361,13 @@ pub(crate) fn chat(value: &Value) -> Result<Value> {
             .parts
             .iter()
             .map(|part| match part {
-                Part::Text(text) => json!({"type":"text","text":text}),
-                Part::Image(image) => {
-                    json!({"type":"image_url","image_url":{"url":image.url,"detail":image.detail}})
-                }
+                Part::Text(text) => Ok(json!({"type":"text","text":text})),
+                Part::Image(image) => Ok(
+                    json!({"type":"image_url","image_url":{"url":image.url,"detail":image.detail}}),
+                ),
+                Part::Pdf(pdf) => pdf.chat(),
             })
-            .collect(),
+            .collect::<Result<_>>()?,
     ))
 }
 #[cfg(feature = "http")]
@@ -344,6 +378,7 @@ pub(crate) fn messages(value: &Value) -> Result<Vec<Value>> {
         .map(|part| match part {
             Part::Text(text) => Ok(json!({"type":"text","text":text})),
             Part::Image(image) => image.messages(),
+            Part::Pdf(pdf) => pdf.messages(),
         })
         .collect()
 }

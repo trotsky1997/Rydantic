@@ -1,0 +1,96 @@
+---
+title: "Stream structured results"
+description: "Display partial JSON previews and collect validated list items with explicit attempt boundaries."
+icon: "waves"
+---
+
+import StructuredStream from "/snippets/examples/structured-stream.mdx";
+
+Extend the [typed-agent tutorial](/tutorials/typed-agent) with two output modes: one for an incomplete object preview and one for a sequence of validated objects. This tutorial uses the checked-in offline provider so it runs without API credentials.
+
+<div className="rd-guide-map" aria-label="Streaming tutorial details"><span>15 minutes</span><span>Partial&lt;T&gt;</span><span>Iterable&lt;T&gt;</span></div>
+
+## 1. Run the complete example
+
+From the [source checkout](/tutorials/overview):
+
+```sh
+cargo run --locked -p rydantic-ai --no-default-features --example structured
+```
+
+The program first streams one person in two text fragments. It then collects a list of two people. Alongside the preview messages, expect:
+
+```text
+Accepted: Ada (36)
+Person: Ada (36)
+Person: Grace (40)
+Observed tokens: 15
+```
+
+<Accordion title="Complete runnable streaming example">
+  <StructuredStream />
+</Accordion>
+
+## 2. Display an object preview
+
+`stream_partial` starts a bounded background task and returns an output-event receiver. `Delta` events contain the current partial JSON snapshot. Fields can be missing until more input arrives.
+
+```rust
+let mut stream = agent.stream_partial(
+    "Extract one person", Arc::new(()), RunContext::default(),
+)?;
+while let Some(event) = stream.recv().await {
+    match event? {
+        OutputEvent::Delta { value, .. } => println!("Preview: {}", value.value),
+        OutputEvent::Reset { .. } => println!("Clear the previous preview"),
+        OutputEvent::Complete(result) => {
+            println!("Accepted: {}", result.output.name);
+        }
+        OutputEvent::Started { .. } => {}
+    }
+}
+```
+
+Use previews to update a loading UI. Apply actions that require a valid `Person` after `Complete`: only that event contains the accepted, fully validated result. Propagate terminal errors rather than keeping an old preview as a result.
+
+## 3. Collect a validated list
+
+`stream_iterable` expects an object containing an `items` array. In the complete source, the demo provider produces this envelope:
+
+```json
+{"items":[{"name":"Ada","age":36},{"name":"Grace","age":40}]}
+```
+
+```rust
+let result = agent.stream_iterable(
+    "Extract all people", Arc::new(()), RunContext::default(),
+)?.collect().await?;
+let people: Vec<Person> = result.output;
+```
+
+The accepted output is a `Vec<Person>`. To render each item as it arrives, consume `OutputEvent::Delta` and read `value.index` and `value.value` instead. Each item has passed its model's validation, while the attempt still awaits final envelope validation.
+
+## 4. Handle attempts and cancellation
+
+| Event or outcome | UI behavior |
+| --- | --- |
+| `Started` | Begin a model-call attempt |
+| `Delta` | Replace the partial preview or append an indexed list item |
+| `Reset` | Clear the previous attempt's preview or items |
+| `Complete` | Accept the final validated output |
+| Terminal error | End the loading state and discard the unfinished attempt |
+
+Validation correction and tool continuation can reset an attempt. `collect()` automatically clears reset attempts and returns the accepted result. Call it on a fresh stream before manually consuming events; consumed items cannot be recovered.
+
+Dropping a stream cancels its background task. You can also call `stream.cancel()`. Use `RunContext::with_timeout` when the entire operation has a deadline.
+
+## Try a change
+
+Change Grace's age to `17` in the demo response. The list cannot complete successfully because the `Person` model requires `age >= 18`. Observe the reset/error behavior, then restore `40` and run it again.
+
+For a live provider, keep the same consumer and replace the demo provider with an HTTP provider from [the previous tutorial](/tutorials/typed-agent). The [streaming reference](/integrations/structured-output) covers backpressure, resource limits and normalized provider events.
+
+<CardGroup cols={2}>
+  <Card title="Browse runnable examples" icon="code" href="/examples/overview">Choose a focused recipe for the next integration.</Card>
+  <Card title="Add images and PDFs" icon="image" href="/examples/agents">Build multimodal prompts with typed results.</Card>
+</CardGroup>

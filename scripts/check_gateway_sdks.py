@@ -1,5 +1,5 @@
 """Verify gateway wire formats with official SDKs and loopback-only fixtures."""
-import json, threading, subprocess, os, time, tempfile
+import base64, json, threading, subprocess, os, time, tempfile
 from pathlib import Path
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 import openai, anthropic
@@ -79,6 +79,39 @@ def image_content(api, kind):
         text_type = 'text'
     return [{'type': text_type, 'text': 'SDK image before'}, image, {'type': text_type, 'text': 'SDK image after'}]
 
+PDF = base64.b64encode((ROOT / 'crates/rydantic-ai/tests/data/receipt.pdf').read_bytes()).decode('ascii')
+PDF_URL = 'https://example.com/receipt.pdf?signature=opaque-test-reference'
+
+def pdf_content(api, kind):
+    if api == 'responses':
+        pdf = {'type': 'input_file', 'filename': 'receipt.pdf', 'detail': 'auto'}
+        pdf['file_url' if kind == 'url' else 'file_data'] = PDF_URL if kind == 'url' else 'data:application/pdf;base64,' + PDF
+        text_type = 'input_text'
+    elif api == 'chat_completions':
+        assert kind == 'base64'
+        pdf = {'type': 'file', 'file': {'filename': 'receipt.pdf', 'file_data': 'data:application/pdf;base64,' + PDF}}
+        text_type = 'text'
+    else:
+        source = {'type': 'url', 'url': PDF_URL} if kind == 'url' else {'type': 'base64', 'media_type': 'application/pdf', 'data': PDF}
+        pdf = {'type': 'document', 'title': 'receipt.pdf', 'source': source}
+        text_type = 'text'
+    return [{'type': text_type, 'text': 'SDK PDF before'}, pdf, {'type': text_type, 'text': 'SDK PDF after'}]
+
+def complete_content(oa, an, front, source, parts, streaming):
+    if front == 'responses':
+        if streaming:
+            with oa.responses.stream(model=source, input=[{'role': 'user', 'content': parts}]) as stream:
+                list(stream)
+                return stream.get_final_response().output_text
+        return oa.responses.create(model=source, input=[{'role': 'user', 'content': parts}]).output_text
+    if front == 'chat_completions':
+        response = oa.chat.completions.create(model=source, messages=[{'role': 'user', 'content': parts}], stream=streaming)
+        return ''.join(c.choices[0].delta.content or '' for c in response if c.choices) if streaming else response.choices[0].message.content
+    if streaming:
+        with an.messages.stream(model=source, max_tokens=256, messages=[{'role': 'user', 'content': parts}]) as stream:
+            return ''.join(stream.text_stream)
+    return an.messages.create(model=source, max_tokens=256, messages=[{'role': 'user', 'content': parts}]).content[0].text
+
 def main():
     with tempfile.TemporaryDirectory(prefix='rydantic-gateway-sdk-') as directory:
         WORK = Path(directory)
@@ -90,7 +123,9 @@ def main():
         path = WORK / 'gateway-sdk-smoke-config.json'
         path.write_text(json.dumps(config))
         env = dict(os.environ, SDK_UPSTREAM_KEY='fixture-upstream-key', SDK_GATEWAY_KEY='fixture-gateway-key-12345')
-        p = subprocess.Popen([str(ROOT / 'target/debug/rydantic-ai-gateway'), str(path)], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        metadata = json.loads(subprocess.check_output(['cargo', 'metadata', '--format-version', '1', '--no-deps', '--locked'], cwd=ROOT))
+        binary = Path(metadata['target_directory']) / 'debug' / ('rydantic-ai-gateway.exe' if os.name == 'nt' else 'rydantic-ai-gateway')
+        p = subprocess.Popen([str(binary), str(path)], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         checks = []
         try:
             line = p.stdout.readline().strip()
@@ -143,33 +178,21 @@ def main():
                 call = next((i for i in r.content if i.type == 'tool_use'))
                 assert call.input == {'a': 19, 'b': 23}
                 checks.append(['anthropic_messages', source, 'tool-stream'])
-                for kind in ['url', 'base64']:
+                for media, content_fn, kind in [('image', image_content, 'url'), ('image', image_content, 'base64'), ('pdf', pdf_content, 'base64'), ('pdf', pdf_content, 'url')]:
                     for streaming in [False, True]:
                         for front in apis:
+                            if media == 'pdf' and kind == 'url' and 'chat_completions' in [front, source]:
+                                continue
                             before = len(SEEN)
-                            parts = image_content(front, kind)
-                            if front == 'responses':
-                                if streaming:
-                                    with oa.responses.stream(model=source, input=[{'role': 'user', 'content': parts}]) as stream:
-                                        list(stream)
-                                        text = stream.get_final_response().output_text
-                                else:
-                                    text = oa.responses.create(model=source, input=[{'role': 'user', 'content': parts}]).output_text
-                            elif front == 'chat_completions':
-                                response = oa.chat.completions.create(model=source, messages=[{'role': 'user', 'content': parts}], stream=streaming)
-                                text = ''.join(c.choices[0].delta.content or '' for c in response if c.choices) if streaming else response.choices[0].message.content
-                            elif streaming:
-                                with an.messages.stream(model=source, max_tokens=256, messages=[{'role': 'user', 'content': parts}]) as stream:
-                                    text = ''.join(stream.text_stream)
-                            else:
-                                text = an.messages.create(model=source, max_tokens=256, messages=[{'role': 'user', 'content': parts}]).content[0].text
+                            parts = content_fn(front, kind)
+                            text = complete_content(oa, an, front, source, parts, streaming)
                             assert text == 'SDK hello'
                             assert len(SEEN) == before + 1
                             upstream_api, request = SEEN[-1]
                             history = request['input'] if source == 'responses' else request['messages']
                             forwarded = next(m['content'] for m in history if m.get('role') == 'user')
-                            assert upstream_api == source and forwarded == image_content(source, kind)
-                            checks.append([front, source, 'image-' + kind + ('-sse' if streaming else '-json')])
+                            assert upstream_api == source and forwarded == content_fn(source, kind)
+                            checks.append([front, source, media + '-' + kind + ('-sse' if streaming else '-json')])
             receipt = {'openai_sdk': openai.__version__, 'anthropic_sdk': anthropic.__version__, 'strict_response_validation': True, 'passed_cases': len(checks), 'cases': checks, 'real_model_traffic': False}
             print(json.dumps(receipt))
         finally:

@@ -1,6 +1,7 @@
 ---
 title: "API providers"
 description: "Connect Responses, Chat Completions and Anthropic Messages with BASEURL and APIKEY."
+icon: "plug-zap"
 ---
 
 RydanticAI 0.6.0 supports three upstream protocols. They share typed Agent output, client tools, validation correction, [Partial and Iterable streams](/integrations/structured-output), token usage, deadlines and cancellation.
@@ -69,11 +70,13 @@ Native schema support depends on the selected model and its accepted schema subs
 
 The shared `ModelRequest` uses Responses-shaped text, images and function-tool history. Chat Completions and Messages adapters convert that history to their native request shapes. All three support ordered user text/image parts, HTTP(S) image URLs and Base64 images. Use [`Prompt` and `Image`](/integrations/images) with Agents and structured streams. Unsupported media and Responses-specific reasoning request settings fail before dispatch.
 
+The development source also supports [`Pdf` and `Prompt::pdf()`](/integrations/pdf). Embedded PDF data converts across all three protocols. Responses and Messages accept PDF URLs; Chat Completions requires embedded data. Explicit PDF detail controls are supported only by Responses. PDF file IDs and provider-specific document controls fail explicitly.
+
 ## Native tools and history
 
 Chat Completions aggregates indexed tool-call deltas and replays assistant `tool_calls` with the corresponding `tool` results. Messages aggregates `input_json_delta`, replays complete assistant content blocks, and groups `tool_result` blocks in the following user message. Thinking signatures and redacted content survive same-protocol tool continuations. Native metadata is retained in the normalized response and history.
 
-Cross-protocol history conversion carries text and function calls. Opaque reasoning content belongs to its originating protocol and is replayed only by that protocol. Direct Responses requests strip the internal replay extension before sending to standard upstreams.
+Cross-protocol history conversion carries user text, images, PDFs and function calls. Opaque reasoning content belongs to its originating protocol and is replayed only by that protocol. Direct Responses requests strip the internal replay extension before sending to standard upstreams.
 
 ## Streaming and usage
 

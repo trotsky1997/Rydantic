@@ -1,0 +1,95 @@
+---
+title: "Agents and streaming"
+description: "Run offline agents and graphs, then connect live APIs, typed tools, images and PDFs."
+icon: "bot"
+---
+
+Start with the offline examples from the [source checkout](/examples/overview). They use no API credentials or external model service.
+
+## Validate and correct a result
+
+**Source:** `crates/rydantic-ai/examples/typed_agent.rs`
+
+```sh
+cargo run --locked -p rydantic-ai --no-default-features --example typed_agent
+```
+
+Returns a typed support decision after one intentionally invalid response. Expect `model_calls=2 total_tokens=30`; those token counts are demonstration data. The [typed-agent tutorial](/tutorials/typed-agent) explains the provider, schema and retry limits.
+
+## Stream partial objects and lists
+
+**Source:** `crates/rydantic-ai/examples/structured.rs`
+
+```sh
+cargo run --locked -p rydantic-ai --no-default-features --example structured
+```
+
+Prints partial previews, one accepted person and two list items. The [streaming tutorial](/tutorials/streaming-ai) explains attempt resets and final acceptance.
+
+## Pause and resume a graph
+
+**Source:** `crates/rydantic-ai/examples/graph.rs`
+
+```sh
+cargo run --locked -p rydantic-ai --no-default-features --example graph
+```
+
+Pauses after incrementing a value, serializes a checkpoint, restores it and finishes the graph. Expect `output=42, steps=2`.
+
+## Call an API with a typed tool
+
+**Source:** `crates/rydantic-ai/examples/provider.rs`
+
+Configure `BASEURL`, `MODEL` and optional `APIKEY` in your environment. Select the API protocol:
+
+<CodeGroup>
+```sh Responses
+API=responses cargo run --locked -p rydantic-ai --example provider
+```
+
+```sh Chat Completions
+API=chat_completions cargo run --locked -p rydantic-ai --example provider
+```
+
+```sh Messages
+API=anthropic_messages cargo run --locked -p rydantic-ai --example provider
+```
+</CodeGroup>
+
+The agent exposes a typed `add` tool and asks the model to compute `19 + 23`. The final output is validated, and the program prints call and usage counters. Live output depends on the configured model and its tool capabilities. See [API providers](/integrations/api-providers).
+
+## Describe an image
+
+**Source:** `crates/rydantic-ai/examples/vision.rs`
+
+With a configured image-capable model and a local image:
+
+```sh
+API=responses cargo run --locked -p rydantic-ai --example vision -- ./sample.png image/png
+```
+
+Prints a validated textual description. `API=chat_completions` and `API=anthropic_messages` use the other supported protocols. See [image inputs](/integrations/images) for media types and limits.
+
+## Summarize a PDF
+
+**Source:** `crates/rydantic-ai/examples/pdf.rs`
+
+With a configured document-capable model and a local PDF:
+
+```sh
+API=responses cargo run --locked -p rydantic-ai --example pdf -- ./report.pdf
+```
+
+Embeds the file and prints a validated summary. All three protocols support embedded PDF inputs in the development source. This example accompanies the [PDF development guide](/integrations/pdf); it is not included in the published RydanticAI 0.6.0 release.
+
+## Ask TypeSafe Jev typed questions
+
+**Source:** `crates/rydantic-ai/examples/jev.rs`
+
+Set both `TYPESAFE_BASEURL` and `TYPESAFE_APIKEY` locally, then run:
+
+```sh
+cargo run --locked -p rydantic-ai --example jev
+```
+
+Combines Noul, Choice and Score questions for a support ticket, validates the decision and prints the response. Read the [Jev SDK guide](/integrations/jev) for question semantics and result types.

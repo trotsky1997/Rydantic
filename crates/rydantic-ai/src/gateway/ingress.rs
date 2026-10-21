@@ -355,7 +355,7 @@ fn messages(wire: Messages) -> Result<Decoded> {
                     fields(block, &["type", "text"])?;
                     block["text"].as_str().ok_or_else(bad)?;
                 }
-                "image" if role == "user" => {
+                "image" | "document" if role == "user" => {
                     content::decode(&json!([block]), content::Format::Messages)?;
                 }
                 "thinking" if role == "assistant" => {
@@ -382,7 +382,7 @@ fn messages(wire: Messages) -> Result<Decoded> {
                 let mut user = Vec::new();
                 let mut saw_content = false;
                 for block in blocks {
-                    if matches!(block["type"].as_str(), Some("text" | "image")) {
+                    if matches!(block["type"].as_str(), Some("text" | "image" | "document")) {
                         saw_content = true;
                         user.push(block.clone());
                     } else {

@@ -4,15 +4,23 @@ description: "Validated JSON requests and responses for asynchronous Rust APIs."
 icon: "globe"
 ---
 
+Turn a JSON request into a validated Rust model before it reaches your handler. The same model validates the response on the way out.
+
+<div className="rd-guide-map" aria-label="HTTP validation flow"><span>JSON request</span><span aria-hidden="true">→</span><span>Model validation</span><span aria-hidden="true">→</span><span>Typed handler</span></div>
+
+## Install the integration
+
 Enable the `axum` feature to use Axum 0.8 adapters:
 
-```toml
+```toml Cargo.toml
 [dependencies]
 rydantic = { version = "=0.7.0", features = ["axum"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "net"] }
 ```
 
-```rust
+## Create a validated endpoint
+
+```rust src/main.rs
 use rydantic::{Model, axum::{Json, Router, routing::post}};
 
 #[derive(Model)]
@@ -38,6 +46,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 `rydantic::axum::Json<T>` reads raw JSON and applies model normalization and validation. It also supports collections such as `Json<Vec<User>>`. Responses revalidate the model, apply output aliases and exclusions, and set `Content-Type: application/json`. The complete Axum API is re-exported through `rydantic::axum::framework`; `Router` and `routing` are also available directly.
 
+## Handle validation errors
+
 | Failure | HTTP status |
 | --- | --- |
 | Invalid JSON syntax | 400 |
@@ -47,6 +57,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 | Invalid model returned by a handler | 500 |
 
 Error bodies use `{"detail": [ValidationError, ...]}` and preserve field paths, codes, stages, and constraint parameters. Axum's `DefaultBodyLimit` applies, and `application/*+json` content types are supported.
+
+## Use asynchronous validators
 
 For asynchronous validators, extract `AsyncJson<T>` and await output validation explicitly:
 
@@ -61,3 +73,12 @@ async fn create_account(
 ```
 
 Here `Account` is a model with asynchronous validators, as shown in the [asynchronous validation guide](/models/async). Tokio provides the asynchronous runtime; Axum supplies the HTTP routing and extraction layer.
+
+## Keep building
+
+<CardGroup cols={2}>
+  <Card title="Build a CRUD API" icon="graduation-cap" href="/tutorials/http-api">Follow a complete SQLite project with requests and expected responses.</Card>
+  <Card title="Run service examples" icon="code" href="/examples/services">Try the same model with three SQL backends.</Card>
+  <Card title="Add a database" icon="database" href="/integrations/http-database">Connect this endpoint to validated SQL models.</Card>
+  <Card title="Write async validators" icon="workflow" href="/models/async">Check application rules at asynchronous boundaries.</Card>
+</CardGroup>
