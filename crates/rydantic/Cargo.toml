@@ -19,6 +19,7 @@ default = ["derive"]
 derive = ["dep:rydantic-derive"]
 partial-json = ["dep:jiter"]
 settings = []
+openapi = []
 dynamic = ["dep:jsonschema"]
 chrono = ["dep:chrono"]
 decimal = ["dep:rust_decimal"]
@@ -80,3 +81,7 @@ required-features = ["derive", "axum", "sqlx"]
 [[example]]
 name = "automatic_migrations"
 required-features = ["derive", "sqlite"]
+
+[[example]]
+name = "openapi_components"
+required-features = ["derive", "openapi"]

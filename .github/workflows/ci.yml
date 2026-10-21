@@ -99,6 +99,8 @@ jobs:
         run: cargo check -p rydantic --no-default-features --lib --locked
       - name: Check AI agents and graphs without HTTP dependencies
         run: cargo test -p rydantic-ai --no-default-features --locked
+      - name: Check OpenAPI components without derive
+        run: cargo check -p rydantic --no-default-features --features openapi --lib --locked
       - name: Check settings without derive
         run: cargo check -p rydantic --no-default-features --features settings --lib --locked
       - name: Check optional runtime features without derive
@@ -130,6 +132,7 @@ jobs:
         run: cargo doc --workspace --all-features --no-deps --locked
       - name: Run tutorial examples without model credentials
         run: |
+          cargo run --locked --quiet -p rydantic --example openapi_components --features openapi
           cargo run --locked --quiet -p rydantic --example data_contract
           cargo run --locked --quiet -p rydantic-ai --no-default-features --example typed_agent
           cargo run --locked --quiet -p rydantic-ai --no-default-features --example structured
