@@ -4,16 +4,26 @@ description: "Install the crate and parse, validate and serialize your first Rus
 icon: "rocket"
 ---
 
-Add the crates.io dependency to your Cargo.toml:
+Parse a JSON document, normalize its fields and return a validated Rust value. This is the starting point for every integration.
 
-This guide targets 0.7.0. See the [release notes](/reference/releases) for the breaking upgrade from 0.6.0 and publication details. For older 0.6.0 deployments, use the [tagged guide](https://github.com/trotsky1997/Rydantic/tree/v0.6.0).
+<div className="rd-guide-map" aria-label="Model workflow"><span>Define</span><span aria-hidden="true">→</span><span>Parse & validate</span><span aria-hidden="true">→</span><span>Serialize</span></div>
 
-```toml
+## Choose your version
+
+<Note>
+These examples target **Rydantic 0.7.0 stable**. Review the [release notes](/reference/releases) for the breaking explicit-derive contract when upgrading from 0.6.0. For older deployments, use the [0.6.0 tagged guide](https://github.com/trotsky1997/Rydantic/tree/v0.6.0).
+</Note>
+
+## Add the dependency
+
+```toml Cargo.toml
 [dependencies]
 rydantic = "=0.7.0"
 ```
 
-```rust
+## Define your first model
+
+```rust src/main.rs
 use rydantic::{Model, SchemaMode};
 
 #[derive(Debug, Model)]
@@ -52,6 +62,10 @@ fn main() -> Result<(), rydantic::ValidationErrors> {
 
 `Model` also generates Serde's `Serialize` and `Deserialize` implementations. Derive `Model` once per model. Deserialization runs full validation, and serialization revalidates the current object.
 
+## Run an example
+
+From the source checkout, run the model or tool-call examples:
+
 ```sh
 cargo run -p rydantic --example user
 cargo run -p rydantic --example tool_call
@@ -63,5 +77,7 @@ cargo run -p rydantic --example tool_call -- '{"kind":"ping"}'
 
 <CardGroup cols={2}>
 <Card title="Validation rules" icon="check" href="/models/validation">Explore constraints, defaults and normalization.</Card>
-<Card title="Optional integrations" icon="puzzle-piece" href="/reference/features">Enable HTTP, SQL, Cap’n Proto and other features.</Card>
+<Card title="Follow the tutorials" icon="graduation-cap" href="/tutorials/overview">Build a model, CRUD API and typed AI agent step by step.</Card>
+<Card title="Run an example" icon="code" href="/examples/overview">Find feature flags, complete programs and expected output.</Card>
+<Card title="Optional integrations" icon="puzzle" href="/reference/features">Enable HTTP, SQL, Cap’n Proto and other features.</Card>
 </CardGroup>

@@ -59,6 +59,20 @@ Run `cargo run -p rydantic-ai --example provider` for a typed tool-call round tr
 
 Synchronous validators cannot be interrupted within a poll. Ordinary runs and partial streams recheck cancellation and the deadline after successful final validation, rejecting a late result instead of accepting it.
 
+## PDF inputs (development)
+
+The development source adds embedded PDFs across all nine Responses, Chat Completions and Messages frontend/upstream combinations. Published 0.6.0 covers image inputs; the PDF API is pending the next release.
+
+```rust
+use rydantic_ai::{Pdf, Prompt};
+
+let prompt = Prompt::new("Extract the invoice total.")
+    .pdf(Pdf::from_bytes("receipt.pdf", &pdf_bytes)?);
+let result = agent.run(prompt, dependencies, context).await?;
+```
+
+`Pdf::base64(filename, data)?` accepts canonical Base64. `Pdf::url(url)?` forwards a URL to Responses or Messages; Chat Completions requires embedded data. Use `Prompt::text`, `image` and `pdf` to keep mixed input in order. PDF names map to Messages `title`, default to `document.pdf`, and must be UTF-8 basenames of at most 255 bytes. `PdfDetail::Auto` is portable; explicit `Low`/`High` is supported only by Responses. Serialized requests are bounded to 16 MiB, Base64 to 10 MiB per PDF and PDFs to 16 across all user turns. The SDK validates MIME, Base64 and the PDF header; upstream handles complete parsing and page limits. PDF source digests, names, detail and order scope native history replay. Provider file IDs and document citations/context/cache controls are outside the portable contract. See the [PDF guide](https://rydantic.mintlify.site/integrations/pdf) and runnable `pdf` example.
+
 ## Image inputs
 
 All three providers and gateway frontends support ordered user text/image input, HTTP(S) image URLs and Base64 PNG/JPEG/GIF/WebP images. `Agent::run`, `stream_partial`, `stream_iterable` and `ModelRequest::new` accept a `Prompt` or a string:

@@ -1,0 +1,37 @@
+//! The complete first-model tutorial. Run with `cargo run -p rydantic --example data_contract`.
+use rydantic::{Model, SchemaMode};
+
+#[derive(Debug, Model)]
+#[model(extra = "forbid")]
+struct Signup {
+    #[model(trim, min_length = 2)]
+    name: String,
+    #[model(trim, lowercase, email)]
+    email: String,
+    #[model(coerce, ge = 18, le = 120)]
+    age: u8,
+    #[model(default)]
+    tags: Vec<String>,
+    note: Option<String>,
+}
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let signup = Signup::parse_json(r#"{"name":" Ada ","email":" ADA@EXAMPLE.COM ","age":"36"}"#)?;
+    assert_eq!(signup.name, "Ada");
+    assert_eq!(signup.email, "ada@example.com");
+    assert_eq!(signup.age, 36);
+    assert!(signup.tags.is_empty());
+    assert!(signup.note.is_none());
+    println!("Accepted: {}", signup.dump_json()?);
+
+    let errors = Signup::parse_json(r#"{"name":"A","email":"invalid","age":17,"unexpected":true}"#)
+        .expect_err("all four invalid fields must be reported");
+    assert_eq!(errors.len(), 4);
+    for error in errors.errors() {
+        println!("Rejected {}: {}", error.pointer(), error.code);
+    }
+
+    let schema = Signup::json_schema(SchemaMode::Input);
+    println!("Input schema generated: {}", schema["$schema"]);
+    Ok(())
+}

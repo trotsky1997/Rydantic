@@ -86,7 +86,7 @@ struct Window {
 }
 ```
 
-Each hook attribute accepts a callback path or an ordered list of paths. For custom fail-fast control flow instead of list error accumulation, compose checks inside an ordinary Rust function:
+In 0.7.0 stable, each hook attribute accepts a single callback path. Ordered callback lists and explicit `*_with_context` attributes are unreleased development features, not included in 0.7.0. For custom fail-fast control flow instead of list error accumulation, compose checks inside an ordinary Rust function:
 
 ```rust
 fn valid_end(value: &u32) -> Result<(), ValidationError> {
@@ -114,6 +114,10 @@ Custom error paths are automatically prefixed with the parent path when nested. 
 ```
 
 ## Ordered callback lists
+
+<Note>
+This section describes unreleased development APIs, not Rydantic 0.7.0 stable. Use the matching development source; see [validator extensions](/models/validator-extensions).
+</Note>
 
 Each callback attribute accepts either a function path or a nonempty list of paths:
 

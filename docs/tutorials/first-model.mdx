@@ -1,0 +1,85 @@
+---
+title: "Your first data contract"
+description: "Turn messy signup JSON into a validated Rust value and inspect failures field by field."
+icon: "braces"
+---
+
+import DataContract from "/snippets/examples/data-contract.mdx";
+
+Build a signup model that accepts surrounding whitespace and a numeric age string, normalizes the email, fills optional values and rejects unknown fields.
+
+<div className="rd-guide-map" aria-label="Project details"><span>10 minutes</span><span>Core Rydantic</span><span>No external services</span></div>
+
+## 1. Create a project
+
+```sh
+cargo new signup-contract
+cd signup-contract
+```
+
+Add this dependency to the generated manifest:
+
+```toml Cargo.toml
+[dependencies]
+rydantic = "=0.7.0"
+```
+
+## 2. Define the boundary
+
+The `Signup` struct in the complete source below is the contract. `#[derive(Model)]` supplies parsing, serialization and schema generation.
+
+| Declaration | Effect |
+| --- | --- |
+| `#[model(extra = "forbid")]` | Report unknown input fields |
+| `trim` and `lowercase` | Normalize text before applying its constraints |
+| `email` | Validate an email address |
+| `coerce, ge = 18, le = 120` | Accept a numeric string and enforce the age range |
+| `#[model(default)]` on `Vec<String>` | Fill an omitted list with an empty vector |
+| `Option<String>` | Allow an omitted note or JSON `null` |
+
+Coercion is explicit. Removing `coerce` makes the string `"36"` fail integer parsing; the JSON number `36` still works.
+
+## 3. Copy the complete program
+
+Put this source in `src/main.rs`. The same program lives at `crates/rydantic/examples/data_contract.rs` in the repository.
+
+<DataContract />
+
+## 4. Run both paths
+
+```sh
+cargo run
+```
+
+From the repository checkout, run the equivalent example:
+
+```sh
+cargo run --locked -p rydantic --example data_contract
+```
+
+The accepted value has a trimmed name, lowercase email, integer age, empty tags and a null note. The next input produces four field errors:
+
+```text
+Accepted: {"age":36,"email":"ada@example.com","name":"Ada","note":null,"tags":[]}
+Rejected /name: too_short
+Rejected /email: email
+Rejected /age: greater_than_equal
+Rejected /unexpected: extra_forbidden
+```
+
+Use each error's `loc` or `pointer()` to associate it with a form field. `code` is the machine-readable category; `message` is a human-readable explanation. `errors.to_json()` exposes the structured errors for an application response.
+
+## 5. Share the schema
+
+`Signup::json_schema(SchemaMode::Input)` describes accepted input, including local-rule annotations for transformations. `SchemaMode::Output` describes the normalized serialized value. Both are JSON values that can be saved or passed to API tooling.
+
+Keep parsing at the application boundary: the generated schema describes structure, while the model runs trimming, coercion and its other runtime rules. See [JSON Schema](/models/schema) for portability details.
+
+## Try a change
+
+Add `"tags":["rust","api"]` to the accepted input. Then change the minimum age to `21` and submit age `20`. Compare the accepted output with the field path and constraint code in the rejected case.
+
+<CardGroup cols={2}>
+  <Card title="Next: build a CRUD API" icon="globe" href="/tutorials/http-api">Use the same approach at an HTTP and database boundary.</Card>
+  <Card title="More model examples" icon="code" href="/examples/models">Explore enums, borrowed values and streaming JSON.</Card>
+</CardGroup>

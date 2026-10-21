@@ -1,0 +1,39 @@
+---
+title: "Example library"
+description: "Runnable Rust programs for models, APIs, databases, typed agents and structured streams."
+icon: "code"
+---
+
+Pick a program, run the command and adapt the model. Each recipe lists the source path, required features and the result to look for.
+
+<div className="rd-guide-map" aria-label="Example workflow"><span>Choose a recipe</span><span aria-hidden="true">→</span><span>Run it locally</span><span aria-hidden="true">→</span><span>Adapt the model</span></div>
+
+<CardGroup cols={2}>
+  <Card title="Models and protocols" icon="braces" href="/examples/models">Signup validation, tagged tool calls, borrowed JSON, async checks, dates and Cap’n Proto.</Card>
+  <Card title="APIs and storage" icon="database" href="/examples/services">Axum CRUD, SQLite, PostgreSQL, MySQL and automatic migrations.</Card>
+  <Card title="Agents and streaming" icon="bot" href="/examples/agents">Offline correction, partial/list streams, resumable graphs, live providers and multimodal inputs.</Card>
+  <Card title="Follow a tutorial" icon="graduation-cap" href="/tutorials/overview">Build an application step by step with explanations and expected output.</Card>
+</CardGroup>
+
+## Run from the source checkout
+
+```sh
+git clone https://github.com/trotsky1997/Rydantic.git
+cd Rydantic
+cargo run --locked -p rydantic --example data_contract
+cargo run --locked -p rydantic-ai --no-default-features --example typed_agent
+```
+
+Use the source revision that matches these docs. Examples added in a pull request preview become available on `main` after merge. The project is tested with Rust **1.98.1**.
+
+## Choose your environment
+
+| Prerequisite | Examples |
+| --- | --- |
+| Rust and Cargo only | Core models, async checks, offline agents, structured streams and graphs |
+| Bundled SQLite | Local HTTP APIs and migration examples |
+| Cap’n Proto compiler | `auto_capnp` and generated Rust bindings |
+| A local test database | PostgreSQL/MySQL driver examples |
+| Configured model API | Live providers, image and PDF examples |
+
+The offline AI recipes use deterministic demonstration responses. Live recipes use `BASEURL`, `MODEL` and optional `APIKEY`; the Jev recipe requires both `TYPESAFE_BASEURL` and `TYPESAFE_APIKEY`. Keep credentials in your local environment.

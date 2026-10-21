@@ -4,6 +4,10 @@ description: "Release history and the current migration path."
 icon: "tag"
 ---
 
+## RydanticAI · Unreleased
+
+[PDF inputs](/integrations/pdf) add `Pdf` and `Prompt::pdf()` for ordered document, image and text prompts. Embedded PDFs work through all nine protocol combinations, including JSON/SSE output, tool continuations, Partial and Iterable streams. Responses and Messages also support URL references; Chat Completions requires embedded PDF data. Validation bounds PDF data, names and counts, and replay uses compact attachment digests. CI covers 89 strict official Python SDK cases.
+
 ## 0.7.0 · Stable
 
 Published on 2026-10-21 as stable: [runtime](https://crates.io/crates/rydantic/0.7.0) and [derive](https://crates.io/crates/rydantic-derive/0.7.0). Install with `rydantic = "=0.7.0"`; the runtime pins derive to the same exact version. The [guarded publication workflow](https://github.com/trotsky1997/Rydantic/actions/runs/39545120139) succeeded for source commit [09ad96d](https://github.com/trotsky1997/Rydantic/commit/09ad96d4852ae187d5ddeac096c690eef723a127). Both downloaded registry archives matched their API and sparse-index checksums and the final local packages.
