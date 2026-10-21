@@ -1,6 +1,6 @@
-# Rydantic 0.8.0-beta.1 · Pending prerelease
+# Rydantic 0.8.0-beta.1 · Published prerelease
 
-Prepared in source; registry publication and registry-only consumer verification are pending. This is a breaking opt-in beta, not a new stable release. Stable/default remains 0.7.0. The intended dependency is `rydantic = "=0.8.0-beta.1"`; runtime and derive share that version with an exact `=0.8.0-beta.1` derive pin.
+Published on 2026-10-21 as a prerelease: [runtime](https://crates.io/crates/rydantic/0.8.0-beta.1) and [derive](https://crates.io/crates/rydantic-derive/0.8.0-beta.1). This is a breaking opt-in beta, not a new stable release. Stable/default remains 0.7.0. Install with `rydantic = "=0.8.0-beta.1"`; runtime and derive share that version with an exact `=0.8.0-beta.1` derive pin. See the [release record](https://github.com/trotsky1997/Rydantic/releases/tag/v0.8.0-beta.1).
 
 ## Added and scope
 
@@ -20,6 +20,12 @@ Construct and consume `Context` inside the `catch_unwind` closure, or avoid capt
 Adopting new transforms or checks can change accepted inputs and outputs. Pipelines are not validated-value wrappers, do not synthesize portable JSON Schema for arbitrary business rules, and do not migrate persisted values. No lossless upgrade or automatic production-data migration is promised.
 
 The 0.7.0 explicit `Model` derive requirement, configuration-specific Cap’n Proto wire schemas, SQLite unsupported-index guards and manual-migration/backup responsibilities remain. Keep shared wire contracts fixed or validate interoperability deliberately; never remove database constraints to bypass migration guards. Existing settings secret-handling, partial JSON completion/size/depth limits and domain-catalog provenance boundaries still apply. See the stable release notes below and the [context](docs/models/validation-context.mdx) and [pipeline](docs/models/validator-extensions.mdx) guides before upgrading.
+
+## Release verification
+
+The guarded [publication workflow](https://github.com/trotsky1997/Rydantic/actions/runs/39559766878) succeeded for source commit [9bc51b3](https://github.com/trotsky1997/Rydantic/commit/9bc51b31839aa76fd8db4037a8f4526cc5b3bc5b). Both downloaded registry archives matched their registry API and sparse-index checksums and the final local packages. Their VCS metadata identifies that source commit; both versions were confirmed unyanked, and the runtime pins derive to exactly `=0.8.0-beta.1`.
+
+A fresh registry-only consumer passed 83 tests plus 3 isolated settings cases in each of its default and all-features modes. A separate renamed-dependency/direct-macro consumer passed 2 tests in each configuration mode. Cargo metadata confirmed both exact beta packages resolved from crates.io without path patches. The safe panic-boundary migration ran successfully; five negative compile probes rejected the intended `UnwindSafe`, `RefUnwindSafe`, `Rc`, borrowed-data and pipeline stage-type violations. See the [release record](https://github.com/trotsky1997/Rydantic/releases/tag/v0.8.0-beta.1) for detailed verification results.
 
 # Rydantic 0.7.0 · Stable
 
