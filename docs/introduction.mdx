@@ -1,44 +1,56 @@
 ---
 title: "One model. Every boundary."
-description: "Define, validate, serialize and persist your data with Rust types."
+description: "A field guide to typed data, APIs and AI in Rust."
 icon: "book-open"
+mode: "frame"
 ---
 
-Rydantic brings Pydantic-style data modeling to Rust. Define a model once, then use it to parse JSON, normalize values, collect validation errors, generate JSON Schema, work with native Cap’n Proto messages, serve HTTP requests and persist validated database rows.
+<div className="rd-home">
+  <div className="rd-eyebrow"><span className="rd-status-dot" /> THE RYDANTIC FIELD GUIDE</div>
 
-<CardGroup cols={2}>
-  <Card title="Start in five minutes" icon="rocket" href="/quickstart">Install Rydantic and parse your first model.</Card>
-  <Card title="Build an HTTP API" icon="globe" href="/integrations/axum">Use validated JSON extractors and responses with Axum.</Card>
-  <Card title="Model your database" icon="database" href="/integrations/sql">Use the same types with SQLite, PostgreSQL and MySQL.</Card>
-  <Card title="Generate a binary protocol" icon="binary" href="/integrations/capnp">Derive Cap’n Proto schemas and Rust bindings.</Card>
-</CardGroup>
-
-## The model is the contract
+  <section className="rd-hero" aria-label="Welcome to Rydantic">
+    <div className="rd-hero-copy">
+      <h1>One model.<span>Every boundary.</span></h1>
+      <p className="rd-hero-description">Give your data a contract. Carry it from JSON to APIs, databases and typed AI agents.</p>
+      <p className="rd-hero-detail">Pydantic-style modeling, built for Rust. Define a type once, then parse, validate, serialize and persist it with the integrations you need.</p>
+      <div className="rd-actions">
+        <a className="rd-button rd-button-primary" href="/quickstart">Start building <span aria-hidden="true">→</span></a>
+        <a className="rd-button rd-button-secondary" href="/integrations/ai">Explore RydanticAI <span aria-hidden="true">↗</span></a>
+      </div>
+    </div>
+    <div className="rd-contract">
+      <div className="rd-window-bar"><span><span className="rd-code-dot" /> model.rs</span><span>RUST</span></div>
 
 ```rust
 use rydantic::Model;
 
-#[derive(Debug, Model)]
+#[derive(Model)]
 struct User {
     #[model(trim, min_length = 2)]
     name: String,
+
     #[model(coerce, ge = 18)]
     age: u8,
 }
-
-let user = User::parse_json(r#"{"name":" Alice ","age":"25"}"#)?;
-assert_eq!(user.name, "Alice");
-assert_eq!(user.age, 25);
 ```
 
-Parsing is strict by default. Enable coercion per field, make normalization explicit and receive structured errors with field paths. Native JSON parsing reads field slices directly; it does not construct a full JSON value tree before decoding a typed model.
+      <div className="rd-contract-result"><span className="rd-result-check" aria-hidden="true">✓</span><span>Validated at the boundary.</span><span>Ready for your application.</span></div>
+    </div>
+  </section>
 
-## Choose the pieces you need
+  <div className="rd-boundaries" aria-label="Supported data boundaries"><span>ONE RUST TYPE</span><span>JSON</span><span>JSON Schema</span><span>HTTP</span><span>SQL</span><span>Cap’n Proto</span><span>AI</span></div>
 
-The default dependency includes the model derive. HTTP, SQL drivers, Cap’n Proto, dates, decimals and runtime JSON Schema validation are optional features. PostgreSQL and MySQL can each be enabled without SQLite.
+  <section className="rd-path-section" aria-labelledby="choose-your-path">
+    <div className="rd-section-heading"><div><span className="rd-eyebrow">FROM IDEA TO IMPLEMENTATION</span><h2 id="choose-your-path">What are you building?</h2></div><p>Pick a path. Keep the same model.</p></div>
+    <div className="rd-path-grid">
+      <a className="rd-path" href="/quickstart"><span className="rd-path-label">01 / CORE MODELS <span aria-hidden="true">↗</span></span><h3>Make your data trustworthy.</h3><p>Parse JSON, normalize fields and return useful validation errors.</p><span className="rd-path-link">Your first model <span aria-hidden="true">→</span></span></a>
+      <a className="rd-path rd-path-ai" href="/integrations/ai"><span className="rd-path-label">02 / RYDANTIC AI <span aria-hidden="true">↗</span></span><h3>Build agents with a contract.</h3><p>Typed tools, structured streams, image and PDF inputs, and a model gateway.</p><span className="rd-path-link">Build an agent <span aria-hidden="true">→</span></span></a>
+      <a className="rd-path" href="/integrations/axum"><span className="rd-path-label">03 / HTTP APIS <span aria-hidden="true">↗</span></span><h3>Meet requests with validation.</h3><p>Use Axum extractors, typed responses and clear error boundaries.</p><span className="rd-path-link">Create an endpoint <span aria-hidden="true">→</span></span></a>
+      <a className="rd-path" href="/integrations/overview"><span className="rd-path-label">04 / STORAGE & WIRE FORMATS <span aria-hidden="true">↗</span></span><h3>Take your model further.</h3><p>Connect SQL databases, evolve tables and generate native binary bindings.</p><span className="rd-path-link">Explore integrations <span aria-hidden="true">→</span></span></a>
+    </div>
+  </section>
 
-<Note>
-These guides describe the **Rydantic 0.7.0-beta.4 source candidate**, including its breaking explicit-derive contract. The latest stable release is **0.6.0**; candidate installation requires explicit opt-in and publication on crates.io. See the [release notes](/reference/releases) when upgrading.
-</Note>
+  <aside className="rd-release-strip" aria-label="Documentation versions"><span className="rd-eyebrow">KNOW YOUR VERSION</span><p>Core guides follow the <strong>0.7.0-beta.4 prerelease</strong>. Stable Rydantic and RydanticAI are independently versioned at <strong>0.6.0</strong>. PDF inputs are in development.</p><a href="/reference/releases">Release notes <span aria-hidden="true">↗</span></a></aside>
 
-Visit the [stable 0.6.0 Rust API reference](https://docs.rs/rydantic/0.6.0/rydantic/) for complete signatures, or explore the [examples](https://github.com/trotsky1997/Rydantic/tree/main/crates/rydantic/examples).
+  <div className="rd-shortcuts"><span>LOOKING FOR SOMETHING SPECIFIC?</span><a href="/models/schema">JSON Schema <span aria-hidden="true">↗</span></a><a href="/integrations/capnp">Cap’n Proto <span aria-hidden="true">↗</span></a><a href="/reference/features">Cargo features <span aria-hidden="true">↗</span></a></div>
+</div>

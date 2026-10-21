@@ -2,17 +2,17 @@
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
   "name": "Rydantic",
-  "description": "One Rust model for validation, JSON, Cap\u2019n Proto, HTTP and SQL.",
+  "description": "Typed data, APIs and AI in Rust. A practical guide to Rydantic and RydanticAI.",
   "colors": {
-    "primary": "#31A879",
-    "light": "#72E3B4",
-    "dark": "#21845F"
+    "primary": "#17684D",
+    "light": "#17684D",
+    "dark": "#8CDDB6"
   },
   "favicon": "/assets/favicon.svg",
   "logo": {
     "light": "/assets/logo-light.svg",
     "dark": "/assets/logo-dark.svg",
-    "href": "https://trotsky1997.github.io/Rydantic/"
+    "href": "/introduction"
   },
   "appearance": {
     "default": "system"
@@ -23,11 +23,11 @@
   "navbar": {
     "links": [
       {
-        "label": "Home",
+        "label": "Website",
         "href": "https://trotsky1997.github.io/Rydantic/"
       },
       {
-        "label": "Stable API reference",
+        "label": "Rust API",
         "href": "https://docs.rs/rydantic/0.6.0/rydantic/"
       }
     ],
@@ -40,44 +40,91 @@
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Rydantic",
+        "icon": "braces",
         "groups": [
           {
-            "group": "Get started",
+            "group": "Start here",
             "pages": [
               "introduction",
               "quickstart"
             ]
           },
           {
-            "group": "Models",
+            "group": "Define your model",
             "pages": [
               "models/validation",
-              "models/settings",
               "models/structure",
-              "models/borrowed",
-              "models/lifecycle",
-              "models/async",
-              "models/streaming",
-              "models/partial-json",
-              "models/schema",
-              "models/dates-decimal",
-              "domain-types"
+              "domain-types",
+              "models/dates-decimal"
             ]
           },
           {
-            "group": "AI",
-            "pages": ["integrations/ai", "integrations/api-providers", "integrations/gateway-protocols", "integrations/images", "integrations/pdf", "integrations/structured-output", "integrations/jev"]
+            "group": "Control its behavior",
+            "pages": [
+              "models/lifecycle",
+              "models/settings",
+              "models/async"
+            ]
           },
           {
-            "group": "HTTP",
+            "group": "Work with JSON",
+            "pages": [
+              "models/schema",
+              "models/borrowed",
+              "models/streaming",
+              "models/partial-json"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "RydanticAI",
+        "icon": "bot",
+        "groups": [
+          {
+            "group": "Build an agent",
+            "pages": [
+              "integrations/ai",
+              "integrations/api-providers",
+              "integrations/structured-output"
+            ]
+          },
+          {
+            "group": "Multimodal inputs",
+            "pages": [
+              "integrations/images",
+              "integrations/pdf"
+            ]
+          },
+          {
+            "group": "Routing and decisions",
+            "pages": [
+              "integrations/gateway-protocols",
+              "integrations/jev"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "HTTP & data",
+        "icon": "network",
+        "groups": [
+          {
+            "group": "Integrations",
+            "pages": [
+              "integrations/overview"
+            ]
+          },
+          {
+            "group": "Serve an API",
             "pages": [
               "integrations/axum",
               "integrations/http-database"
             ]
           },
           {
-            "group": "Databases",
+            "group": "Work with SQL",
             "pages": [
               "integrations/sql",
               "integrations/databases",
@@ -96,6 +143,7 @@
       },
       {
         "tab": "Reference",
+        "icon": "book-open",
         "groups": [
           {
             "group": "Project",
@@ -120,5 +168,21 @@
       "chatgpt",
       "claude"
     ]
+  },
+  "background": {
+    "color": {
+      "light": "#FBFCF9",
+      "dark": "#101714"
+    }
+  },
+  "fonts": {
+    "family": "Geist"
+  },
+  "search": {
+    "prompt": "Find a guide, type or integration…"
+  },
+  "styling": {
+    "eyebrows": "breadcrumbs",
+    "codeblocks": "system"
   }
 }

@@ -1,0 +1,38 @@
+---
+title: "From model to application"
+description: "Choose the HTTP, SQL or binary integration for your next boundary."
+icon: "network"
+---
+
+Keep the model at the center of your application. Add an HTTP adapter, a database driver or a native wire format as you need it. Each integration builds on the same validation rules.
+
+<div className="rd-guide-map" aria-label="Integration workflow"><span>Rust model</span><span aria-hidden="true">→</span><span>Validated data</span><span aria-hidden="true">→</span><span>HTTP · SQL · Cap’n Proto</span></div>
+
+## Choose a boundary
+
+<CardGroup cols={2}>
+  <Card title="Serve a typed HTTP API" icon="globe" href="/integrations/axum">Validate request bodies and response models with Axum and Tokio.</Card>
+  <Card title="Persist your model" icon="database" href="/integrations/sql">Use SQLx-backed CRUD with SQLite, PostgreSQL or MySQL.</Card>
+  <Card title="Evolve your database" icon="git-branch" href="/integrations/migrations">Plan table changes from model definitions and review the migration.</Card>
+  <Card title="Generate a native protocol" icon="binary" href="/integrations/capnp">Derive Cap’n Proto schemas, Rust bindings and validated codecs.</Card>
+</CardGroup>
+
+## Start with a complete example
+
+The [HTTP + database guide](/integrations/http-database) connects a validated Axum endpoint to the same SQL model. Start with SQLite locally, then choose an independent PostgreSQL or MySQL driver.
+
+```sh
+cargo run -p rydantic --example database_api --features axum,sqlite -- --smoke
+```
+
+## Add only the features you need
+
+| Application boundary | Cargo feature | Continue with |
+| --- | --- | --- |
+| HTTP requests and responses | `axum` | [Axum and Tokio](/integrations/axum) |
+| Local database | `sqlite` | [Database models](/integrations/sql) |
+| Server database | `postgres` or `mysql` | [PostgreSQL and MySQL](/integrations/databases) |
+| Native binary messages | `capnp` | [Generated bindings](/integrations/capnp) |
+| Existing binary schema | `capnp` | [External schema bindings](/integrations/existing-capnp) |
+
+See [Cargo features](/reference/features) for combinations and [release notes](/reference/releases) for version details. For typed agents, structured output or model routing, start with the separate [RydanticAI crate](/integrations/ai).

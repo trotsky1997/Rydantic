@@ -4,16 +4,26 @@ description: "Install the crate and parse, validate and serialize your first Rus
 icon: "rocket"
 ---
 
-Add the crates.io dependency to your Cargo.toml:
+Parse a JSON document, normalize its fields and return a validated Rust value. This is the starting point for every integration.
 
-This guide targets the 0.7.0-beta.4 source candidate. Check [registry availability](https://crates.io/crates/rydantic/versions) before installing it. For stable 0.6.0, use the [tagged guide](https://github.com/trotsky1997/Rydantic/tree/v0.6.0).
+<div className="rd-guide-map" aria-label="Model workflow"><span>Define</span><span aria-hidden="true">→</span><span>Parse & validate</span><span aria-hidden="true">→</span><span>Serialize</span></div>
 
-```toml
+## Choose your version
+
+<Note>
+These examples target the published **0.7.0-beta.4 prerelease**. The exact version below opts in explicitly. For stable **0.6.0**, follow the [tagged guide](https://github.com/trotsky1997/Rydantic/tree/v0.6.0).
+</Note>
+
+## Add the dependency
+
+```toml Cargo.toml
 [dependencies]
 rydantic = "=0.7.0-beta.4"
 ```
 
-```rust
+## Define your first model
+
+```rust src/main.rs
 use rydantic::{Model, SchemaMode};
 
 #[derive(Debug, Model)]
@@ -51,6 +61,10 @@ fn main() -> Result<(), rydantic::ValidationErrors> {
 ```
 
 `Model` also generates Serde's `Serialize` and `Deserialize` implementations. Derive `Model` once per model. Deserialization runs full validation, and serialization revalidates the current object.
+
+## Run an example
+
+From the source checkout, run the model or tool-call examples:
 
 ```sh
 cargo run -p rydantic --example user

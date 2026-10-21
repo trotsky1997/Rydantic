@@ -1,9 +1,21 @@
 ---
 title: "RydanticAI"
 description: "Build typed agents, resumable graphs and a three-protocol gateway with the independent rydantic-ai crate."
+icon: "bot"
 ---
 
 `rydantic-ai` lives in the same workspace with its own `0.6.0` version and publishing lifecycle. The core Rydantic model crate remains independent of AI transport dependencies.
+
+<div className="rd-guide-map" aria-label="Typed agent workflow"><span>Prompt & tools</span><span aria-hidden="true">→</span><span>Agent</span><span aria-hidden="true">→</span><span>Validated Rust output</span></div>
+
+<CardGroup cols={2}>
+  <Card title="Connect a model" icon="plug" href="/integrations/api-providers">Choose Responses, Chat Completions or Messages.</Card>
+  <Card title="Stream typed output" icon="braces" href="/integrations/structured-output">Work with Partial and Iterable results.</Card>
+  <Card title="Add images and PDFs" icon="image" href="/integrations/images">Build ordered multimodal prompts.</Card>
+  <Card title="Route through a gateway" icon="network" href="/integrations/gateway-protocols">Translate protocols and apply per-client budgets.</Card>
+</CardGroup>
+
+## Install RydanticAI
 
 ```toml
 [dependencies]
@@ -43,7 +55,7 @@ Responses and Chat Completions request native JSON Schema by default. Messages u
 
 ## Structured output streams
 
-RydanticAI 0.6.0 adds `Agent::stream_partial()` and `Agent::stream_iterable()`. `Partial<T>` emits provisional JSON field snapshots and returns a fully validated final `T`. `Iterable<T>` validates complete elements before emission and can collect the accepted attempt into `Vec<T>`, with no `Clone` requirement. Both modes preserve validation correction, tool execution, usage, cancellation and bounded backpressure. See the [structured output guide](/integrations/structured-output).
+Use `Agent::stream_partial()` and `Agent::stream_iterable()` for structured output. `Partial<T>` emits provisional JSON field snapshots and returns a fully validated final `T`. `Iterable<T>` validates complete elements before emission and can collect the accepted attempt into `Vec<T>`, with no `Clone` requirement. Both modes preserve validation correction, tool execution, usage, cancellation and bounded backpressure. See the [structured output guide](/integrations/structured-output).
 
 ## Tools and execution limits
 
