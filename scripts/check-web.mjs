@@ -59,6 +59,20 @@ for (const link of html.matchAll(/(?:href|src)="([^"#]+|#[^"]+)"/g)) {
     assert(files.includes(target.slice(2)), `Missing asset ${target}`);
 }
 const site = JSON.parse(await readFile(new URL("website/site.json", root), "utf8"));
+assert.match(site.stableVersion, /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/);
+assert(
+  html.includes(`v${site.stableVersion}`),
+  "Homepage must display the stable version",
+);
+assert.equal(
+  html.match(/<code>(cargo add rydantic@=[^<]+)<\/code\s*>/)?.[1],
+  `cargo add rydantic@=${site.stableVersion}`,
+  "Homepage install must use the stable version",
+);
+assert(
+  html.includes(`data-copy="cargo add rydantic@=${site.stableVersion}"`),
+  "Homepage copy command must use the stable version",
+);
 const docs = site.docs.replace(/\/$/, "");
 for (const anchor of html.matchAll(/<a\b[^>]*>/g)) {
   const page = anchor[0].match(/\bdata-docs-path="([^"]+)"/)?.[1];

@@ -1,5 +1,6 @@
 {
   "url": "https://trotsky1997.github.io/Rydantic/",
   "docs": "https://rydantic.mintlify.site",
-  "repository": "https://github.com/trotsky1997/Rydantic"
+  "repository": "https://github.com/trotsky1997/Rydantic",
+  "stableVersion": "0.7.0"
 }

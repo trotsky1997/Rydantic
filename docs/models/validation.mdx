@@ -86,7 +86,7 @@ struct Window {
 }
 ```
 
-Each hook attribute accepts a callback path or an ordered list of paths. For custom fail-fast control flow instead of list error accumulation, compose checks inside an ordinary Rust function:
+Stable 0.7.0 supports the single callback paths shown above. Ordered lists and context-aware variants require the 0.8.0-beta.1 APIs described below. For custom fail-fast control flow on either version, compose checks inside an ordinary Rust function:
 
 ```rust
 fn valid_end(value: &u32) -> Result<(), ValidationError> {
@@ -97,7 +97,7 @@ fn valid_end(value: &u32) -> Result<(), ValidationError> {
 // Use #[model(validate = valid_end)].
 ```
 
-Here `?` stops this callback at its first failure; it does not stop validation of independent sibling fields. The plain callback signatures above remain context-free. Explicit `*_with_context` callback attributes additionally receive `&Context`, including per-call application data when supplied through a context entry point. Cross-field checks belong in a model callback, which receives the fully constructed model. These derive attributes do not suppress or retry typed decoding; typed pipeline adapters are a separate API.
+Here `?` stops this callback at its first failure; it does not stop validation of independent sibling fields. The plain callback signatures above remain context-free. The beta-only explicit `*_with_context` callback attributes additionally receive `&Context`, including per-call application data when supplied through a context entry point. Cross-field checks belong in a model callback, which receives the fully constructed model. These derive attributes do not suppress or retry typed decoding; typed pipeline adapters are a separate API.
 
 Custom error paths are automatically prefixed with the parent path when nested. `ValidationErrors::errors()` returns an error slice, and `to_json()` returns structured JSON. Each error includes `loc`, `code`, `message`, `stage`, and constraint parameters; `pointer()` returns an escaped JSON Pointer.
 
@@ -114,6 +114,8 @@ Custom error paths are automatically prefixed with the parent path when nested. 
 ```
 
 ## Ordered callback lists
+
+**Requires 0.8.0-beta.1, not stable 0.7.0.** These lists and the context variants below are currently prepared in source; registry publication and verification are pending. After publication, opt in with `rydantic = "=0.8.0-beta.1"`. See [release status](/reference/releases), [per-call context and its breaking panic-boundary contract](/models/validation-context), and [typed pipelines](/models/validator-extensions).
 
 Each callback attribute accepts either a function path or a nonempty list of paths:
 

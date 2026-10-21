@@ -1,3 +1,26 @@
+# Rydantic 0.8.0-beta.1 · Pending prerelease
+
+Prepared in source; registry publication and registry-only consumer verification are pending. This is a breaking opt-in beta, not a new stable release. Stable/default remains 0.7.0. The intended dependency is `rydantic = "=0.8.0-beta.1"`; runtime and derive share that version with an exact `=0.8.0-beta.1` derive pin.
+
+## Added and scope
+
+- Ordered, nonempty callback lists for field/model hooks. `before` transforms pass outputs left to right and stop at the first error. Typed sync/async check lists run all callbacks sequentially in declaration order and collect errors; existing prerequisite gates are evaluated before the list. Independent sibling errors still accumulate, model checks require successful fields, and any synchronous failure prevents the async phase. Parsing and typed revalidation retain their distinct field gates.
+- Explicit context-aware hook variants and owned `Model` entry points carry an `Arc` of `Any + Send + Sync` application data through nested validation and encoding. Exact-type retrieval reports `context_missing` or `context_type_mismatch` as ordinary validation errors. Models do not retain the data; supply it again for later validation/dumping. Ordinary entry points, Serde and existing high-level Axum/SQL/Cap’n Proto paths remain context-free; there are no high-level `BorrowModel` context entry points.
+- Typed `Pipeline` and `AsyncPipeline` adapters offer `plain`, `then`, `check` and explicit `wrap` composition. Stages are sequential and fail-fast, preserve their error type, and do not implicitly validate models. Wrappers can skip or repeat their continuation; side effects are not rolled back. Dropping a pending async run prevents later stages, not completed effects or synchronous work already executing. No scheduler, implicit retries, derive-level plain/wrap hooks, or Pydantic parity is claimed.
+- Existing single callbacks continue through the same implementation, not a compatibility layer. This core release includes only `rydantic` and `rydantic-derive`. `rydantic-ai` remains independently versioned at 0.6.0; its source path dependency tracks this beta solely for workspace resolution, not an AI publication. CLI/codegen remain at 0.1.0 and unpublished. Frozen Skill/evaluation recipes keep their original contracts.
+
+## Breaking Context panic-boundary contract
+
+`Context` no longer implements `UnwindSafe` or `RefUnwindSafe`, including a context constructed without business data. Its new erased `Arc<dyn Any + Send + Sync>` payload does not retain the unwind-safety marker traits. Capturing an owned or shared context across `std::panic::catch_unwind`, or requiring those marker bounds, can therefore stop compiling even if the concrete payload would have met the bounds. This is an API break from 0.7.0, not merely an additive context API.
+
+Construct and consume `Context` inside the `catch_unwind` closure, or avoid capturing it across that boundary. Any other captured state must still satisfy the closure's requirements. Use `AssertUnwindSafe` only after explicitly auditing every captured value and shared payload for panic safety; do not blindly wrap a context or closure to silence the error. Ordinary validation errors are `Result` values and do not require panic catching. No compatibility layer restores the old auto-trait contract.
+
+## Data and deployment responsibilities
+
+Adopting new transforms or checks can change accepted inputs and outputs. Pipelines are not validated-value wrappers, do not synthesize portable JSON Schema for arbitrary business rules, and do not migrate persisted values. No lossless upgrade or automatic production-data migration is promised.
+
+The 0.7.0 explicit `Model` derive requirement, configuration-specific Cap’n Proto wire schemas, SQLite unsupported-index guards and manual-migration/backup responsibilities remain. Keep shared wire contracts fixed or validate interoperability deliberately; never remove database constraints to bypass migration guards. Existing settings secret-handling, partial JSON completion/size/depth limits and domain-catalog provenance boundaries still apply. See the stable release notes below and the [context](docs/models/validation-context.mdx) and [pipeline](docs/models/validator-extensions.mdx) guides before upgrading.
+
 # Rydantic 0.7.0 · Stable
 
 Published on 2026-10-21 as stable: [runtime](https://crates.io/crates/rydantic/0.7.0) and [derive](https://crates.io/crates/rydantic-derive/0.7.0). Runtime and derive use matching 0.7.0 versions, with an exact `=0.7.0` derive pin. See the [release record](https://github.com/trotsky1997/Rydantic/releases/tag/v0.7.0) for verification details.

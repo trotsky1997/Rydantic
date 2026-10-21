@@ -4,10 +4,16 @@ const root = new URL("../", import.meta.url);
 const site = JSON.parse(
   await readFile(new URL("website/site.json", root), "utf8"),
 );
-const manifest = await readFile(new URL("Cargo.toml", root), "utf8");
-const version = manifest.match(
-  /\[workspace\.package\]\s*\nversion\s*=\s*"([^"]+)"/,
-)[1];
+// Public installation stays on the verified stable release while main advances.
+const version = site.stableVersion;
+if (
+  typeof version !== "string" ||
+  !/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(version)
+) {
+  throw new Error(
+    "website/site.json must name a stableVersion without a prerelease suffix",
+  );
+}
 const output = new URL(".site/", root);
 await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });

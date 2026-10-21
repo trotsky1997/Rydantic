@@ -3,6 +3,12 @@ title: "Per-call business context"
 description: "Explicit request data for owned model validation"
 ---
 
+These APIs require **0.8.0-beta.1** and are not included in stable 0.7.0.
+They are currently prepared in source; registry publication and verification are
+pending. After publication, opt in with `rydantic = "=0.8.0-beta.1"`.
+See [release status](/reference/releases) and the breaking panic-boundary contract
+below. The default installation remains stable 0.7.0.
+
 Owned `Model` entry points accept explicit business data through their
 `_with_context` variants. For example:
 
@@ -58,10 +64,18 @@ is isolated; deliberately reusing the same `Arc` or putting shared mutable state
 inside it is the caller's responsibility, not an isolation guarantee provided by
 the library. Cancellation drops the owned context references with the future.
 
+Untagged-enum branch trials share the same `Arc` payload. Their collectors isolate
+diagnostic paths and errors, not application state or side effects. Mutations or
+external effects from a failed alternative persist; there is no rollback.
+
 The resulting model does not retain context. Supply the data again when
 revalidating or dumping. Ordinary entry points, serde, `Validated`, and
 `AsyncValidated` remain context-free; context-required callbacks return a missing
 context error when invoked there. They do not silently skip required checks.
+Existing high-level Axum, SQL and Cap’n Proto integration paths also create their
+own context-free collectors: they do not automatically forward business data or
+support context-required callbacks. Use the explicit owned `Model` context entry
+points or deliberately wire context through an appropriate low-level integration.
 `BorrowModel` high-level context entry points are not provided in this initial
 API. Low-level custom decoders/checkers may use `Context::with_data` and
 `Context::require_data`, propagate children with `Context::child`, and push
@@ -70,11 +84,17 @@ in custom error messages or parameters if those errors will be exposed publicly.
 
 ## Panic-boundary compatibility
 
-The erased application payload means `Context` no longer implements the automatic
+**Breaking from 0.7.0:** `Context` no longer implements the automatic
 `UnwindSafe` and `RefUnwindSafe` marker traits, even when created without data.
-Code that captures a context across `std::panic::catch_unwind` may therefore stop
-compiling. Prefer constructing and consuming the collector inside the closure,
-or keep the collector outside the captured state. Use `AssertUnwindSafe` only
-when the application has explicitly audited every captured value and any shared
-payload for panic safety; it is not a general migration shortcut. Validation
-errors remain ordinary `Result` values and do not require catching panics.
+Its erased `Arc<dyn Any + Send + Sync>` payload does not retain those markers,
+even if the concrete application data would have satisfied them. Code that
+captures a context across `std::panic::catch_unwind`, or requires those bounds,
+may therefore stop compiling.
+
+Prefer constructing and consuming the collector inside the closure, or avoid
+capturing it across the panic boundary. Other captured state must still meet the
+closure's requirements. Use `AssertUnwindSafe` only when the application has
+explicitly audited every captured value and any shared payload for panic safety;
+never blindly wrap the context or whole closure just to silence the error.
+Validation errors remain ordinary `Result` values and do not require catching
+panics. No compatibility layer restores the old auto-trait contract.

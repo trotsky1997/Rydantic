@@ -1,6 +1,6 @@
 # Rydantic documentation
 
-Read the published guides at [Rydantic Docs](https://rydantic.mintlify.site/introduction). This directory is the [Mintlify](https://www.mintlify.com/) source project. These sources describe stable 0.7.0, published on 2026-10-21, with breaking changes and migration responsibilities called out explicitly. See the [release record](https://github.com/trotsky1997/Rydantic/releases/tag/v0.7.0) for verification details; use the [versioned 0.6.0 source](https://github.com/trotsky1997/Rydantic/tree/v0.6.0) for older deployments.
+Read the published guides at [Rydantic Docs](https://rydantic.mintlify.site/introduction). This directory is the [Mintlify](https://www.mintlify.com/) source project. The default guides describe stable 0.7.0, published on 2026-10-21, with breaking changes and migration responsibilities called out explicitly. Marked callback-list, per-call context and pipeline sections describe 0.8.0-beta.1 source preparation, pending registry publication; they are not part of stable 0.7.0. See the [release record](https://github.com/trotsky1997/Rydantic/releases/tag/v0.7.0) for verification details; use the [versioned 0.6.0 source](https://github.com/trotsky1997/Rydantic/tree/v0.6.0) for older deployments.
 
 ## Read the guides
 
@@ -38,4 +38,4 @@ The public documentation origin is configured as `docs` in `website/site.json`. 
 npm run site:dev
 ```
 
-The build writes `.site/`, derives the displayed version from `Cargo.toml`, and uses relative asset URLs for the `/Rydantic/` project path. The `Documentation and homepage` workflow checks both projects and publishes the homepage from `main` through the `github-pages` environment. No deploy token is stored in the repository.
+The build writes `.site/`, takes the displayed/install version from `website/site.json`'s explicit `stableVersion` (0.7.0), not the prerelease workspace version, and uses relative asset URLs for the `/Rydantic/` project path. The `Documentation and homepage` workflow checks both projects and publishes the homepage from `main` through the `github-pages` environment. No deploy token is stored in the repository.
