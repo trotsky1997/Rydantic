@@ -4,6 +4,10 @@ description: "Release history and the current migration path."
 icon: "tag"
 ---
 
+## RydanticAI · Unreleased
+
+[PDF inputs](/integrations/pdf) add `Pdf` and `Prompt::pdf()` for ordered document, image and text prompts. Embedded PDFs work through all nine protocol combinations, including JSON/SSE output, tool continuations, Partial and Iterable streams. Responses and Messages also support URL references; Chat Completions requires embedded PDF data. Validation bounds PDF data, names and counts, and replay uses compact attachment digests. CI covers 89 strict official Python SDK cases.
+
 ## RydanticAI 0.6.0
 
 All three providers and gateway frontends support ordered user image inputs across the nine protocol combinations, including URL references and Base64 images. Typed `Prompt` / `Image` builders work with Agents, Partial and Iterable output. Requests are bounded to 16 MiB with image-specific validation, and replay identity includes compact image digests. The release also carries the multi-turn replay fixes from main. See [image inputs](/integrations/images).

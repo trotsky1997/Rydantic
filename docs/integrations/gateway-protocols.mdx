@@ -13,6 +13,8 @@ RydanticAI 0.6.0 serves three standard API frontends. A client selects its wire 
 
 All nine combinations support text, [URL/Base64 image inputs](/integrations/images), client function tools, tool-result continuations, structured output mappings and token accounting. Agent validation correction, `Partial<T>` and `Iterable<T>` also work through every frontend.
 
+The development source adds [embedded PDF inputs](/integrations/pdf) to every combination. PDF URL references convert between Responses and Messages; routes targeting Chat Completions require embedded PDF data.
+
 ## Configure routes
 
 Each upstream chooses `api`: `responses`, `chat_completions` or `anthropic_messages`. `base_url` includes the API prefix, and credential fields contain environment-variable names.
@@ -105,7 +107,7 @@ Tool definitions, tool choice, parallel tool settings, output token limits, temp
 
 JSON Schema maps between `text.format`, `response_format.json_schema` and `output_config.format`. The upstream model must support its schema subset. Rydantic Agent runtime validation remains available through every frontend. JSON object mode is supported by Responses and Chat Completions; Messages uses JSON Schema or instruction-based output.
 
-The gateway implements text, ordered user image inputs and client function tools. Unsupported media, parameters and model-specific reasoning controls fail explicitly where they cannot be represented. Stored responses are disabled. The gateway relays tool calls; the client application executes handlers and returns tool results with the original call IDs.
+The gateway implements text, ordered user image/PDF inputs and client function tools. Unsupported media, parameters and model-specific reasoning controls fail explicitly where they cannot be represented. Stored responses are disabled. The gateway relays tool calls; the client application executes handlers and returns tool results with the original call IDs.
 
 Chat system and developer messages retain their roles and conversation order for Chat and Responses upstreams. Messages upstreams combine leading system/developer instructions into their top-level system field and reject interleaved instruction messages.
 
@@ -125,4 +127,4 @@ Replay is process-local and bounded to 128 entries and 8 MiB of serialized data,
 
 ## Verification
 
-The test suite covers all nine JSON/SSE combinations, multi-turn tools, partial/iterable validation, authentication, usage, cache isolation, failure terminals, cancellation and bounded replay. CI also runs 63 cases through pinned official Python SDKs with strict response validation, using loopback fixtures and no live provider credentials.
+The test suite covers all nine JSON/SSE combinations, image/PDF inputs, multi-turn tools, partial/iterable validation, authentication, usage, cache isolation, failure terminals, cancellation and bounded replay. CI also runs 89 cases through pinned official Python SDKs with strict response validation, including 26 PDF cases, using loopback fixtures and no live provider credentials.

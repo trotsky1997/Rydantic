@@ -52,3 +52,7 @@ required-features = ["http"]
 [[example]]
 name = "vision"
 required-features = ["http"]
+
+[[example]]
+name = "pdf"
+required-features = ["http"]

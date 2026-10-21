@@ -3,6 +3,7 @@
 //! Providers implement [`ModelProvider`]. Both agent outputs and tool arguments use
 //! Rydantic's runtime validation, including async validators. Optional HTTP
 //! adapters support Responses, Chat Completions and Anthropic Messages APIs.
+//! Ordered user text, images and PDFs share the [`Prompt`] input API.
 //! Graphs and custom providers work without default features.
 
 mod agent;
@@ -20,7 +21,7 @@ pub mod structured;
 mod tool;
 
 pub use agent::{Agent, AgentLimits, RunResult};
-pub use content::{Image, ImageDetail, Prompt};
+pub use content::{Image, ImageDetail, Pdf, PdfDetail, Prompt};
 pub use context::{BoxFuture, RunContext};
 pub use error::{Error, Result};
 #[cfg(feature = "http")]

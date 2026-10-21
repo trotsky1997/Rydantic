@@ -17,6 +17,8 @@ Configure `BASEURL`, `MODEL` and optional `APIKEY`. Select `ResponsesProvider`, 
 
 `BASEURL` includes the API prefix, such as `https://api.openai.com/v1` or `https://api.anthropic.com/v1`. The provider appends `/responses`, `/chat/completions` or `/messages`. See [API providers](/integrations/api-providers) for authentication, capability selection, native history and protocol limits.
 
+Use ordered [`Prompt` image inputs](/integrations/images) with all three providers. The development source also adds [`Pdf` document inputs](/integrations/pdf), including embedded PDF conversion across every protocol combination.
+
 ## Return a validated Rust type
 
 ```rust

@@ -104,6 +104,6 @@ Images remain in conversation history across tool calls, output-validation corre
 
 Native tool history is scoped to the authenticated client, model alias and complete visible conversation prefix. Replay identity includes SHA-256 digests of image references/data, detail settings and content order, so changing an image cannot recover another image's cached assistant history. Digests keep large user images out of the replay cache payload. The existing 128-entry, 8 MiB, 30-minute process-local replay bounds apply.
 
-The Rust suite covers all nine image routes, mixed content, large Base64 requests, tools, image-scoped replay, invalid input and image detail. CI also runs **63 strict official Python SDK cases**, including URL and Base64 image inputs through every JSON/SSE combination with loopback fixtures.
+The Rust suite covers all nine image routes, mixed content, large Base64 requests, tools, image-scoped replay, invalid input and image detail. CI also runs **89 strict official Python SDK cases**, including URL and Base64 image inputs through every JSON/SSE combination and 26 [PDF input](/integrations/pdf) cases with loopback fixtures.
 
 See [gateway protocols](/integrations/gateway-protocols) and [API providers](/integrations/api-providers) for authentication, routing and provider configuration. Native formats follow the [OpenAI vision guide](https://developers.openai.com/api/docs/guides/images-vision) and [Anthropic vision guide](https://platform.claude.com/docs/en/build-with-claude/vision).
