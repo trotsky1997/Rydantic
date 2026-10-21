@@ -4,6 +4,18 @@ description: "Release history and the current migration path."
 icon: "tag"
 ---
 
+## 0.8.0-beta.1 · Pending prerelease
+
+Prepared in source; registry publication and registry-only consumer verification are pending. This breaking beta is opt-in and is not the latest stable release. Stable/default remains **0.7.0**. The intended pin is `rydantic = "=0.8.0-beta.1"`, with matching runtime/derive packages and an exact derive dependency.
+
+- [Ordered callback lists](/models/validation#ordered-callback-lists): `before` transforms stop at the first failure; typed sync/async check lists accumulate errors in declaration order, behind existing prerequisite gates. Siblings still accumulate errors and model checks require successful fields. Synchronous errors prevent the async phase.
+- [Typed per-call context](/models/validation-context): explicit hooks and owned Model entry points carry `Any + Send + Sync` data through nested validation/encoding. Missing or wrong types are validation errors. Models do not retain context; ordinary/Serde and existing high-level Axum/SQL/Cap’n Proto entry points stay context-free.
+- [Sync/async pipelines](/models/validator-extensions): typed, sequential, fail-fast stages with explicit wrappers that may skip/repeat their continuation. No automatic rollback, model-validity proof, schema synthesis, scheduler or implicit retries. Single callbacks remain supported through the same implementation, not a compatibility layer.
+- **Breaking from 0.7.0:** `Context` no longer implements `UnwindSafe` or `RefUnwindSafe`, even without data. The erased `Arc<dyn Any + Send + Sync>` payload omits these markers, so captures across `catch_unwind` can stop compiling. Construct and consume the context inside the closure or avoid capturing it. Use `AssertUnwindSafe` only after auditing every captured value and shared payload, never as a blind wrapper. Validation failures remain ordinary `Result` errors; no compatibility layer restores the old bounds.
+- This core release covers only runtime/derive. AI remains independently versioned at 0.6.0, with its source path dependency adjusted for this workspace; it is not being published here. CLI/codegen remain unpublished 0.1.0 tools. Frozen Skill/evaluation versions are unchanged.
+
+New checks/transforms can change accepted data; they do not migrate stored values or promise lossless conversion. Existing explicit Cap’n Proto derives, configuration-specific wire compatibility, SQLite index-safety guards, backups/manual migrations, settings secret handling, partial JSON limits and domain provenance requirements remain. Read the [full changelog](https://github.com/trotsky1997/Rydantic/blob/main/CHANGELOG.md) and [migration limits](/integrations/migrations). Publication and consumer-test results must be recorded after verification, not inferred from these source changes.
+
 ## RydanticAI · Unreleased
 
 [PDF inputs](/integrations/pdf) add `Pdf` and `Prompt::pdf()` for ordered document, image and text prompts. Embedded PDFs work through all nine protocol combinations, including JSON/SSE output, tool continuations, Partial and Iterable streams. Responses and Messages also support URL references; Chat Completions requires embedded PDF data. Validation bounds PDF data, names and counts, and replay uses compact attachment digests. CI covers 89 strict official Python SDK cases.

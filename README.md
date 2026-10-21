@@ -108,11 +108,26 @@ rydantic = { version = "=0.7.0", features = ["axum", "postgres"] }
 
 See the [complete feature reference](https://rydantic.mintlify.site/reference/features). Automatic Cap'n Proto binding generation also requires the official `capnp` compiler on `PATH`.
 
+## Opt in to 0.8.0-beta.1
+
+This source tree and its packaged README describe the **0.8.0-beta.1 prerelease contract**. The stable default remains 0.7.0, as used in the quickstart above. To opt in to the new validator APIs, use the exact beta pin after verifying both [runtime](https://crates.io/crates/rydantic/0.8.0-beta.1) and [derive](https://crates.io/crates/rydantic-derive/0.8.0-beta.1) availability:
+
+```toml
+[dependencies]
+rydantic = "=0.8.0-beta.1"
+```
+
+Runtime and derive share this version, with an exact `=0.8.0-beta.1` derive dependency. The beta adds [ordered callback lists](docs/models/validation.mdx#ordered-callback-lists), [typed per-call business context](docs/models/validation-context.mdx), and [synchronous/asynchronous pipelines](docs/models/validator-extensions.mdx). `before` lists stop at the first failure; typed check lists accumulate errors in declaration order, behind the existing prerequisite gates. Pipelines are sequential and fail-fast; their explicit wrappers may skip or repeat stages, without automatic rollback or a guarantee of model validity. Existing single callbacks use the same mechanism, not a compatibility layer.
+
+> **Breaking upgrade from 0.7.0:** `Context` no longer implements `UnwindSafe` or `RefUnwindSafe`, even when it carries no application data. Its erased `Any + Send + Sync` payload does not retain those unwind-safety markers. Code capturing a context across `catch_unwind` may stop compiling. Construct and consume it inside the closure or avoid capturing it. Use `AssertUnwindSafe` only after auditing every captured value and shared payload for panic safety, never as a blind wrapper. Ordinary validation failures remain `Result` errors.
+
+The beta does not migrate stored data or promise lossless conversion. The explicit Cap’n Proto derives, wire-configuration limits, SQLite guards and backup responsibilities below still apply. Only the runtime and derive are part of this core release; RydanticAI remains independently versioned, and CLI/codegen remain unpublished source tools. See the [release notes](https://rydantic.mintlify.site/reference/releases) for publication status and verification, not source metadata alone.
+
 ## Stable release 0.7.0
 
-This README describes the 0.7.0 stable release contract: tested settings, partial JSON and domain types, callback hygiene, and conditional Cap’n Proto generation. Runtime and derive use matching 0.7.0 versions, with an exact derive dependency pin.
+The default stable release is 0.7.0: tested settings, partial JSON and domain types, callback hygiene, and conditional Cap’n Proto generation. Its runtime and derive use matching 0.7.0 versions, with an exact derive dependency pin. The new beta validator APIs above are not included in 0.7.0.
 
-Source metadata alone does not prove registry availability. Before installing, verify both [runtime](https://crates.io/crates/rydantic/0.7.0) and [derive](https://crates.io/crates/rydantic-derive/0.7.0) packages and the [release record](https://github.com/trotsky1997/Rydantic/releases/tag/v0.7.0). Use `rydantic = "=0.7.0"` for this release. For older 0.6.0 deployments, consult the [versioned source](https://github.com/trotsky1997/Rydantic/tree/v0.6.0) and [API reference](https://docs.rs/rydantic/0.6.0/rydantic/); the live guides follow the current source.
+Source metadata alone does not prove registry availability. Before installing, verify both [runtime](https://crates.io/crates/rydantic/0.7.0) and [derive](https://crates.io/crates/rydantic-derive/0.7.0) packages and the [release record](https://github.com/trotsky1997/Rydantic/releases/tag/v0.7.0). Use `rydantic = "=0.7.0"` for this release. For older 0.6.0 deployments, consult the [versioned source](https://github.com/trotsky1997/Rydantic/tree/v0.6.0) and [API reference](https://docs.rs/rydantic/0.6.0/rydantic/); the live guides default to stable 0.7.0 and explicitly mark beta-only APIs.
 
 > **Breaking upgrade from 0.6.0:** 0.7.0 removes automatic `Model` derive insertion inside `#[rydantic::capnp_models]`. Add an explicit `#[derive(rydantic::Model)]` to every model struct and enum, including nested models. The release also rejects unsupported custom SQLite index layouts before a table rebuild. Conditional Cap’n Proto definitions produce configuration-specific wire schemas; different feature/target configurations are not automatically wire-compatible. Read the [changelog and migration guidance](https://github.com/trotsky1997/Rydantic/blob/main/CHANGELOG.md) before upgrading.
 

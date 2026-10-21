@@ -28,6 +28,10 @@ dependency (`=X.Y.Z-beta.N`, or `=X.Y.Z`) synchronized. Record breaking changes,
 affected behavior, and migration/backup warnings in the changelog; legacy data
 and deployment compatibility are not an implicit release guarantee.
 
+Keep public quickstarts and `website/site.json`'s `stableVersion` on the verified
+stable release while preparing or publishing betas. Advance them only after a
+new stable release is verified; explicitly mark beta-only guide sections.
+
 1. Merge the release preparation PR and wait for **that exact main commit's CI**
    to finish successfully, including live database tests.
 2. Review the changelog, package content and version. Create an immutable release

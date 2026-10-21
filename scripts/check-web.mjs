@@ -1,5 +1,17 @@
 import assert from "node:assert/strict";
-import { access, readFile, readdir } from "node:fs/promises";
+import {
+  access,
+  cp,
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  rm,
+  writeFile,
+} from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 
 const root = new URL("../", import.meta.url);
 const config = JSON.parse(
@@ -59,6 +71,33 @@ for (const link of html.matchAll(/(?:href|src)="([^"#]+|#[^"]+)"/g)) {
     assert(files.includes(target.slice(2)), `Missing asset ${target}`);
 }
 const site = JSON.parse(await readFile(new URL("website/site.json", root), "utf8"));
+function checkStableReferences(html, version) {
+  assert.match(version, /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/);
+  assert(
+    html.includes(`v${version}`),
+    "Homepage must display the stable version",
+  );
+  assert.equal(
+    html.match(/<code>(cargo add rydantic@=[^<]+)<\/code\s*>/)?.[1],
+    `cargo add rydantic@=${version}`,
+    "Homepage install must use the stable version",
+  );
+  assert(
+    html.includes(`data-copy="cargo add rydantic@=${version}"`),
+    "Homepage copy command must use the stable version",
+  );
+  assert.equal(
+    html.match(/<a\s+href="([^"]+)"\s*>\s*Stable API reference<\/a\s*>/)?.[1],
+    `https://docs.rs/rydantic/${version}/rydantic/`,
+    "Homepage stable API reference must use the stable version",
+  );
+  assert.equal(
+    html.match(/Stable ([^\s]+) includes breaking changes from 0\.6\.0\./)?.[1],
+    version,
+    "Homepage cumulative upgrade warning must use the stable version",
+  );
+}
+checkStableReferences(html, site.stableVersion);
 const docs = site.docs.replace(/\/$/, "");
 for (const anchor of html.matchAll(/<a\b[^>]*>/g)) {
   const page = anchor[0].match(/\bdata-docs-path="([^"]+)"/)?.[1];
@@ -67,6 +106,31 @@ for (const anchor of html.matchAll(/<a\b[^>]*>/g)) {
   const href = anchor[0].match(/\bhref="([^"]+)"/)?.[1];
   assert.equal(href, `${docs}/${page}`, `Incorrect documentation link for ${page}`);
 }
+// Exercise the actual builder with a future stable version without changing the
+// checkout's verified stable configuration or its generated homepage.
+const temporary = await mkdtemp(join(tmpdir(), "rydantic-site-version-"));
+try {
+  const fixture = pathToFileURL(`${temporary}/`);
+  await mkdir(new URL("scripts/", fixture));
+  await cp(
+    new URL("scripts/build-site.mjs", root),
+    new URL("scripts/build-site.mjs", fixture),
+  );
+  await cp(new URL("website/", root), new URL("website/", fixture), {
+    recursive: true,
+  });
+  await writeFile(
+    new URL("website/site.json", fixture),
+    JSON.stringify({ ...site, stableVersion: "0.9.0" }),
+  );
+  await import(new URL("scripts/build-site.mjs", fixture).href);
+  checkStableReferences(
+    await readFile(new URL(".site/index.html", fixture), "utf8"),
+    "0.9.0",
+  );
+} finally {
+  await rm(temporary, { recursive: true, force: true });
+}
 console.log(
-  `Checked ${pages.length} documentation pages, navigation, English content, assets and homepage links.`,
+  `Checked ${pages.length} documentation pages, navigation, English content, assets, homepage links and stable-version regression.`,
 );
