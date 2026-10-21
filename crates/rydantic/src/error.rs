@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::{collections::BTreeMap, fmt};
+use std::{any::Any, collections::BTreeMap, fmt, sync::Arc};
 
 /// A location in a nested input. Object keys and array indices remain distinct.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -132,14 +132,49 @@ impl fmt::Display for ValidationErrors {
 impl std::error::Error for ValidationErrors {}
 
 /// Shared error collector used by generated code and custom `JsonType` implementations.
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct Context {
     path: Vec<PathSegment>,
     errors: Vec<ValidationError>,
+    data: Option<Arc<dyn Any + Send + Sync>>,
+}
+impl fmt::Debug for Context {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Context")
+            .field("path", &self.path)
+            .field("errors", &self.errors)
+            .field("has_data", &self.data.is_some())
+            .finish()
+    }
 }
 impl Context {
     pub fn new() -> Self {
         Self::default()
+    }
+    /// Create a fresh collector carrying one explicitly supplied business context.
+    /// The data is shared, never copied, with child collectors. `Any` requires
+    /// owned (`'static`) data; `Send + Sync` keeps async validation futures Send.
+    /// Interior mutation and deliberately sharing an Arc between requests remain
+    /// the caller's responsibility. Debug output never includes this data.
+    pub fn with_data<C: Any + Send + Sync>(data: Arc<C>) -> Self {
+        Self {
+            data: Some(data),
+            ..Self::default()
+        }
+    }
+    /// Retrieve the exact supplied type, or return a relative validation error.
+    /// Callbacks should propagate this error with `?`; low-level implementations
+    /// should push it into the collector to attach the current location.
+    pub fn require_data<C: Any + Send + Sync>(&self) -> Result<&C, ValidationError> {
+        let data = self.data.as_ref().ok_or_else(|| {
+            ValidationError::new("context_missing", "validation requires business context")
+        })?;
+        data.downcast_ref::<C>().ok_or_else(|| {
+            ValidationError::new(
+                "context_type_mismatch",
+                "business context has an unexpected type",
+            )
+        })
     }
     pub fn error_count(&self) -> usize {
         self.errors.len()
@@ -169,6 +204,18 @@ impl Context {
         Self {
             path,
             errors: vec![],
+            data: self.data.clone(),
+        }
+    }
+    /// Start an isolated branch trial with relative diagnostic paths and the
+    /// same application data. Unlike `child`, this resets the path because trial
+    /// errors are embedded beneath a single outer union error rather than absorbed.
+    #[doc(hidden)]
+    pub fn trial(&self) -> Self {
+        Self {
+            path: vec![],
+            errors: vec![],
+            data: self.data.clone(),
         }
     }
     pub fn absorb(&mut self, child: Self) {
