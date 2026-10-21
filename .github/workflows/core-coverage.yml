@@ -1,0 +1,76 @@
+name: Default core coverage
+
+on:
+  pull_request:
+    paths:
+      - "crates/rydantic/**"
+      - "crates/rydantic-derive/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "scripts/core_coverage.py"
+      - "scripts/test_core_coverage.py"
+      - "COVERAGE.md"
+      - ".github/workflows/core-coverage.yml"
+  push:
+    branches: [main]
+    paths:
+      - "crates/rydantic/**"
+      - "crates/rydantic-derive/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "scripts/core_coverage.py"
+      - "scripts/test_core_coverage.py"
+      - "COVERAGE.md"
+      - ".github/workflows/core-coverage.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-coverage-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  coverage:
+    name: Default-core runtime coverage / Linux
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      RUSTUP_TOOLCHAIN: 1.98.1
+      CARGO_TARGET_DIR: target/core-coverage
+      CARGO_BUILD_JOBS: 2
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Install pinned compiler and matching coverage tools
+        run: rustup toolchain install 1.98.1 --profile minimal --component llvm-tools-preview
+      - name: Test the measurement contract
+        run: python3 -m unittest discover -s scripts -p 'test_core_coverage.py' -v
+      - name: Measure default-core runtime and enforce floors
+        run: >-
+          python3 scripts/core_coverage.py
+          --output-dir coverage/core
+          --min-line-coverage 85
+          --min-function-coverage 85
+      - name: Show scoped coverage summary
+        if: always()
+        run: |
+          if [ -f coverage/core/current.txt ]; then
+            echo 'Default-core runtime only. Optional features, proc-macro implementation, trybuild and other crates are excluded. Branch coverage is not measured.' >> "$GITHUB_STEP_SUMMARY"
+            echo '```text' >> "$GITHUB_STEP_SUMMARY"
+            cat coverage/core/current.txt >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Preserve reports and failure logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: default-core-coverage-${{ github.sha }}
+          path: |
+            coverage/core/*.json
+            coverage/core/*.txt
+            coverage/core/*.log
+          if-no-files-found: warn
+          retention-days: 7
