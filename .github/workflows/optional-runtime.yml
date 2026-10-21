@@ -1,0 +1,63 @@
+name: Optional runtime contracts
+
+on:
+  pull_request:
+    paths:
+      - 'crates/rydantic/**'
+      - 'crates/rydantic-derive/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'scripts/optional_runtime.py'
+      - 'scripts/test_optional_runtime.py'
+      - 'COVERAGE.md'
+      - '.github/workflows/optional-runtime.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'crates/rydantic/**'
+      - 'crates/rydantic-derive/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'scripts/optional_runtime.py'
+      - 'scripts/test_optional_runtime.py'
+      - 'COVERAGE.md'
+      - '.github/workflows/optional-runtime.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: optional-runtime-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contracts:
+    name: Minimal optional runtime / ${{ matrix.layer }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        layer: [settings, partial-json]
+    env:
+      RUSTUP_TOOLCHAIN: 1.98.1
+      CARGO_TARGET_DIR: target/optional-runtime
+      CARGO_BUILD_JOBS: 2
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - run: rustup toolchain install 1.98.1 --profile minimal
+      - name: Test gate parsing and fail-closed contract
+        run: python3 -m unittest discover -s scripts -p 'test_optional_runtime.py' -v
+      - name: Run minimal feature suite and disabled-feature negative control
+        run: python3 scripts/optional_runtime.py --layer '${{ matrix.layer }}' --output-dir 'reports/${{ matrix.layer }}'
+      - name: Preserve exact-source manifest and failure logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: optional-runtime-${{ matrix.layer }}-${{ github.sha }}
+          path: reports/${{ matrix.layer }}/
+          if-no-files-found: warn
+          retention-days: 7
