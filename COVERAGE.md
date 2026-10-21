@@ -162,3 +162,40 @@ diff checks pass. This report does not claim a new release, merge, or CI result.
 
 Implementation follows Rust's official
 [instrumentation-based coverage documentation](https://doc.rust-lang.org/rustc/instrument-coverage.html).
+
+## Minimal optional-runtime correctness layer
+
+Settings and partial JSON already execute in the all-features workspace CI.
+The separate `Optional runtime contracts` workflow additionally verifies their
+minimal feature configurations on Linux with Rust 1.98.1:
+
+- `settings`: only `derive,settings`, selecting `tests/settings.rs` and exercising
+  `src/settings.rs`.
+- `partial-json`: only `partial-json` (no derive), selecting
+  `tests/partial_json.rs` and exercising `src/partial_json.rs`.
+
+Reproduce with `python3 scripts/optional_runtime.py --layer settings --output-dir
+reports/settings` (or `--layer partial-json --output-dir reports/partial-json`),
+using Rust 1.98.1 (`RUSTUP_TOOLCHAIN=1.98.1`) and a new report directory;
+`--offline` is available with cached dependencies.
+The script builds the exact integration-test binary from Cargo JSON artifacts,
+lists its tests, rejects zero/duplicate inventories, runs the whole suite, and
+requires all listed tests to pass with no ignored or filtered tests. It then
+rebuilds the same suite without its optional feature and confirms that the
+resulting zero-test inventory is rejected by the same guard. This deliberate
+negative control prevents a feature-disabled suite being credited as a pass.
+
+Artifacts record the revision, dirty-tree flag, lockfile hash, compiler/host,
+commands, enabled features, binary path, test names/count and control outcome.
+The runner, selected test suite and primary runtime source hashes are recorded
+alongside inherited Rust flags.
+Build, discovery and execution logs are retained on failure. Python contract
+tests reject missing/ambiguous Cargo artifacts, empty/duplicate lists and
+skipped, filtered or failing execution summaries.
+
+This is a correctness layer, not LLVM coverage measurement: no measured source
+universe or new numerical floor is claimed. It does not measure macro code,
+other optional features, Cap'n Proto, SQL/Axum, AI, or external application usage.
+The default-core 85% floors and existing broader platform jobs are unchanged.
+A successful workflow run is the runtime evidence; merely adding this gate does
+not establish its Rust result or a new coverage baseline.
