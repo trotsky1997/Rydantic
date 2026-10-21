@@ -4,9 +4,13 @@ description: "Release history and the current migration path."
 icon: "tag"
 ---
 
-## 0.8.0-beta.1 · Pending prerelease
+## 0.8.0-beta.1 · Published prerelease
 
-Prepared in source; registry publication and registry-only consumer verification are pending. This breaking beta is opt-in and is not the latest stable release. Stable/default remains **0.7.0**. The intended pin is `rydantic = "=0.8.0-beta.1"`, with matching runtime/derive packages and an exact derive dependency.
+Published on 2026-10-21 as a prerelease: [runtime](https://crates.io/crates/rydantic/0.8.0-beta.1) and [derive](https://crates.io/crates/rydantic-derive/0.8.0-beta.1). This breaking beta is opt-in and is not the latest stable release. Stable/default remains **0.7.0**. Install with `rydantic = "=0.8.0-beta.1"`, with matching runtime/derive packages and an exact derive dependency.
+
+The guarded [publication workflow](https://github.com/trotsky1997/Rydantic/actions/runs/39559766878) succeeded for source commit [9bc51b3](https://github.com/trotsky1997/Rydantic/commit/9bc51b31839aa76fd8db4037a8f4526cc5b3bc5b). Both downloaded registry archives matched their registry API and sparse-index checksums and the final local packages. Their VCS metadata identifies that source commit; both versions were confirmed unyanked, and the runtime pins derive to exactly `=0.8.0-beta.1`.
+
+A fresh registry-only consumer passed 83 tests plus 3 isolated settings cases in each of its default and all-features modes. A separate renamed-dependency/direct-macro consumer passed 2 tests in each configuration mode. Cargo metadata confirmed both exact beta packages resolved from crates.io without path patches. The safe panic-boundary migration ran successfully; five negative compile probes rejected the intended `UnwindSafe`, `RefUnwindSafe`, `Rc`, borrowed-data and pipeline stage-type violations. See the [release record](https://github.com/trotsky1997/Rydantic/releases/tag/v0.8.0-beta.1) for detailed verification results.
 
 - [Ordered callback lists](/models/validation#ordered-callback-lists): `before` transforms stop at the first failure; typed sync/async check lists accumulate errors in declaration order, behind existing prerequisite gates. Siblings still accumulate errors and model checks require successful fields. Synchronous errors prevent the async phase.
 - [Typed per-call context](/models/validation-context): explicit hooks and owned Model entry points carry `Any + Send + Sync` data through nested validation/encoding. Missing or wrong types are validation errors. Models do not retain context; ordinary/Serde and existing high-level Axum/SQL/Cap’n Proto entry points stay context-free.
@@ -14,7 +18,7 @@ Prepared in source; registry publication and registry-only consumer verification
 - **Breaking from 0.7.0:** `Context` no longer implements `UnwindSafe` or `RefUnwindSafe`, even without data. The erased `Arc<dyn Any + Send + Sync>` payload omits these markers, so captures across `catch_unwind` can stop compiling. Construct and consume the context inside the closure or avoid capturing it. Use `AssertUnwindSafe` only after auditing every captured value and shared payload, never as a blind wrapper. Validation failures remain ordinary `Result` errors; no compatibility layer restores the old bounds.
 - This core release covers only runtime/derive. AI remains independently versioned at 0.6.0, with its source path dependency adjusted for this workspace; it is not being published here. CLI/codegen remain unpublished 0.1.0 tools. Frozen Skill/evaluation versions are unchanged.
 
-New checks/transforms can change accepted data; they do not migrate stored values or promise lossless conversion. Existing explicit Cap’n Proto derives, configuration-specific wire compatibility, SQLite index-safety guards, backups/manual migrations, settings secret handling, partial JSON limits and domain provenance requirements remain. Read the [full changelog](https://github.com/trotsky1997/Rydantic/blob/main/CHANGELOG.md) and [migration limits](/integrations/migrations). Publication and consumer-test results must be recorded after verification, not inferred from these source changes.
+New checks/transforms can change accepted data; they do not migrate stored values or promise lossless conversion. Existing explicit Cap’n Proto derives, configuration-specific wire compatibility, SQLite index-safety guards, backups/manual migrations, settings secret handling, partial JSON limits and domain provenance requirements remain. Read the [full changelog](https://github.com/trotsky1997/Rydantic/blob/main/CHANGELOG.md) and [migration limits](/integrations/migrations).
 
 ## RydanticAI · Unreleased
 
