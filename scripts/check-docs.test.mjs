@@ -218,3 +218,51 @@ test("does not accept a directory as an image asset", async (t) => {
     /must be a file/,
   );
 });
+
+for (const markup of [
+  '<img srcSet="/assets/missing.svg 1x" />',
+  '<video poster="/assets/missing.svg" />',
+  '<form action="/missing" />',
+  '<use xlinkHref="/assets/missing.svg#x" />',
+  '<div style={{backgroundImage: "url(/missing.svg)"}} />',
+]) {
+  test(`rejects unsupported URL-bearing attributes ${markup}`, async (t) => {
+    await assert.rejects(
+      checkDocs(await fixture(t, markup)),
+      /unsupported JSX attribute|dynamic JSX/,
+    );
+  });
+}
+
+test("rejects path-based JSX icons rather than skipping asset checks", async (t) => {
+  await assert.rejects(
+    checkDocs(
+      await fixture(t, '<Card icon="/assets/missing.svg">Broken</Card>'),
+    ),
+    /library icon/,
+  );
+});
+test("rejects URL-shaped navigation icons", async (t) => {
+  await assert.rejects(
+    checkDocs(
+      await fixture(
+        t,
+        "",
+        {},
+        (c) => (c.navigation.tabs[0].icon = "https://example.com/icon.svg"),
+      ),
+    ),
+    /library icon/,
+  );
+});
+test("rejects path-based frontmatter icons", async (t) => {
+  const root = await fixture(t);
+  await writeFile(
+    path.join(root, "introduction.mdx"),
+    header.replace(
+      'title: "Test"',
+      'icon: "/assets/missing.svg"\ntitle: "Test"',
+    ),
+  );
+  await assert.rejects(checkDocs(root), /library icon/);
+});

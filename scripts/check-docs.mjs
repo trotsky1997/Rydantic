@@ -58,6 +58,12 @@ function string(value, name) {
     `${name}: expected nonempty string`,
   );
 }
+function icon(value, name) {
+  assert(
+    typeof value === "string" && /^[a-z][a-z0-9-]*$/.test(value),
+    `${name}: only static library icon names are supported`,
+  );
+}
 function keys(value, allowed, name) {
   object(value, name);
   for (const key of Object.keys(value))
@@ -114,7 +120,7 @@ export function checkConfig(config) {
   for (const tab of config.navigation.tabs) {
     keys(tab, ["tab", "icon", "groups"], "tab");
     string(tab.tab, "tab");
-    if (tab.icon) string(tab.icon, "tab.icon");
+    if (tab.icon !== undefined) icon(tab.icon, "tab.icon");
     assert(Array.isArray(tab.groups) && tab.groups.length);
     for (const group of tab.groups) {
       keys(group, ["group", "pages"], "group");
@@ -223,7 +229,7 @@ export async function checkDocs(
       );
       string(data.title, file + " title");
       string(data.description, file + " description");
-      if (data.icon !== undefined) string(data.icon, file + " icon");
+      if (data.icon !== undefined) icon(data.icon, file + " icon");
       if (data.mode !== undefined)
         assert.equal(data.mode, "frame", file + " mode");
     }
@@ -290,6 +296,26 @@ export async function checkDocs(
               file,
               "spread attributes are outside the supported documentation subset",
             );
+          // Fail closed on every unmodeled attribute, including URL lists,
+          // form targets, SVG references and CSS-bearing attributes.
+          if (
+            ![
+              "href",
+              "src",
+              "id",
+              "alt",
+              "title",
+              "className",
+              "role",
+              "cols",
+              "icon",
+              "aria-label",
+              "aria-hidden",
+              "aria-labelledby",
+            ].includes(attr.name)
+          )
+            fail(file, `unsupported JSX attribute ${attr.name}`);
+          if (attr.name === "icon") icon(attr.value, file + " icon");
           if (attr.value?.type === "mdxJsxAttributeValueExpression") {
             const body = attr.value.data.estree.body;
             if (

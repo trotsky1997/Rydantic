@@ -37,7 +37,8 @@ snippets are restricted to code, plain formatted text and comments; headings,
 links, JSX and nested imports are rejected because their rendered parent-page
 anchor/base-URL semantics are not modeled by this checker.
 The repository's supported configuration and component subset is checked explicitly;
-new config keys/components or dynamic expression/link/import patterns require extending the
+icons accept static library names only. New config keys/components/JSX attributes
+or dynamic expression/link/import patterns require extending the
 checker and its regression tests. External URL availability, runtime component
 behavior, Mintlify-specific custom-heading syntax and full proprietary renderer
 semantics are not certified by this local check. Existing homepage, stable-version
