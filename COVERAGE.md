@@ -180,7 +180,10 @@ using Rust 1.98.1 (`RUSTUP_TOOLCHAIN=1.98.1`) and a new report directory;
 `--offline` is available with cached dependencies.
 The script builds the exact integration-test binary from Cargo JSON artifacts,
 lists its tests, rejects zero/duplicate inventories, runs the whole suite, and
-requires all listed tests to pass with no ignored or filtered tests. It then
+requires the final parent harness to pass all listed tests with no ignored or
+filtered tests. Settings intentionally spawns filtered isolation subprocesses;
+their earlier summaries must also succeed and account for the same inventory.
+Duplicate full-suite summaries or failed/ignored child tests are rejected. It then
 rebuilds the same suite without its optional feature and confirms that the
 resulting zero-test inventory is rejected by the same guard. This deliberate
 negative control prevents a feature-disabled suite being credited as a pass.

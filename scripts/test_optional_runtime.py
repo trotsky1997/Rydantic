@@ -86,6 +86,14 @@ class GateTests(unittest.TestCase):
                     self.assertNotIn("--features", disabled_command)
                 self.assertTrue((report / "disabled-list.log").is_file())
 
+    def test_nested_settings_harnesses(self):
+        child = "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 17 filtered out; finished in 0.00s\n"
+        parent = "test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\n"
+        verify_result(child * 3 + parent, 18)
+        for output in [parent + parent, parent + child, child * 3, child.replace("17 filtered", "18 filtered") + parent, child.replace("0 failed", "1 failed") + parent, child.replace("0 ignored", "1 ignored") + parent]:
+            with self.subTest(output=output), self.assertRaises(ValueError):
+                verify_result(output, 18)
+
     def test_minimal_features(self):
         self.assertEqual(LAYERS["settings"]["features"], ["derive", "settings"])
         self.assertEqual(LAYERS["partial-json"]["features"], ["partial-json"])

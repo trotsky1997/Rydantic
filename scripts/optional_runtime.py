@@ -54,7 +54,13 @@ def test_names(output, allow_empty=False):
 def verify_result(output, count):
     lines = [line for line in output.splitlines() if line.startswith("test result:")]
     pattern = rf"test result: ok\. {count} passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in .+"
-    if len(lines) != 1 or re.fullmatch(pattern, lines[0]) is None or count <= 0:
+    # Settings intentionally spawns isolated child harnesses; their summaries
+    # precede the final parent result. Children may filter tests, but cannot fail
+    # or ignore them. The parent must still execute the complete inventory.
+    child_pattern = r"test result: ok\. ([1-9]\d*) passed; 0 failed; 0 ignored; 0 measured; ([1-9]\d*) filtered out; finished in .+"
+    children = [re.fullmatch(child_pattern, line) for line in lines[:-1]]
+    if (not lines or re.fullmatch(pattern, lines[-1]) is None or count <= 0
+            or any(match is None or sum(map(int, match.groups())) != count for match in children)):
         raise ValueError("Selected tests did not all execute successfully without skips")
 
 
