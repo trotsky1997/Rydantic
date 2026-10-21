@@ -4,9 +4,11 @@ description: "Release history and the current migration path."
 icon: "tag"
 ---
 
-## 0.7.0 · Stable-release candidate
+## 0.7.0 · Stable
 
-Prepared for stable promotion; publication is pending verification. Check the [release](https://github.com/trotsky1997/Rydantic/releases/tag/v0.7.0) and [registry](https://crates.io/crates/rydantic/versions) before installing `rydantic = "=0.7.0"`. Source version metadata alone does not prove publication.
+Published on 2026-10-21 as stable: [runtime](https://crates.io/crates/rydantic/0.7.0) and [derive](https://crates.io/crates/rydantic-derive/0.7.0). Install with `rydantic = "=0.7.0"`; the runtime pins derive to the same exact version. The [guarded publication workflow](https://github.com/trotsky1997/Rydantic/actions/runs/39545120139) succeeded for source commit [09ad96d](https://github.com/trotsky1997/Rydantic/commit/09ad96d4852ae187d5ddeac096c690eef723a127). Both downloaded registry archives matched their API and sparse-index checksums and the final local packages.
+
+A fresh registry-only consumer passed 48 tests plus 3 isolated settings cases, 2 alternate-configuration tests, and 2 direct-macro tests in each configuration mode. Both packages resolved from crates.io without path patches. See the [release record](https://github.com/trotsky1997/Rydantic/releases/tag/v0.7.0) for detailed verification results.
 
 - Promote settings, partial JSON and domain types from the verified betas, with their documented limits. Fix callback-path hygiene and evaluate consumer cfg/cfg_attr before automatic Cap’n Proto schema generation.
 - **Breaking from 0.6.0:** explicitly derive Model on every capnp_models struct/enum. Conditional definitions create configuration-specific wire schemas; different feature/target sets are not automatically compatible. Preserve explicit ordinal checks; use fixed/schema-first protocols for shared wire formats.

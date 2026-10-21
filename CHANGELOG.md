@@ -1,6 +1,6 @@
-# Rydantic 0.7.0 · Stable-release candidate
+# Rydantic 0.7.0 · Stable
 
-This source prepares stable 0.7.0; it does not announce completed publication. Runtime and derive are promoted together, with an exact `=0.7.0` derive pin. Verify the [release](https://github.com/trotsky1997/Rydantic/releases/tag/v0.7.0) and both registry packages before installation. Stable remains 0.6.0 until that publication completes.
+Published on 2026-10-21 as stable: [runtime](https://crates.io/crates/rydantic/0.7.0) and [derive](https://crates.io/crates/rydantic-derive/0.7.0). Runtime and derive use matching 0.7.0 versions, with an exact `=0.7.0` derive pin. See the [release record](https://github.com/trotsky1997/Rydantic/releases/tag/v0.7.0) for verification details.
 
 ## Included
 
@@ -26,9 +26,11 @@ Domain catalogs are pinned offline snapshots: phones do not prove reachability o
 
 This promotion publishes only `rydantic` and `rydantic-derive`. RydanticAI has an independent version/publication lifecycle. `rydantic-cli` and `rydantic-codegen` remain unpublished source tools (`publish = false`); the Skill and frozen evaluation fixtures are repository assets, not extra crates. Their exact 0.6.0/beta.4 recipes retain their original version-specific contracts.
 
-## Release gates
+## Release verification
 
-Before publication: resolve release-blocking review findings, pass fresh exact-commit main CI on Rust 1.98.1 (Linux/macOS, Windows compiler paths, PostgreSQL/MySQL, fixtures/Clippy/docs), inspect and verify both package archives and test a packaged consumer. Publish derive before runtime through the existing guarded workflow. After publication: verify registry/index/checksums and run a fresh registry-only consumer. Record actual results on the GitHub Release; do not infer a pass from author reports or an older beta.
+The guarded [publication workflow](https://github.com/trotsky1997/Rydantic/actions/runs/39545120139) completed successfully for source commit [09ad96d](https://github.com/trotsky1997/Rydantic/commit/09ad96d4852ae187d5ddeac096c690eef723a127). Both registry archives were independently downloaded, matched their registry API and sparse-index checksums, and were byte-for-byte equal to the final local packages. Their VCS metadata identifies that source commit.
+
+A fresh registry-only consumer passed 48 tests plus 3 isolated settings cases, 2 alternate-configuration tests, and 2 direct-macro tests in each configuration mode. Cargo metadata confirmed both 0.7.0 packages resolved from crates.io without path patches, with the runtime's exact `=0.7.0` derive dependency. See the [release record](https://github.com/trotsky1997/Rydantic/releases/tag/v0.7.0) for detailed verification results.
 
 # Rydantic 0.7.0-beta.4
 
