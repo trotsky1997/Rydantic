@@ -124,7 +124,7 @@ Breaking changes are allowed in this early-stage library. Application owners are
 - JSON Schema cannot express every normalization, coercion, or custom-validation rule. Schema validation and model validation are not interchangeable.
 - Reusing models reduces repeated rules; it does not replace separate public, internal, and storage models when their contracts differ.
 - Native Cap'n Proto bindings use concrete, owned models. Keep protocol IDs and ordinals stable when wire compatibility matters.
-- Conditional definitions inside `capnp_models` have a [known limitation](https://github.com/trotsky1997/Rydantic/issues/8); this beta does not claim general conditional schema generation.
+- `capnp_models` evaluates `cfg` and `cfg_attr` in the consuming crate and generates only the active configuration. Conditional fields or variants can change wire layouts; a shared protocol ID does not make different configurations compatible. See the [conditional-compilation boundaries](docs/integrations/capnp.mdx#conditional-compilation) before deploying different builds.
 
 ## Explore and contribute
 

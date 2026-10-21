@@ -59,10 +59,6 @@ Default mappings cover nested and recursive models, `Box`, `Option`, `Vec`, fixe
 
 Models must use concrete, owned types within the annotated inline module. Data enums still declare their JSON representation: named fields can use `#[model(tag = "kind")]`, while tuple variants use `#[model(untagged)]`. `capnp_name` controls the protocol name independently. `capnp_skip` with a default preserves a local field. JSON aliases, flattening, extra fields, and exclusion continue to control the JSON representation. Unsupported external types can use a default with `capnp_skip`, or the [existing-schema integration](/integrations/existing-capnp).
 
-<Warning>
-Conditional model definitions inside `capnp_models` have a [known limitation](https://github.com/trotsky1997/Rydantic/issues/8): the macro can inspect and reject a definition even when its `#[cfg(...)]` condition disables it. Do not assume feature-gated or platform-gated definitions are excluded from schema analysis. General conditional schema generation is not currently supported.
-</Warning>
-
 ## Breaking change in 0.7.0-beta.1: explicit Model derives
 
 Version 0.7.0-beta.1 removes automatic `Model` derive insertion inside `capnp_models`. Existing code that relied on it will no longer compile. Add `#[derive(rydantic::Model)]` to every model struct and enum in the annotated module, including nested modules, or add `rydantic::Model` to the model's existing derive list. With a renamed dependency, use that dependency's name instead. Already-explicit derives, including aliases imported outside the annotated module, need no change. An unrelated derive named `Model` does not implement Rydantic's model traits.
@@ -96,3 +92,22 @@ See [fixtures/auto-capnp](https://github.com/trotsky1997/Rydantic/tree/main/fixt
 cargo run -p rydantic-auto-capnp-fixture
 cargo test -p rydantic-auto-capnp-fixture
 ```
+
+## Conditional compilation
+
+`capnp_models` lets Rust evaluate `cfg` and `cfg_attr` in the consuming crate before
+collecting its models and generating the schema. Disabled inline modules, models,
+fields, enum variants, aliases and imports are omitted. This includes nested
+`cfg_attr` and consumer features or target predicates; predicates are not evaluated
+in the procedural macro's host environment. Active declarations still have to meet
+all of the normal model restrictions. Out-of-line modules (`mod file;`) are not
+supported, including inside a disabled declaration on stable Rust.
+
+**Wire compatibility warning:** the exported schema describes only the active
+configuration. Conditional fields or variants can change implicit ordinals and the
+wire layout. A shared namespace or file ID does not make different configurations
+compatible. Use separate schema identities for distinct protocols, or use an explicit
+schema-first protocol when different builds must exchange stored or network data.
+Keep and review the exported schema before deploying a changed configuration, and
+back up existing data before any incompatible migration. This feature does not
+migrate or preserve data automatically.

@@ -43,9 +43,37 @@ pub fn derive_sql_model(input: TokenStream) -> TokenStream {
 #[cfg(feature = "capnp")]
 #[proc_macro_attribute]
 pub fn capnp_models(args: TokenStream, input: TokenStream) -> TokenStream {
-    auto_protocol::expand(args.into(), input.into())
+    auto_protocol::prepare(args.into(), input.into(), false)
         .unwrap_or_else(syn::Error::into_compile_error)
         .into()
+}
+
+// The runtime re-export selects its own helper path explicitly. A consumer may
+// also declare an inactive or differently versioned direct proc-macro dependency.
+#[doc(hidden)]
+#[cfg(feature = "capnp")]
+#[proc_macro_attribute]
+pub fn __rydantic_capnp_models_runtime(args: TokenStream, input: TokenStream) -> TokenStream {
+    auto_protocol::prepare(args.into(), input.into(), true)
+        .unwrap_or_else(syn::Error::into_compile_error)
+        .into()
+}
+
+// Internal compiler-driven cfg normalization for `capnp_models`.
+#[doc(hidden)]
+#[cfg(feature = "capnp")]
+#[proc_macro_derive(__RydanticCapnpConfigured, attributes(__rydantic_capnp_options))]
+pub fn capnp_configured(input: TokenStream) -> TokenStream {
+    auto_protocol::configured(input.into())
+        .unwrap_or_else(syn::Error::into_compile_error)
+        .into()
+}
+
+#[doc(hidden)]
+#[cfg(feature = "capnp")]
+#[proc_macro_attribute]
+pub fn __rydantic_capnp_discard(_: TokenStream, _: TokenStream) -> TokenStream {
+    TokenStream::new()
 }
 
 #[proc_macro_derive(Model, attributes(model))]
