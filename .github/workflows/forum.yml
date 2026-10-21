@@ -1,0 +1,80 @@
+name: Forum example
+
+"on":
+  pull_request:
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'examples/forum/**'
+      - 'crates/rydantic/**'
+      - 'crates/rydantic-derive/**'
+      - '.github/workflows/forum.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'examples/forum/**'
+      - 'crates/rydantic/**'
+      - 'crates/rydantic-derive/**'
+      - '.github/workflows/forum.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: forum-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  standalone:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      RUSTUP_TOOLCHAIN: 1.98.1
+      CARGO_INCREMENTAL: 0
+      CARGO_PROFILE_DEV_DEBUG: 0
+      CARGO_PROFILE_TEST_DEBUG: 0
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Install pinned toolchain and actual web target
+        run: rustup toolchain install 1.98.1 --profile minimal --component rustfmt --target wasm32-unknown-unknown
+      - name: Format standalone application
+        run: cargo fmt --manifest-path examples/forum/Cargo.toml -- --check
+      - name: Run isolated server regressions (not the persistent forum database)
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo test --manifest-path examples/forum/Cargo.toml --locked --no-default-features --features server --bin rydantic-forum-example -- --test-threads=1 2>&1 | tee /tmp/forum-tests.log
+          python3 - <<'PY'
+          import pathlib, re
+          output = pathlib.Path('/tmp/forum-tests.log').read_text()
+          summaries = re.findall(r'^test result: ok\. (\d+) passed; (\d+) failed; (\d+) ignored; (\d+) measured; (\d+) filtered out;', output, re.M)
+          if len(summaries) != 1 or int(summaries[0][0]) == 0 or any(map(int, summaries[0][1:])):
+              raise SystemExit('Expected one nonempty, fully executed server regression suite')
+          expected = {
+              'backend::server_impl::tests::replies_follow_parent_visibility_and_preserve_individual_hiding',
+              'backend::server_impl::tests::attachment_failure_rolls_back_post_and_success_commits_both',
+              'backend::server_impl::tests::missing_targets_cannot_be_marked_hidden_or_restored',
+              'backend::server_impl::tests::moderation_status_failure_rolls_back_content_change',
+              'backend::server_impl::tests::report_cursor_reaches_older_records_with_equal_timestamps',
+              'request_tests::refresh_invalidates_older_feed_and_page_responses',
+          }
+          passed = set(re.findall(r'^test ([^ ]+) \.\.\. ok$', output, re.M))
+          if not expected <= passed:
+              raise SystemExit(f'Missing expected regression execution: {sorted(expected - passed)}')
+          PY
+      - name: Compile browser code for WebAssembly
+        run: cargo check --manifest-path examples/forum/Cargo.toml --locked --no-default-features --features web --target wasm32-unknown-unknown
+      - name: Compile combined host configuration
+        run: cargo check --manifest-path examples/forum/Cargo.toml --locked --no-default-features --features server,web
+      - name: Preserve server regression output
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: forum-server-tests
+          path: /tmp/forum-tests.log
+          if-no-files-found: warn

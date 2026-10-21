@@ -33,3 +33,24 @@ The UI includes a small local Dioxus `Button` component and CSS. Its component A
 - Account-scoped limits for topics, replies, reports, registration, and login
 
 This example is intended for local development. Set `FORUM_COOKIE_SECURE=1` when serving over HTTPS. Rate limits use account or username buckets; public deployments also need IP-based limits, backups, and operational monitoring.
+
+## Standalone verification
+
+The root workspace excludes this application. Its green checks alone do not
+validate the forum. The `Forum example` workflow uses Rust 1.98.1 to check this
+manifest's formatting, execute nonzero isolated in-memory SQLite server
+regressions, compile the web feature for `wasm32-unknown-unknown`, and compile the
+combined host server/web configuration. From the repository root, run:
+
+```sh
+cargo fmt --manifest-path examples/forum/Cargo.toml -- --check
+cargo test --manifest-path examples/forum/Cargo.toml --locked --no-default-features --features server --bin rydantic-forum-example
+cargo check --manifest-path examples/forum/Cargo.toml --locked --no-default-features --features web --target wasm32-unknown-unknown
+cargo check --manifest-path examples/forum/Cargo.toml --locked --no-default-features --features server,web
+```
+
+Install the wasm target first. These commands do not deploy anything or start a
+public server. Compilation and SQL regressions are not a browser/fullstack smoke
+test: before merging UI changes, manually check moderator hide/restore, returning
+to the feed without reloading, and loading older report pages using the local
+Dioxus development server described above.

@@ -34,26 +34,81 @@ fn main() {
     dioxus::launch(App);
 }
 
+// Request tokens prevent an older response from replacing newer state.
+#[derive(Default)]
+struct RequestGeneration(u64);
+
+impl RequestGeneration {
+    fn begin(&mut self) -> u64 {
+        self.0 = self.0.checked_add(1).expect("request generation exhausted");
+        self.0
+    }
+
+    fn accepts(&self, token: u64) -> bool {
+        self.0 == token
+    }
+}
+
+#[cfg(test)]
+mod request_tests {
+    use super::RequestGeneration;
+
+    #[test]
+    fn refresh_invalidates_older_feed_and_page_responses() {
+        let mut requests = RequestGeneration::default();
+        let old_page = requests.begin();
+        assert!(requests.accepts(old_page));
+        let refresh = requests.begin();
+        assert!(!requests.accepts(old_page));
+        assert!(requests.accepts(refresh));
+        let newer_refresh = requests.begin();
+        assert!(!requests.accepts(refresh));
+        assert!(requests.accepts(newer_refresh));
+        let after_create = requests.begin();
+        assert!(!requests.accepts(newer_refresh));
+        let after_delete = requests.begin();
+        assert!(!requests.accepts(after_create));
+        assert!(requests.accepts(after_delete));
+    }
+}
+
+fn refresh_posts(
+    mut posts: Signal<Vec<PostView>>,
+    mut loaded: Signal<bool>,
+    mut error: Signal<Option<String>>,
+    mut generation: Signal<RequestGeneration>,
+) {
+    let token = generation.with_mut(RequestGeneration::begin);
+    // Do not leave previously visible content available while revalidating.
+    posts.set(Vec::new());
+    loaded.set(false);
+    error.set(None);
+    spawn(async move {
+        let result = list_posts().await;
+        if !generation.peek().accepts(token) {
+            return;
+        }
+        match result {
+            Ok(items) => posts.set(items),
+            Err(reason) => error.set(Some(reason.to_string())),
+        }
+        loaded.set(true);
+    });
+}
+
 #[component]
 fn App() -> Element {
-    let mut posts = use_signal(Vec::<PostView>::new);
+    let posts = use_signal(Vec::<PostView>::new);
     let mut user = use_signal(|| None::<UserView>);
     let mut screen = use_signal(|| Screen::Feed);
     let mut selected_category = use_signal(|| None::<String>);
     let mut search = use_signal(String::new);
     let mut newest_first = use_signal(|| true);
-    let mut loaded = use_signal(|| false);
-    let mut load_error = use_signal(|| None::<String>);
+    let loaded = use_signal(|| false);
+    let load_error = use_signal(|| None::<String>);
+    let post_generation = use_signal(RequestGeneration::default);
 
-    use_effect(move || {
-        spawn(async move {
-            match list_posts().await {
-                Ok(items) => posts.set(items),
-                Err(error) => load_error.set(Some(error.to_string())),
-            }
-            loaded.set(true);
-        });
-    });
+    use_effect(move || refresh_posts(posts, loaded, load_error, post_generation));
 
     use_effect(move || {
         spawn(async move {
@@ -195,12 +250,15 @@ fn App() -> Element {
                         },
                     }
                 } else if current_screen == Screen::Moderation && is_moderator {
-                    ModerationPanel { on_back: move |_| screen.set(Screen::Feed) }
+                    ModerationPanel {
+                        on_back: move |_| screen.set(Screen::Feed),
+                        on_changed: move |_| refresh_posts(posts, loaded, load_error, post_generation),
+                    }
                 } else if current_screen == Screen::Compose && authenticated {
                     ComposePost {
                         on_cancel: move |_| screen.set(Screen::Feed),
-                        on_created: move |post| {
-                            posts.with_mut(|items| items.insert(0, post));
+                        on_created: move |_| {
+                            refresh_posts(posts, loaded, load_error, post_generation);
                             selected_category.set(None);
                             screen.set(Screen::Feed);
                         },
@@ -212,8 +270,8 @@ fn App() -> Element {
                             user: current_user.clone(),
                             on_back: move |_| screen.set(Screen::Feed),
                             on_auth: move |_| screen.set(Screen::Auth),
-                            on_deleted: move |id| {
-                                posts.with_mut(|items| items.retain(|post| post.id != id));
+                            on_deleted: move |_| {
+                                refresh_posts(posts, loaded, load_error, post_generation);
                                 screen.set(Screen::Feed);
                             },
                         }
@@ -736,9 +794,22 @@ fn AuthPanel(on_cancel: EventHandler<()>, on_authenticated: EventHandler<UserVie
     }
 }
 
-fn refresh_reports(mut reports: Signal<Vec<ReportView>>, mut error: Signal<Option<String>>) {
+fn refresh_reports(
+    mut reports: Signal<Vec<ReportView>>,
+    mut error: Signal<Option<String>>,
+    mut generation: Signal<RequestGeneration>,
+    mut loading_more: Signal<bool>,
+) {
+    let token = generation.with_mut(RequestGeneration::begin);
+    reports.set(Vec::new());
+    error.set(None);
+    loading_more.set(false);
     spawn(async move {
-        match list_reports().await {
+        let result = list_reports(None).await;
+        if !generation.peek().accepts(token) {
+            return;
+        }
+        match result {
             Ok(items) => reports.set(items),
             Err(reason) => error.set(Some(reason.to_string())),
         }
@@ -750,21 +821,29 @@ fn apply_report_action(
     action: &'static str,
     reports: Signal<Vec<ReportView>>,
     mut error: Signal<Option<String>>,
+    on_changed: EventHandler<()>,
+    generation: Signal<RequestGeneration>,
+    loading_more: Signal<bool>,
 ) {
     spawn(async move {
         match moderate_report(report_id, action.to_string()).await {
-            Ok(()) => refresh_reports(reports, error),
+            Ok(()) => {
+                on_changed.call(());
+                refresh_reports(reports, error, generation, loading_more);
+            }
             Err(reason) => error.set(Some(reason.to_string())),
         }
     });
 }
 
 #[component]
-fn ModerationPanel(on_back: EventHandler<()>) -> Element {
-    let reports = use_signal(Vec::<ReportView>::new);
-    let error = use_signal(|| None::<String>);
+fn ModerationPanel(on_back: EventHandler<()>, on_changed: EventHandler<()>) -> Element {
+    let mut reports = use_signal(Vec::<ReportView>::new);
+    let mut error = use_signal(|| None::<String>);
+    let mut loading_more = use_signal(|| false);
+    let mut generation = use_signal(RequestGeneration::default);
 
-    use_effect(move || refresh_reports(reports, error));
+    use_effect(move || refresh_reports(reports, error, generation, loading_more));
 
     rsx! {
         button { class: "back-button", onclick: move |_| on_back.call(()), "← 返回社区" }
@@ -798,24 +877,24 @@ fn ModerationPanel(on_back: EventHandler<()>) -> Element {
                                     if report.status == "open" {
                                         button {
                                             class: "text-action danger-action",
-                                            onclick: move |_| apply_report_action(report_id, "hide", reports, error),
+                                            onclick: move |_| apply_report_action(report_id, "hide", reports, error, on_changed, generation, loading_more),
                                             "隐藏并处理"
                                         }
                                         button {
                                             class: "text-action",
-                                            onclick: move |_| apply_report_action(report_id, "dismiss", reports, error),
+                                            onclick: move |_| apply_report_action(report_id, "dismiss", reports, error, on_changed, generation, loading_more),
                                             "忽略"
                                         }
                                     } else if report.status == "reviewed" {
                                         button {
                                             class: "text-action",
-                                            onclick: move |_| apply_report_action(report_id, "restore", reports, error),
+                                            onclick: move |_| apply_report_action(report_id, "restore", reports, error, on_changed, generation, loading_more),
                                             "恢复内容"
                                         }
                                     } else if report.status == "restored" {
                                         button {
                                             class: "text-action danger-action",
-                                            onclick: move |_| apply_report_action(report_id, "hide", reports, error),
+                                            onclick: move |_| apply_report_action(report_id, "hide", reports, error, on_changed, generation, loading_more),
                                             "再次隐藏"
                                         }
                                     }
@@ -823,6 +902,35 @@ fn ModerationPanel(on_back: EventHandler<()>) -> Element {
                             }
                         }
                     }
+                }
+                button {
+                    class: "text-action",
+                    disabled: loading_more(),
+                    onclick: move |_| {
+                        if loading_more() { return; }
+                        let before_id = reports.read().last().map(|report| report.id);
+                        let token = generation.with_mut(RequestGeneration::begin);
+                        loading_more.set(true);
+                        spawn(async move {
+                            let result = list_reports(before_id).await;
+                            if !generation.peek().accepts(token) { return; }
+                            match result {
+                                Ok(items) if items.is_empty() => error.set(Some("没有更早的举报记录。".to_string())),
+                                Ok(items) => {
+                                    // Ignore an older page if an action refreshed the list in flight.
+                                    if reports.read().last().map(|report| report.id) != before_id {
+                                        loading_more.set(false);
+                                        return;
+                                    }
+                                    reports.with_mut(|existing| existing.extend(items));
+                                    error.set(None);
+                                }
+                                Err(reason) => error.set(Some(reason.to_string())),
+                            }
+                            loading_more.set(false);
+                        });
+                    },
+                    "加载更早的举报"
                 }
             }
         }
