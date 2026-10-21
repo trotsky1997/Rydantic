@@ -1,0 +1,96 @@
+---
+title: "Validator extensions"
+description: "Explicit callback composition and typed pipelines"
+---
+
+This development increment follows the published 0.7.0 stable release and is not included in it.
+The APIs on this page are not a claim that the current registry stable contains
+them. Release/version metadata is set only after integration and review.
+
+## Typed pipelines
+
+`rydantic::pipeline::Pipeline` composes ordinary Rust callbacks with a typed input,
+output, application context and error type. Closure implementation types stay
+private. `plain` constructs a stage, `then` transforms its output, and `check`
+borrows the output without changing it. Execution is sequential and fail-fast:
+when a stage fails, later stages do not run. Use `ValidationError` in field hooks
+and `ValidationErrors` in model hooks; the pipeline does not flatten or discard
+error collections.
+
+```rust
+use rydantic::{pipeline::Pipeline, ValidationError, Value, json};
+fn numeric_input(raw: Value) -> Result<Value, ValidationError> {
+    Pipeline::plain(|raw: Value, _: &()| {
+        raw.as_str().map(str::to_owned)
+            .ok_or_else(|| ValidationError::new("text", "expected numeric text"))
+    })
+    .then(|text, _| text.parse::<u32>()
+        .map_err(|_| ValidationError::new("number", "invalid integer")))
+    .then(|number, _| Ok(json!(number)))
+    .run(raw, &())
+}
+```
+
+Use this as `#[model(before = numeric_input)]` on a `u32` field. The declared type,
+built-in field constraints and later callbacks still execute. The normal field
+path and parse-stage annotations still apply. Construction transformations are
+not rerun by typed `validate` or `dump`.
+
+For a complete model stage, start with `Pipeline::plain(|value: Value, _: &()| MyModel::parse_value(value))`. That preserves all parsing errors and the required
+async-validation guard. A later transformation that mutates the model must
+explicitly call `validate` before returning it if model validity is required.
+A pipeline itself is neither a validated-value wrapper nor a proof of validity.
+
+## Plain and wrap are explicit control flow
+
+`plain` implements only the selected pipeline stage. It does not replace the
+generated `Model` decoder, its field rules, or its required asynchronous checks.
+There are no new derive-level `plain` or `wrap` attributes in this increment and
+no claim of Pydantic hook parity.
+
+`pipeline.wrap(|input, context, next| ...)` intercepts that pipeline. `next` can
+be invoked zero times, once, or multiple times. For example,
+`next(input, context).or_else(|_| next(fallback, context))` retries explicitly.
+Skipping it skips **that pipeline's** checks. Retrying repeats its side effects;
+failed-attempt errors are returned or discarded exactly as the wrapper chooses.
+Nothing is automatically retried, rolled back or merged. Do not use retries for
+non-idempotent side effects unless the application deliberately handles them.
+
+An ordinary generated field callback containing such a wrapper cannot suppress
+the surrounding generated decoder's rules. Conversely, a wrapper around a
+complete model parsing stage can bypass that stage deliberately, so callers must
+not call its output validated unless they subsequently validate it.
+
+## Async pipelines
+
+`AsyncPipeline::plain`, `then`, `check` and `wrap` follow the same sequencing and
+failure rules. Callbacks return `rydantic::BoxFuture`; e.g. `Box::pin(async move { ... })`. The async wrapper receives the preceding pipeline and calls
+`next.run(input, context).await` to continue. To parse a model with async rules,
+use its `parse_value_async` entry point inside an awaited stage.
+
+Async stages use owned `Send + 'static` inputs, outputs, errors and captured
+configuration. The per-call `&C` is borrowed until the future completes; `C` must
+be `Sync + 'static`. `check` also requires a `Sync` output. Synchronous pipelines
+can instead borrow captured configuration and input/output data for their
+ordinary Rust lifetimes. There is no requirement to copy application data into a
+JSON value or to use global variables.
+
+Dropping a pending run drops the active future and prevents later stages from
+starting. No task is spawned by the library. Completed side effects are not
+undone, and synchronous work inside a future poll cannot be preempted. There is
+no built-in timeout, task scheduler, parallel check execution or cancellation
+token; those remain explicit application policy.
+
+## Schema, errors and migration
+
+Pipelines are ordinary callback composition, not a new schema language. Existing
+callback local-rule annotations remain applicable when used in derived models.
+The pipeline does not synthesize portable JSON Schema for arbitrary transforms,
+wrappers or business rules. In particular a successful JSON Schema check is not
+proof those callbacks executed.
+
+Existing single callbacks continue to work through the same callback mechanism,
+not through a compatibility layer. Adopting a pipeline is opt-in and can change
+accepted input or normalize data according to its explicit stages. It does not
+migrate stored values and must not be described as a lossless conversion.
+The existing distinction between construction and typed revalidation remains.

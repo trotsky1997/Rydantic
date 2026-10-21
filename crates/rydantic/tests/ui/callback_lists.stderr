@@ -1,0 +1,23 @@
+error: unexpected end of input, callback list must not be empty
+ --> tests/ui/callback_lists.rs:3:34
+  |
+3 | struct Empty { #[model(validate=[])] value: i32 }
+  |                                  ^
+
+error: expected identifier
+ --> tests/ui/callback_lists.rs:5:34
+  |
+5 | struct NotPath { #[model(before=[42])] value: i32 }
+  |                                  ^^
+
+error: expected `,`
+ --> tests/ui/callback_lists.rs:7:44
+  |
+7 | struct Call { #[model(async_validate=[check()])] value: i32 }
+  |                                            ^
+
+error: validate and validate_with_context cannot be combined
+ --> tests/ui/callback_lists.rs:9:40
+  |
+9 | struct Mixed { #[model(validate=check, validate_with_context=check)] value: i32 }
+  |                                        ^^^^^^^^^^^^^^^^^^^^^

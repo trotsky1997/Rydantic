@@ -6,9 +6,11 @@ pub struct Container {
     pub ignore_extra: bool,
     pub allow_extra: bool,
     pub untagged: bool,
-    pub async_validate: Option<Path>,
+    pub async_validate: Vec<Path>,
+    pub async_validate_uses_context: bool,
     pub title: Option<String>,
-    pub validate: Option<Path>,
+    pub validate: Vec<Path>,
+    pub validate_uses_context: bool,
     pub tag: Option<String>,
     pub capnp: Option<Path>,
     pub capnp_enum: Option<Path>,
@@ -37,9 +39,12 @@ pub struct Field {
     pub default_trait: bool,
     pub default: Option<Expr>,
     pub default_factory: Option<Path>,
-    pub validate: Option<Path>,
-    pub before: Option<Path>,
-    pub async_validate: Option<Path>,
+    pub validate: Vec<Path>,
+    pub validate_uses_context: bool,
+    pub before: Vec<Path>,
+    pub before_uses_context: bool,
+    pub async_validate: Vec<Path>,
+    pub async_validate_uses_context: bool,
     pub flatten: bool,
     pub extra: bool,
     pub capnp_name: Option<String>,
@@ -49,6 +54,21 @@ pub struct Field {
     pub capnp_text: bool,
     pub capnp_enum: bool,
     pub capnp_skip: bool,
+}
+
+// A path and a nonempty path list have exactly the same callback contract.
+fn callbacks(input: syn::parse::ParseStream<'_>) -> syn::Result<Vec<Path>> {
+    if input.peek(syn::token::Bracket) {
+        let content;
+        syn::bracketed!(content in input);
+        let paths = content.parse_terminated(|input| input.parse::<Path>(), syn::Token![,])?;
+        if paths.is_empty() {
+            return Err(content.error("callback list must not be empty"));
+        }
+        Ok(paths.into_iter().collect())
+    } else {
+        Ok(vec![input.parse()?])
+    }
 }
 
 fn key(meta: &syn::meta::ParseNestedMeta<'_>, seen: &mut HashSet<String>) -> syn::Result<String> {
@@ -87,12 +107,29 @@ pub fn container(attrs: &[Attribute]) -> syn::Result<Container> {
                     };
                 }
                 "title" => result.title = Some(meta.value()?.parse::<LitStr>()?.value()),
-                "validate" => result.validate = Some(meta.value()?.parse()?),
+                "validate" | "validate_with_context" => {
+                    if !result.validate.is_empty() {
+                        return Err(
+                            meta.error("validate and validate_with_context cannot be combined")
+                        );
+                    }
+                    result.validate_uses_context = meta.path.is_ident("validate_with_context");
+                    result.validate = callbacks(meta.value()?)?;
+                }
                 "tag" => result.tag = Some(meta.value()?.parse::<LitStr>()?.value()),
                 "capnp" => result.capnp = Some(meta.value()?.parse::<LitStr>()?.parse()?),
                 "capnp_enum" => result.capnp_enum = Some(meta.value()?.parse::<LitStr>()?.parse()?),
                 "untagged" => result.untagged = true,
-                "async_validate" => result.async_validate = Some(meta.value()?.parse()?),
+                "async_validate" | "async_validate_with_context" => {
+                    if !result.async_validate.is_empty() {
+                        return Err(meta.error(
+                            "async_validate and async_validate_with_context cannot be combined",
+                        ));
+                    }
+                    result.async_validate_uses_context =
+                        meta.path.is_ident("async_validate_with_context");
+                    result.async_validate = callbacks(meta.value()?)?;
+                }
                 _ => {
                     return Err(meta.error(
                         "unsupported model attribute; expected extra, title, validate, or tag",
@@ -192,9 +229,32 @@ pub fn field(attrs: &[Attribute]) -> syn::Result<Field> {
                     }
                 }
                 "default_factory" => result.default_factory = Some(meta.value()?.parse()?),
-                "validate" => result.validate = Some(meta.value()?.parse()?),
-                "before" => result.before = Some(meta.value()?.parse()?),
-                "async_validate" => result.async_validate = Some(meta.value()?.parse()?),
+                "validate" | "validate_with_context" => {
+                    if !result.validate.is_empty() {
+                        return Err(
+                            meta.error("validate and validate_with_context cannot be combined")
+                        );
+                    }
+                    result.validate_uses_context = meta.path.is_ident("validate_with_context");
+                    result.validate = callbacks(meta.value()?)?;
+                }
+                "before" | "before_with_context" => {
+                    if !result.before.is_empty() {
+                        return Err(meta.error("before and before_with_context cannot be combined"));
+                    }
+                    result.before_uses_context = meta.path.is_ident("before_with_context");
+                    result.before = callbacks(meta.value()?)?;
+                }
+                "async_validate" | "async_validate_with_context" => {
+                    if !result.async_validate.is_empty() {
+                        return Err(meta.error(
+                            "async_validate and async_validate_with_context cannot be combined",
+                        ));
+                    }
+                    result.async_validate_uses_context =
+                        meta.path.is_ident("async_validate_with_context");
+                    result.async_validate = callbacks(meta.value()?)?;
+                }
                 "capnp_name" => result.capnp_name = Some(meta.value()?.parse::<LitStr>()?.value()),
                 "capnp_ordinal" => {
                     result.capnp_ordinal = Some(meta.value()?.parse::<LitInt>()?.base10_parse()?)

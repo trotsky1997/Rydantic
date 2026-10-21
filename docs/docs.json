@@ -53,6 +53,8 @@
             "group": "Models",
             "pages": [
               "models/validation",
+              "models/validator-extensions",
+              "models/validation-context",
               "models/settings",
               "models/structure",
               "models/borrowed",

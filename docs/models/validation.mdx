@@ -86,7 +86,7 @@ struct Window {
 }
 ```
 
-Each hook attribute accepts one callback path. Compose several checks using an ordinary Rust function with explicit control flow:
+Each hook attribute accepts a callback path or an ordered list of paths. For custom fail-fast control flow instead of list error accumulation, compose checks inside an ordinary Rust function:
 
 ```rust
 fn valid_end(value: &u32) -> Result<(), ValidationError> {
@@ -97,7 +97,7 @@ fn valid_end(value: &u32) -> Result<(), ValidationError> {
 // Use #[model(validate = valid_end)].
 ```
 
-Here `?` stops this callback at its first failure; it does not stop validation of independent sibling fields. `Context` is the error/path collector for lower-level type implementations, not a per-call application-data argument to these callbacks. Cross-field checks belong in a model callback, which receives the fully constructed model. There is no `plain` or `wrap` hook that suppresses or retries the generated validation pipeline.
+Here `?` stops this callback at its first failure; it does not stop validation of independent sibling fields. The plain callback signatures above remain context-free. Explicit `*_with_context` callback attributes additionally receive `&Context`, including per-call application data when supplied through a context entry point. Cross-field checks belong in a model callback, which receives the fully constructed model. These derive attributes do not suppress or retry typed decoding; typed pipeline adapters are a separate API.
 
 Custom error paths are automatically prefixed with the parent path when nested. `ValidationErrors::errors()` returns an error slice, and `to_json()` returns structured JSON. Each error includes `loc`, `code`, `message`, `stage`, and constraint parameters; `pointer()` returns an escaped JSON Pointer.
 
@@ -112,3 +112,19 @@ Custom error paths are automatically prefixed with the parent path when nested. 
   }
 ]
 ```
+
+## Ordered callback lists
+
+Each callback attribute accepts either a function path or a nonempty list of paths:
+
+```rust
+#[model(validate = [check_relationships, check_business_rules])]
+struct Request {
+    #[model(before = [strip_prefix, normalize_input], validate = [check_format, check_policy])]
+    value: String,
+}
+```
+
+`before` transforms run left to right, passing each output to the next. The first error stops that field's transform chain; independent siblings still run. Typed `validate` and `async_validate` lists run all checks in declared order and accumulate their errors. The prerequisite gate is evaluated once before the list, not again after each callback. Construction skips the entire field check list after decoding or built-in constraint failure; revalidation preserves the different gate documented above. Model lists run only after successful field checks. Async lists are sequential and begin only after the nested async checks succeed. A failing check in a list does not skip later checks in that same list. Empty lists, non-path elements, and duplicate attributes are compile errors.
+
+For per-call data, the explicit `before_with_context`, `validate_with_context`, and `async_validate_with_context` variants accept the same paths or lists and add `&Context` as the final callback argument. Their return types and gates are unchanged. Do not combine a plain and context variant of the same phase on one field or model; use context callbacks wrapping context-free helpers if needed. Context callbacks cannot mutate the error collection directly: return errors, and generated code assigns the current field/model path once.
