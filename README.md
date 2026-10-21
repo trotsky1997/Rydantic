@@ -8,7 +8,7 @@
 [![crates.io](https://img.shields.io/crates/v/rydantic.svg)](https://crates.io/crates/rydantic)
 [![License: MIT](https://img.shields.io/badge/license-MIT-31A879.svg)](https://github.com/trotsky1997/Rydantic/blob/main/LICENSE)
 
-[Documentation](https://rydantic.mintlify.site/introduction) · [Quick start](https://rydantic.mintlify.site/quickstart) · [Stable API](https://docs.rs/rydantic/0.6.0/rydantic/) · [Homepage](https://trotsky1997.github.io/Rydantic/)
+[Documentation](https://rydantic.mintlify.site/introduction) · [Quick start](https://rydantic.mintlify.site/quickstart) · [Stable API](https://docs.rs/rydantic/0.7.0/rydantic/) · [Homepage](https://trotsky1997.github.io/Rydantic/)
 
 </div>
 
@@ -49,11 +49,11 @@ Integrations are opt-in Cargo features. The default `derive` feature covers the 
 
 ## Start with a validated model
 
-For the current **stable 0.6.0** release:
+For the **0.7.0 stable release** (verify registry availability before installation):
 
 ```toml
 [dependencies]
-rydantic = "0.6.0"
+rydantic = "=0.7.0"
 ```
 
 ```rust
@@ -93,7 +93,7 @@ Enable features on the version you selected:
 
 ```toml
 # Stable HTTP + PostgreSQL example
-rydantic = { version = "0.6.0", features = ["axum", "postgres"] }
+rydantic = { version = "=0.7.0", features = ["axum", "postgres"] }
 ```
 
 | Build with | Features | Guide |
@@ -106,14 +106,11 @@ rydantic = { version = "0.6.0", features = ["axum", "postgres"] }
 
 See the [complete feature reference](https://rydantic.mintlify.site/reference/features). Automatic Cap'n Proto binding generation also requires the official `capnp` compiler on `PATH`.
 
-## Stable promotion
+## Stable release 0.7.0
 
-| Channel | Version | Use it for |
-| --- | --- | --- |
-| **Stable** | `0.6.0` | Published API, with [versioned source documentation](https://github.com/trotsky1997/Rydantic/tree/v0.6.0) and [Rust API reference](https://docs.rs/rydantic/0.6.0/rydantic/). |
-| **Stable-release candidate** | `0.7.0` | Promoting the tested beta features, callback hygiene and conditional Cap’n Proto generation; publication is pending verification. |
+This README describes the 0.7.0 stable release contract: tested settings, partial JSON and domain types, callback hygiene, and conditional Cap’n Proto generation. Runtime and derive use matching 0.7.0 versions, with an exact derive dependency pin.
 
-A version in this branch is **not a publication announcement**. Check [published versions](https://crates.io/crates/rydantic/versions) before installing a candidate. Once published, install with `rydantic = "=0.7.0"`. The guides follow the working source; use the versioned links above for stable behavior.
+Source metadata alone does not prove registry availability. Before installing, verify both [runtime](https://crates.io/crates/rydantic/0.7.0) and [derive](https://crates.io/crates/rydantic-derive/0.7.0) packages and the [release record](https://github.com/trotsky1997/Rydantic/releases/tag/v0.7.0). Use `rydantic = "=0.7.0"` for this release. For older 0.6.0 deployments, consult the [versioned source](https://github.com/trotsky1997/Rydantic/tree/v0.6.0) and [API reference](https://docs.rs/rydantic/0.6.0/rydantic/); the live guides follow the current source.
 
 > **Breaking upgrade from 0.6.0:** 0.7.0 removes automatic `Model` derive insertion inside `#[rydantic::capnp_models]`. Add an explicit `#[derive(rydantic::Model)]` to every model struct and enum, including nested models. The release also rejects unsupported custom SQLite index layouts before a table rebuild. Conditional Cap’n Proto definitions produce configuration-specific wire schemas; different feature/target configurations are not automatically wire-compatible. Read the [changelog and migration guidance](https://github.com/trotsky1997/Rydantic/blob/main/CHANGELOG.md) before upgrading.
 
