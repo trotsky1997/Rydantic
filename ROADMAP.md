@@ -54,6 +54,12 @@ Acceptance evidence:
   contract failure. Verify the exact final source with platform CI, package
   checks, paired runtime/derive pins and fresh registry-only consumers.
 
+**Progress:** [#83](https://github.com/trotsky1997/Rydantic/pull/83) adds
+synthetic regressions for failed untagged alternatives: shared effects persist,
+branch errors stay relative, successful fallback discards rejected-branch errors,
+and context ownership is released. The tests cover JSON and Value entry points.
+This is regression evidence, not external adoption or stable-promotion evidence.
+
 **Dependencies:** beta usage evidence and the layered verification below.
 The existing package and synthetic-test receipts are a starting point, not a
 substitute for the usage-feedback gate. See the
@@ -116,23 +122,35 @@ budget; fixtures are not proof of universal provider support. See
 [#75](https://github.com/trotsky1997/Rydantic/pull/75) and the
 [PDF contract](docs/integrations/pdf.mdx).
 
-## Next: P1 — unblock documentation dependency maintenance
+## Delivered: P1 — remove the blocked local documentation dependency chain
 
-**Outcome:** find a supported remediation for
-[#80](https://github.com/trotsky1997/Rydantic/issues/80), without weakening the
-build or overstating security evidence.
+**Outcome:** repository-owned remediation merged in
+[#84](https://github.com/trotsky1997/Rydantic/pull/84), tracked by
+[#80](https://github.com/trotsky1997/Rydantic/issues/80). The root lockfile no longer
+contains the local Mintlify CLI or any of the eight affected package families.
+This removes those dependency paths from this repository; it does not claim that
+upstream packages were patched or that a new full audit found zero vulnerabilities.
 
-Dependabot remediation is blocked for eight transitive package families under
-Mintlify tooling. The checked `mint` 4.2.1085 candidate did not remove those
-families from the audit result. Audit package/metavulnerability counts are not
-unique vulnerability counts or proof of deployed-site exploitability.
+The replacement pins official MDX/GFM/frontmatter/YAML/slugification tooling and
+checks the supported source subset, imports, navigation, links, anchors and assets.
+Its 46 regression tests and independent review accompany the existing homepage,
+stable-version and runnable-snippet checks. No blind overrides, CLI downgrade,
+credential or hosting/security-setting changes were used.
 
-**Acceptance:** identify a supported upstream dependency path, verify applicable
-advisory ranges and the resolved lockfile, then pass documentation build, links,
-snippets and homepage checks in a bounded change. If no supported path exists,
-keep the blocker and candidate evidence explicit rather than calling an
-ineffective upgrade a fix. No blind overrides, CLI downgrades or security-setting
-changes. This work does not assert a vulnerability in the Rust runtime.
+**Intentional tradeoff:** `docs:dev` and local proprietary Mintlify strict-prebuild
+validation are removed. The replacement does not promise renderer parity. The
+existing hosted Mintlify preview is still a separate manual merge gate: inspect
+an actual Ready preview and affected pages, navigation and snippets. A skipped
+check alone is not approval; an explicit no-changes result can reuse verified
+preview evidence only when rendered inputs are unchanged. See
+[the documentation workflow and limits](docs/README.md#preview-and-validate).
+
+**Ongoing acceptance:** retain the fail-closed source checks and their negative
+controls, monitor the smaller dependency tree, and keep rendering verification
+separate. Any future local-preview tooling proposal needs fresh dependency and
+compatibility evidence. Historical audit counts in #80 are not unique
+vulnerability counts or evidence of deployed-site exploitability; no Rust runtime
+vulnerability is asserted.
 
 ## Later: P2 — measure Agent tooling value before expanding it
 
