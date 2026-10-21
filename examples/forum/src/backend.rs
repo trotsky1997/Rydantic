@@ -410,27 +410,37 @@ mod server_impl {
         });
         let row = PostRow::parse_json(&input.to_string())
             .map_err(|error| anyhow!("帖子内容校验失败：{error}"))?;
-        let row = row.insert(pool).await?;
+        persist_post(pool, row, image, image_type).await
+    }
+
+    async fn persist_post(
+        pool: &SqlitePool,
+        row: PostRow,
+        image: Option<Vec<u8>>,
+        image_type: Option<&str>,
+    ) -> Result<PostView> {
+        let mut transaction = pool.begin().await?;
+        let row = row.insert(&mut *transaction).await?;
+        let has_image = image.is_some() && image_type.is_some();
         if let (Some(bytes), Some(content_type)) = (image, image_type) {
             query("INSERT INTO post_images (post_id, content_type, data) VALUES (?, ?, ?)")
                 .bind(row.id)
                 .bind(content_type)
                 .bind(bytes)
-                .execute(pool)
+                .execute(&mut *transaction)
                 .await?;
         }
-        let (has_image,): (bool,) =
-            query_as("SELECT EXISTS(SELECT 1 FROM post_images WHERE post_id = ?)")
-                .bind(row.id)
-                .fetch_one(pool)
-                .await?;
+        transaction.commit().await?;
         Ok(post_view(row, has_image))
     }
 
     pub async fn list_replies_impl(post_id: i64) -> Result<Vec<ReplyView>> {
-        let pool = database().await?;
+        list_replies_from_pool(database().await?, post_id).await
+    }
+
+    async fn list_replies_from_pool(pool: &SqlitePool, post_id: i64) -> Result<Vec<ReplyView>> {
         let replies = query_as::<_, ReplyRow>(
-            "SELECT id, post_id, author, body, created_at, owner_id, is_hidden FROM replies WHERE post_id = ? AND is_hidden = 0 ORDER BY id ASC",
+            "SELECT replies.id, replies.post_id, replies.author, replies.body, replies.created_at, replies.owner_id, replies.is_hidden FROM replies JOIN posts ON posts.id = replies.post_id WHERE replies.post_id = ? AND replies.is_hidden = 0 AND posts.is_hidden = 0 ORDER BY replies.id ASC",
         )
         .bind(post_id)
         .fetch_all(pool)
@@ -558,12 +568,24 @@ mod server_impl {
         Ok(())
     }
 
-    pub async fn list_reports_impl(headers: HeaderMap) -> Result<Vec<ReportView>> {
+    pub async fn list_reports_impl(
+        headers: HeaderMap,
+        before_id: Option<i64>,
+    ) -> Result<Vec<ReportView>> {
         let pool = database().await?;
         require_moderator(pool, &headers).await?;
+        list_reports_from_pool(pool, before_id).await
+    }
+
+    async fn list_reports_from_pool(
+        pool: &SqlitePool,
+        before_id: Option<i64>,
+    ) -> Result<Vec<ReportView>> {
         let rows = query_as::<_, (i64, String, i64, String, String, String, i64)>(
-            "SELECT reports.id, reports.target_type, reports.target_id, reports.reason, users.username, reports.status, reports.created_at FROM reports JOIN users ON users.id = reports.reporter_id ORDER BY reports.created_at DESC LIMIT 100",
+            "SELECT reports.id, reports.target_type, reports.target_id, reports.reason, users.username, reports.status, reports.created_at FROM reports JOIN users ON users.id = reports.reporter_id WHERE (? IS NULL OR reports.id < ?) ORDER BY reports.id DESC LIMIT 100",
         )
+        .bind(before_id)
+        .bind(before_id)
         .fetch_all(pool)
         .await?;
         Ok(rows
@@ -589,44 +611,51 @@ mod server_impl {
     ) -> Result<()> {
         let pool = database().await?;
         require_moderator(pool, &headers).await?;
+        moderate_report_from_pool(pool, report_id, &action).await
+    }
+
+    async fn moderate_report_from_pool(
+        pool: &SqlitePool,
+        report_id: i64,
+        action: &str,
+    ) -> Result<()> {
+        let status = match action {
+            "hide" => "reviewed",
+            "restore" => "restored",
+            "dismiss" => "dismissed",
+            _ => bail!("审核操作无效"),
+        };
+        let mut transaction = pool.begin().await?;
         let (target_type, target_id): (String, i64) =
             query_as("SELECT target_type, target_id FROM reports WHERE id = ?")
                 .bind(report_id)
-                .fetch_optional(pool)
+                .fetch_optional(&mut *transaction)
                 .await?
                 .ok_or_else(|| anyhow!("举报记录不存在"))?;
-        let hidden_sql = match (target_type.as_str(), action.as_str()) {
-            ("post", "hide") => "UPDATE posts SET is_hidden = 1 WHERE id = ?",
-            ("post", "restore") => "UPDATE posts SET is_hidden = 0 WHERE id = ?",
-            ("reply", "hide") => "UPDATE replies SET is_hidden = 1 WHERE id = ?",
-            ("reply", "restore") => "UPDATE replies SET is_hidden = 0 WHERE id = ?",
+        let hidden_sql = match (target_type.as_str(), action) {
+            ("post", "hide") => Some("UPDATE posts SET is_hidden = 1 WHERE id = ?"),
+            ("post", "restore") => Some("UPDATE posts SET is_hidden = 0 WHERE id = ?"),
+            ("reply", "hide") => Some("UPDATE replies SET is_hidden = 1 WHERE id = ?"),
+            ("reply", "restore") => Some("UPDATE replies SET is_hidden = 0 WHERE id = ?"),
             (_, "hide" | "restore") => bail!("举报对象无效"),
-            _ => "",
+            _ => None,
         };
-        if !hidden_sql.is_empty() {
-            query(hidden_sql).bind(target_id).execute(pool).await?;
+        if let Some(sql) = hidden_sql {
+            let result = query(sql)
+                .bind(target_id)
+                .execute(&mut *transaction)
+                .await?;
+            if result.rows_affected() == 0 {
+                bail!("举报对象已不存在");
+            }
         }
-        match action.as_str() {
-            "hide" => {
-                query("UPDATE reports SET status = 'reviewed' WHERE id = ?")
-                    .bind(report_id)
-                    .execute(pool)
-                    .await?;
-            }
-            "restore" => {
-                query("UPDATE reports SET status = 'restored' WHERE id = ?")
-                    .bind(report_id)
-                    .execute(pool)
-                    .await?;
-            }
-            "dismiss" => {
-                query("UPDATE reports SET status = 'dismissed' WHERE id = ?")
-                    .bind(report_id)
-                    .execute(pool)
-                    .await?;
-            }
-            _ => bail!("审核操作无效"),
-        }
+        // Dismissal remains available for reports whose content was deleted.
+        query("UPDATE reports SET status = ? WHERE id = ?")
+            .bind(status)
+            .bind(report_id)
+            .execute(&mut *transaction)
+            .await?;
+        transaction.commit().await?;
         Ok(())
     }
 
@@ -637,6 +666,224 @@ mod server_impl {
                 .fetch_optional(database().await?)
                 .await?,
         )
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        async fn test_pool() -> SqlitePool {
+            let pool = SqlitePoolOptions::new()
+                .max_connections(1)
+                .connect_with(
+                    SqliteConnectOptions::new()
+                        .in_memory(true)
+                        .foreign_keys(true),
+                )
+                .await
+                .unwrap();
+            PostRow::migrate(&pool).await.unwrap();
+            ReplyRow::migrate(&pool).await.unwrap();
+            for sql in [
+                "CREATE TABLE users (id INTEGER PRIMARY KEY, username TEXT NOT NULL)",
+                "INSERT INTO users VALUES (1, 'tester')",
+                "CREATE TABLE post_images (post_id INTEGER PRIMARY KEY REFERENCES posts(id) ON DELETE CASCADE, content_type TEXT NOT NULL, data BLOB NOT NULL)",
+                "CREATE TABLE reports (id INTEGER PRIMARY KEY, target_type TEXT NOT NULL, target_id INTEGER NOT NULL, reason TEXT NOT NULL, reporter_id INTEGER NOT NULL REFERENCES users(id), status TEXT NOT NULL DEFAULT 'open', created_at INTEGER NOT NULL)",
+            ] {
+                query(sql).execute(&pool).await.unwrap();
+            }
+            pool
+        }
+
+        fn post() -> PostRow {
+            PostRow {
+                id: 0,
+                title: "Example topic".into(),
+                body: "Example topic body".into(),
+                author: "tester".into(),
+                category: CATEGORIES[0].into(),
+                created_at: 1,
+                owner_id: Some(1),
+                is_hidden: false,
+            }
+        }
+
+        async fn add_report(pool: &SqlitePool, id: i64, target_type: &str, target_id: i64) {
+            query("INSERT INTO reports (id, target_type, target_id, reason, reporter_id, created_at) VALUES (?, ?, ?, 'test reason', 1, 1)")
+                .bind(id).bind(target_type).bind(target_id).execute(pool).await.unwrap();
+        }
+
+        async fn report_status(pool: &SqlitePool, id: i64) -> String {
+            let (status,): (String,) = query_as("SELECT status FROM reports WHERE id = ?")
+                .bind(id)
+                .fetch_one(pool)
+                .await
+                .unwrap();
+            status
+        }
+
+        #[tokio::test]
+        async fn replies_follow_parent_visibility_and_preserve_individual_hiding() {
+            let pool = test_pool().await;
+            let post = post().insert(&pool).await.unwrap();
+            for hidden in [false, true] {
+                ReplyRow {
+                    id: 0,
+                    post_id: post.id,
+                    author: "tester".into(),
+                    body: "reply".into(),
+                    created_at: 1,
+                    owner_id: Some(1),
+                    is_hidden: hidden,
+                }
+                .insert(&pool)
+                .await
+                .unwrap();
+            }
+            assert_eq!(
+                list_replies_from_pool(&pool, post.id).await.unwrap().len(),
+                1
+            );
+            query("UPDATE posts SET is_hidden = 1 WHERE id = ?")
+                .bind(post.id)
+                .execute(&pool)
+                .await
+                .unwrap();
+            assert!(list_replies_from_pool(&pool, post.id)
+                .await
+                .unwrap()
+                .is_empty());
+            query("UPDATE posts SET is_hidden = 0 WHERE id = ?")
+                .bind(post.id)
+                .execute(&pool)
+                .await
+                .unwrap();
+            assert_eq!(
+                list_replies_from_pool(&pool, post.id).await.unwrap().len(),
+                1
+            );
+            assert!(list_replies_from_pool(&pool, post.id + 1)
+                .await
+                .unwrap()
+                .is_empty());
+        }
+
+        #[tokio::test]
+        async fn attachment_failure_rolls_back_post_and_success_commits_both() {
+            let pool = test_pool().await;
+            query("CREATE TRIGGER reject_image BEFORE INSERT ON post_images BEGIN SELECT RAISE(ABORT, 'injected image failure'); END")
+                .execute(&pool).await.unwrap();
+            assert!(
+                persist_post(&pool, post(), Some(vec![1]), Some("image/png"))
+                    .await
+                    .is_err()
+            );
+            let (count,): (i64,) = query_as("SELECT COUNT(*) FROM posts")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+            assert_eq!(count, 0);
+            query("DROP TRIGGER reject_image")
+                .execute(&pool)
+                .await
+                .unwrap();
+            let saved = persist_post(&pool, post(), Some(vec![1]), Some("image/png"))
+                .await
+                .unwrap();
+            assert_eq!(saved.image_url, Some(format!("/uploads/{}", saved.id)));
+            let (count,): (i64,) = query_as(
+                "SELECT COUNT(*) FROM posts JOIN post_images ON post_images.post_id = posts.id",
+            )
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+            assert_eq!(count, 1);
+            assert!(persist_post(&pool, post(), None, None)
+                .await
+                .unwrap()
+                .image_url
+                .is_none());
+        }
+
+        #[tokio::test]
+        async fn missing_targets_cannot_be_marked_hidden_or_restored() {
+            let pool = test_pool().await;
+            for (id, kind) in [(1, "post"), (2, "reply")] {
+                add_report(&pool, id, kind, 999).await;
+                for action in ["hide", "restore"] {
+                    assert!(moderate_report_from_pool(&pool, id, action).await.is_err());
+                    assert_eq!(report_status(&pool, id).await, "open");
+                }
+                moderate_report_from_pool(&pool, id, "dismiss")
+                    .await
+                    .unwrap();
+                assert_eq!(report_status(&pool, id).await, "dismissed");
+            }
+            assert!(moderate_report_from_pool(&pool, 999, "hide").await.is_err());
+        }
+
+        #[tokio::test]
+        async fn moderation_status_failure_rolls_back_content_change() {
+            let pool = test_pool().await;
+            let post = post().insert(&pool).await.unwrap();
+            add_report(&pool, 1, "post", post.id).await;
+            query("CREATE TRIGGER reject_status BEFORE UPDATE OF status ON reports BEGIN SELECT RAISE(ABORT, 'injected status failure'); END")
+                .execute(&pool).await.unwrap();
+            assert!(moderate_report_from_pool(&pool, 1, "hide").await.is_err());
+            let (hidden,): (bool,) = query_as("SELECT is_hidden FROM posts WHERE id = ?")
+                .bind(post.id)
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+            assert!(!hidden);
+            assert_eq!(report_status(&pool, 1).await, "open");
+            query("DROP TRIGGER reject_status")
+                .execute(&pool)
+                .await
+                .unwrap();
+            for (action, expected_hidden, status) in
+                [("hide", true, "reviewed"), ("restore", false, "restored")]
+            {
+                moderate_report_from_pool(&pool, 1, action).await.unwrap();
+                let (hidden,): (bool,) = query_as("SELECT is_hidden FROM posts WHERE id = ?")
+                    .bind(post.id)
+                    .fetch_one(&pool)
+                    .await
+                    .unwrap();
+                assert_eq!(hidden, expected_hidden);
+                assert_eq!(report_status(&pool, 1).await, status);
+            }
+        }
+
+        #[tokio::test]
+        async fn report_cursor_reaches_older_records_with_equal_timestamps() {
+            let pool = test_pool().await;
+            for id in 1..=105 {
+                add_report(&pool, id, "post", id).await;
+            }
+            query("UPDATE reports SET status = 'reviewed' WHERE id % 2 = 0")
+                .execute(&pool)
+                .await
+                .unwrap();
+            let first = list_reports_from_pool(&pool, None).await.unwrap();
+            assert_eq!(
+                first.iter().map(|r| r.id).collect::<Vec<_>>(),
+                (6..=105).rev().collect::<Vec<_>>()
+            );
+            // New arrivals must not shift the cursor or duplicate older results.
+            add_report(&pool, 106, "post", 106).await;
+            let second = list_reports_from_pool(&pool, first.last().map(|r| r.id))
+                .await
+                .unwrap();
+            assert_eq!(
+                second.iter().map(|r| r.id).collect::<Vec<_>>(),
+                vec![5, 4, 3, 2, 1]
+            );
+            assert!(list_reports_from_pool(&pool, Some(1))
+                .await
+                .unwrap()
+                .is_empty());
+        }
     }
 }
 
@@ -719,8 +966,8 @@ pub async fn report_content(target_type: String, target_id: i64, reason: String)
 }
 
 #[server(headers: HeaderMap)]
-pub async fn list_reports() -> Result<Vec<ReportView>> {
-    Ok(server_impl::list_reports_impl(headers).await?)
+pub async fn list_reports(before_id: Option<i64>) -> Result<Vec<ReportView>> {
+    Ok(server_impl::list_reports_impl(headers, before_id).await?)
 }
 
 #[server(headers: HeaderMap)]
