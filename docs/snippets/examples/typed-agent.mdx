@@ -1,0 +1,93 @@
+{/* Generated from crates/rydantic-ai/examples/typed_agent.rs. Run npm run examples:sync to refresh. */}
+
+```rust crates/rydantic-ai/examples/typed_agent.rs
+//! Offline output validation and correction. No API credentials or network needed.
+use rydantic_ai::{
+    rydantic::Model, Agent, AgentLimits, BoxFuture, ModelProvider, ModelRequest, ModelResponse,
+    Result, RunContext,
+};
+use serde_json::json;
+use std::sync::{
+    atomic::{AtomicUsize, Ordering},
+    Arc,
+};
+
+#[derive(Debug, PartialEq, Model)]
+enum Department {
+    #[model(rename = "billing")]
+    Billing,
+    #[model(rename = "technical")]
+    Technical,
+}
+
+#[derive(Debug, Model)]
+#[model(extra = "forbid")]
+struct Triage {
+    department: Department,
+    urgent: bool,
+    #[model(ge = 0.0, le = 1.0)]
+    confidence: f64,
+}
+
+#[derive(Default)]
+struct DemoProvider {
+    calls: AtomicUsize,
+}
+
+impl ModelProvider for DemoProvider {
+    fn complete(
+        &self,
+        _request: ModelRequest,
+        _context: RunContext,
+    ) -> BoxFuture<'_, Result<ModelResponse>> {
+        Box::pin(async move {
+            // The first response deliberately violates the output model.
+            let confidence = if self.calls.fetch_add(1, Ordering::SeqCst) == 0 {
+                1.2
+            } else {
+                0.9
+            };
+            let text = json!({
+                "department": "billing", "urgent": true, "confidence": confidence
+            })
+            .to_string();
+            ModelResponse::from_value(json!({
+                "status": "completed",
+                "output": [{"type": "message", "content": [
+                    {"type": "output_text", "text": text}
+                ]}],
+                "usage": {"input_tokens": 10, "output_tokens": 5}
+            }))
+        })
+    }
+}
+
+#[tokio::main]
+async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+    let agent = Agent::<(), Triage>::new(Arc::new(DemoProvider::default()), "demo-triage")
+        .instructions("Route support requests to billing or technical support.")
+        .limits(AgentLimits {
+            max_model_calls: 2,
+            max_validation_retries: 1,
+            ..Default::default()
+        });
+    let result = agent
+        .run(
+            "Payment failed for three days. Please help now.",
+            Arc::new(()),
+            RunContext::default(),
+        )
+        .await?;
+    assert_eq!(result.output.department, Department::Billing);
+    assert_eq!(result.output.confidence, 0.9);
+    assert_eq!(result.model_calls, 2);
+    assert_eq!(result.usage.total()?, 30);
+    println!("{}", result.output.dump_json()?);
+    println!(
+        "model_calls={} total_tokens={}",
+        result.model_calls,
+        result.usage.total()?
+    );
+    Ok(())
+}
+```

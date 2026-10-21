@@ -1,0 +1,67 @@
+---
+title: "APIs and storage"
+description: "Run validated CRUD endpoints and model-driven migrations against SQLite, PostgreSQL or MySQL."
+icon: "database"
+---
+
+Run commands from the [matching source checkout](/examples/overview). Start with SQLite for a self-contained program. Use an isolated local test database when trying a server driver; these examples create or migrate a `users` table.
+
+## SQLite CRUD API
+
+**Source:** `crates/rydantic/examples/sqlite_api.rs`
+
+```sh
+cargo run --locked -p rydantic --example sqlite_api --features axum,sqlite -- --smoke
+```
+
+Exercises a create request through the Axum router and SQLite, prints `Validated HTTP -> SQLite -> JSON: OK` and exits.
+
+Omit `-- --smoke` to serve on `127.0.0.1:3000`. The [CRUD tutorial](/tutorials/http-api) walks through create, rejected input, updates, deletion and persistence.
+
+## The same API across three databases
+
+**Source:** `crates/rydantic/examples/database_api.rs`
+
+<CodeGroup>
+```sh SQLite
+cargo run --locked -p rydantic --example database_api --features axum,sqlite -- --smoke
+```
+
+```sh PostgreSQL
+# Set POSTGRES_URL locally to an isolated test database.
+DATABASE_URL="$POSTGRES_URL" \
+cargo run --locked -p rydantic --example database_api --features axum,postgres -- --smoke
+```
+
+```sh MySQL
+# Set MYSQL_URL locally to an isolated test database.
+DATABASE_URL="$MYSQL_URL" \
+cargo run --locked -p rydantic --example database_api --features axum,mysql -- --smoke
+```
+</CodeGroup>
+
+`DATABASE_URL` selects the backend; the corresponding Cargo feature supplies its driver. The smoke program inserts a temporary user through HTTP, parses the response, deletes that row and exits. Successful runs print the selected dialect and `JSON: OK`.
+
+Omit `-- --smoke` to start the server. Use `LISTEN_ADDR` for a different loopback address. All variants expose:
+
+| Method | Path | Result |
+| --- | --- | --- |
+| `POST` | `/users` | Validate and insert a row |
+| `GET` | `/users` | List up to 100 rows |
+| `GET` | `/users/{id}` | Fetch one row |
+| `PUT` | `/users/{id}` | Validate and replace one row |
+| `DELETE` | `/users/{id}` | Delete one row |
+
+Read [database backends](/integrations/databases) for storage representations and [queries](/integrations/queries) for filtering and transactions.
+
+## Upgrade a table from model changes
+
+**Source:** `crates/rydantic/examples/automatic_migrations.rs`
+
+```sh
+cargo run --locked -p rydantic --example automatic_migrations --features sqlite
+```
+
+Creates `accounts(id, name)`, inserts Alice, then upgrades to a model with `display_name`, `enabled` and `note`. It prints the change descriptions and a migration receipt. Embedded assertions verify preserved values, defaults and a second no-op migration.
+
+The program uses its own in-memory database. The [CRUD tutorial](/tutorials/http-api) includes its full source; the [migration reference](/integrations/migrations) covers preview/apply, destructive changes and server-database behavior.

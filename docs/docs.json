@@ -142,6 +142,42 @@
         ]
       },
       {
+        "tab": "Tutorials",
+        "icon": "graduation-cap",
+        "groups": [
+          {
+            "group": "Learn by building",
+            "pages": [
+              "tutorials/overview",
+              "tutorials/first-model",
+              "tutorials/http-api"
+            ]
+          },
+          {
+            "group": "Build with AI",
+            "pages": [
+              "tutorials/typed-agent",
+              "tutorials/streaming-ai"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Examples",
+        "icon": "code",
+        "groups": [
+          {
+            "group": "Runnable recipes",
+            "pages": [
+              "examples/overview",
+              "examples/models",
+              "examples/services",
+              "examples/agents"
+            ]
+          }
+        ]
+      },
+      {
         "tab": "Reference",
         "icon": "book-open",
         "groups": [

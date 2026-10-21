@@ -5,6 +5,8 @@ on:
     paths:
       [
         "docs/**",
+        "crates/rydantic/examples/**",
+        "crates/rydantic-ai/examples/**",
         "website/**",
         "scripts/**",
         "package*.json",
@@ -16,6 +18,8 @@ on:
     paths:
       [
         "docs/**",
+        "crates/rydantic/examples/**",
+        "crates/rydantic-ai/examples/**",
         "website/**",
         "scripts/**",
         "package*.json",

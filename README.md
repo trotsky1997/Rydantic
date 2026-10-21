@@ -8,7 +8,7 @@
 [![crates.io](https://img.shields.io/crates/v/rydantic.svg)](https://crates.io/crates/rydantic)
 [![License: MIT](https://img.shields.io/badge/license-MIT-31A879.svg)](https://github.com/trotsky1997/Rydantic/blob/main/LICENSE)
 
-[Documentation](https://rydantic.mintlify.site/introduction) · [Quick start](https://rydantic.mintlify.site/quickstart) · [Stable API](https://docs.rs/rydantic/0.6.0/rydantic/) · [Homepage](https://trotsky1997.github.io/Rydantic/)
+[Documentation](https://rydantic.mintlify.site/introduction) · [Quick start](https://rydantic.mintlify.site/quickstart) · [Tutorials](https://rydantic.mintlify.site/tutorials/overview) · [Examples](https://rydantic.mintlify.site/examples/overview) · [Stable API](https://docs.rs/rydantic/0.6.0/rydantic/) · [Homepage](https://trotsky1997.github.io/Rydantic/)
 
 </div>
 

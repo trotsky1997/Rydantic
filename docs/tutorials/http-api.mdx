@@ -1,0 +1,120 @@
+---
+title: "Build a CRUD API"
+description: "Use one model for validated HTTP input, JSON responses and SQLite persistence."
+icon: "globe"
+---
+
+import SqliteApi from "/snippets/examples/sqlite-api.mdx";
+import AutomaticMigrations from "/snippets/examples/automatic-migrations.mdx";
+
+Build a user service with create, list, fetch, update and delete endpoints. Run the checked-in example from a source checkout matching these docs; [setup instructions](/tutorials/overview) explain the prerequisites.
+
+<div className="rd-guide-map" aria-label="Request flow"><span>20 minutes</span><span>Axum → validated model → SQLite → JSON</span></div>
+
+## 1. Follow one model through the service
+
+The `User` model derives both `Model` and `SqlModel`. The first supplies parsing and output validation. The second supplies SQL metadata, migrations and CRUD operations.
+
+`name` is trimmed, length-checked and unique. `age` must be between 18 and 120. SQLite supplies an ID when `id` is omitted. `User::migrate(&pool)` creates the table before the HTTP listener starts.
+
+<Accordion title="Complete runnable service">
+  <SqliteApi />
+</Accordion>
+
+The request extractor `Json<User>` validates before `create` executes. The handler calls `insert` and returns the stored row. That response is validated again by Rydantic's `Json` adapter.
+
+## 2. Run the in-process check
+
+```sh
+cargo run --locked -p rydantic --example sqlite_api --features axum,sqlite -- --smoke
+```
+
+Expected output:
+
+```text
+Validated HTTP -> SQLite -> JSON: OK
+```
+
+The smoke mode exercises a real Axum request and an in-memory SQLite database, then exits. It opens no listening socket.
+
+## 3. Start the server
+
+```sh
+cargo run --locked -p rydantic --example sqlite_api --features axum,sqlite
+```
+
+Keep that terminal running. The default address is `http://127.0.0.1:3000`, backed by a fresh in-memory database. In another terminal, create a user:
+
+```sh
+curl -i http://127.0.0.1:3000/users \
+  -H 'Content-Type: application/json' \
+  -d '{"name":" Ada ","age":36}'
+```
+
+Expect **201 Created** and a normalized row. On a fresh database it is:
+
+```json
+{"age":36,"id":1,"name":"Ada"}
+```
+
+## 4. Reject invalid input
+
+```sh
+curl -i http://127.0.0.1:3000/users \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"A","age":17}'
+```
+
+Expect **422 Unprocessable Entity**, with errors at `name` and `age` in the `detail` array. No row is inserted. Check the list:
+
+```sh
+curl http://127.0.0.1:3000/users
+```
+
+It still contains only Ada. Posting `Ada` again returns **409 Conflict** because the database enforces the unique name. Fetching a missing ID returns **404 Not Found**.
+
+## 5. Update and delete a row
+
+Use the ID returned by the create request. For ID `1`:
+
+```sh
+curl -i -X PUT http://127.0.0.1:3000/users/1 \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Ada Lovelace","age":37}'
+curl http://127.0.0.1:3000/users/1
+curl -i -X DELETE http://127.0.0.1:3000/users/1
+curl -i http://127.0.0.1:3000/users/1
+```
+
+The update returns the changed row, deletion returns **204 No Content**, and the final fetch returns **404**. Stop the demo server with `Ctrl-C`.
+
+## 6. Keep data between restarts
+
+Choose a new local database file:
+
+```sh
+DATABASE_URL='sqlite://tutorial.db?mode=rwc' \
+LISTEN_ADDR='127.0.0.1:3001' \
+cargo run --locked -p rydantic --example sqlite_api --features axum,sqlite
+```
+
+The model is migrated at startup. Subsequent runs reuse the file. The demo accepts loopback listen addresses and has no authentication; use it for local learning.
+
+To see a table evolve, run the migration example in its own in-memory database:
+
+```sh
+cargo run --locked -p rydantic --example automatic_migrations --features sqlite
+```
+
+It creates an old `Account`, inserts a row, previews a rename and two added fields, then applies the plan. Assertions check that the old name survives, `enabled` is backfilled, and a second migration has no work.
+
+<Accordion title="Complete model-to-model migration">
+  <AutomaticMigrations />
+</Accordion>
+
+Inspect plans and validate upgrades on a copy before using automatic migrations with application data. The [migration guide](/integrations/migrations) documents supported changes and database-specific behavior.
+
+<CardGroup cols={2}>
+  <Card title="Next: build a typed agent" icon="bot" href="/tutorials/typed-agent">Apply a Rust contract to an AI result.</Card>
+  <Card title="Use PostgreSQL or MySQL" icon="database" href="/examples/services">Run the same API with an independent SQL driver.</Card>
+</CardGroup>

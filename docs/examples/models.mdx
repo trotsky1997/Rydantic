@@ -1,0 +1,91 @@
+---
+title: "Models and protocols"
+description: "Small programs for validation, schemas, borrowed input, streaming JSON and native binary codecs."
+icon: "braces"
+---
+
+Run these commands from the [matching source checkout](/examples/overview). Paths are relative to the repository root.
+
+## Validate a data contract
+
+**Source:** `crates/rydantic/examples/data_contract.rs`
+
+```sh
+cargo run --locked -p rydantic --example data_contract
+```
+
+Normalizes a signup, prints four field errors for a second input and generates an input schema. No optional feature flags are needed. Follow the [first-model tutorial](/tutorials/first-model) to build it in a standalone project.
+
+## Inspect a model and its schema
+
+**Source:** `crates/rydantic/examples/user.rs`
+
+```sh
+cargo run --locked -p rydantic --example user
+```
+
+Prints a normalized user, structured errors and a schema report including local runtime rules. See [validation](/models/validation) and [JSON Schema](/models/schema).
+
+## Dispatch a tagged tool call
+
+**Source:** `crates/rydantic/examples/tool_call.rs`
+
+```sh
+cargo run --locked -p rydantic --example tool_call
+cargo run --locked -p rydantic --example tool_call -- '{"kind":"ping"}'
+cargo run --locked -p rydantic --example tool_call -- --schema
+```
+
+The default command searches a local text corpus; `ping` returns `{"results":["pong"]}`. The last command prints the input schema. Invalid arguments produce structured errors and exit status `2`.
+
+## Borrow from input JSON
+
+**Source:** `crates/rydantic/examples/borrowed.rs`
+
+```sh
+cargo run --locked -p rydantic --example borrowed
+```
+
+Checks borrowed strings, flattened fields and extra keys. Escaped strings use owned storage where decoding requires it. See [borrowed models](/models/borrowed) for lifetime requirements.
+
+## Process arrays and NDJSON
+
+**Source:** `crates/rydantic/examples/streaming.rs`
+
+```sh
+cargo run --locked -p rydantic --example streaming
+```
+
+Visits a JSON array containing one invalid row, then processes newline-delimited JSON containing a malformed record. Prints row results and errors as it goes. This example parses input records; the [AI streaming tutorial](/tutorials/streaming-ai) consumes model output.
+
+## Await a custom validator
+
+**Source:** `crates/rydantic/examples/asynchronous.rs`
+
+```sh
+cargo run --locked -p rydantic --example asynchronous
+```
+
+Accepts `Alice` and rejects the reserved name `taken` through an async field check. The simulated availability check is local. Read [asynchronous validation](/models/async) to connect an application check.
+
+## Parse dates and exact decimals
+
+**Source:** `crates/rydantic/examples/dates_decimal.rs`
+
+```sh
+cargo run --locked -p rydantic --example dates_decimal --features chrono,decimal
+```
+
+Normalizes a timestamp and serializes an exact decimal string. Both optional features are required. See [dates and decimals](/models/dates-decimal).
+
+## Generate a native Cap’n Proto codec
+
+**Source:** `crates/rydantic/examples/auto_capnp.rs`
+
+Install the official `capnp` compiler and make it available on `PATH`, then run:
+
+```sh
+cargo run --locked -p rydantic --example auto_capnp --features capnp
+```
+
+Derives bindings from model definitions, round-trips ordinary and packed messages, and prints the generated `.capnp` schema. See [native Cap’n Proto](/integrations/capnp) for compiler setup and schema evolution.

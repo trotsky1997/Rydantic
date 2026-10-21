@@ -1,0 +1,88 @@
+---
+title: "Build a typed agent"
+description: "Classify a support request with a validated output model and one bounded correction."
+icon: "bot"
+---
+
+import TypedAgent from "/snippets/examples/typed-agent.mdx";
+
+Route a support message to a department and return an urgency flag and confidence score. Start with a deterministic local provider so you can observe invalid output and its correction on every run.
+
+<div className="rd-guide-map" aria-label="Agent tutorial details"><span>15 minutes</span><span>Offline provider</span><span>Validated final output</span></div>
+
+## 1. Set up the project
+
+```sh
+cargo new support-triage
+cd support-triage
+```
+
+Add these dependencies to the generated manifest:
+
+```toml Cargo.toml
+[dependencies]
+rydantic-ai = { version = "=0.6.0", default-features = false }
+serde_json = "1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+```
+
+Import `Model` through `rydantic_ai::rydantic` to use the same core model version as the agent. The offline example needs no HTTP transport.
+
+## 2. Define the result you will accept
+
+`Triage` contains a `Department` enum, a boolean `urgent` flag and a confidence between `0.0` and `1.0`. Enum variants serialize to `billing` or `technical`; unknown result fields are rejected.
+
+The agent's type is `Agent<(), Triage>`. The first parameter is application dependency data; `()` means this example has none. The second is the model the final output must satisfy.
+
+## 3. Add the local provider
+
+Copy the complete source into `src/main.rs`. It is also available at `crates/rydantic-ai/examples/typed_agent.rs`.
+
+<TypedAgent />
+
+`DemoProvider` returns fixed example responses and simulated token counts. It performs no inference. Its first response uses confidence `1.2`, which violates the model. The second uses `0.9`.
+
+## 4. Observe validation correction
+
+```sh
+cargo run
+```
+
+From a source checkout:
+
+```sh
+cargo run --locked -p rydantic-ai --no-default-features --example typed_agent
+```
+
+Expected output:
+
+```text
+{"confidence":0.9,"department":"billing","urgent":true}
+model_calls=2 total_tokens=30
+```
+
+The first result fails model validation. The agent adds structured error feedback to the next request, then accepts the second result. `max_validation_retries: 1` allows one correction, and `max_model_calls: 2` caps the total calls. Usage includes both completed responses.
+
+Change the provider to always return `1.2`. The run terminates with an output-validation error after the retry budget is used. Restore the valid second response to continue.
+
+## 5. Connect a real API
+
+Enable the default HTTP feature by changing the dependency to `rydantic-ai = "=0.6.0"`. Keep `Triage`, and replace the demo provider and model name with your configured provider:
+
+```rust
+use rydantic_ai::{Api, HttpProvider};
+
+let provider = Arc::new(HttpProvider::from_env(Api::ChatCompletions)?);
+let model = std::env::var("MODEL")?;
+let agent = Agent::<(), Triage>::new(provider, model)
+    .instructions("Route support requests to billing or technical support.");
+```
+
+Set `BASEURL`, `MODEL` and optional `APIKEY` in your local environment. Remove the demo's fixed-output and fixed-usage assertions when using a real model. Model capability and credentials determine whether that run succeeds.
+
+Choose `Api::Responses` or `Api::AnthropicMessages` for the other supported protocols. The [provider guide](/integrations/api-providers) explains URL prefixes, authentication and schema capabilities.
+
+<CardGroup cols={2}>
+  <Card title="Next: stream structured results" icon="waves" href="/tutorials/streaming-ai">Add partial previews and validated list output.</Card>
+  <Card title="Tools, graphs and multimodal inputs" icon="code" href="/examples/agents">Run focused agent examples.</Card>
+</CardGroup>

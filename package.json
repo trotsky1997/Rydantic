@@ -8,7 +8,9 @@
     "docs:check": "cd docs && mint validate --client-version 0.0.3898 && mint broken-links --check-anchors",
     "site:build": "node scripts/build-site.mjs",
     "site:dev": "npm run site:build && python3 -m http.server 4173 --directory .site",
-    "check": "node scripts/check-web.mjs"
+    "check": "node scripts/check-web.mjs && npm run examples:check",
+    "examples:sync": "node scripts/sync-examples.mjs",
+    "examples:check": "node scripts/sync-examples.mjs --check"
   },
   "devDependencies": {
     "mint": "4.2.1072"

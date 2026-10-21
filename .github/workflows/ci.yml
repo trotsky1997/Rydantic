@@ -122,6 +122,12 @@ jobs:
         env:
           RUSTDOCFLAGS: -D warnings
         run: cargo doc --workspace --all-features --no-deps --locked
+      - name: Run tutorial examples without model credentials
+        run: |
+          cargo run --locked --quiet -p rydantic --example data_contract
+          cargo run --locked --quiet -p rydantic-ai --no-default-features --example typed_agent
+          cargo run --locked --quiet -p rydantic-ai --no-default-features --example structured
+          cargo run --locked --quiet -p rydantic-ai --no-default-features --example graph
       - name: Run the tool and renamed dependency examples
         run: |
           cargo run --locked --quiet -p rydantic --example tool_call

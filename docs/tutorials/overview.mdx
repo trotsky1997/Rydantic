@@ -1,0 +1,40 @@
+---
+title: "Learn by building"
+description: "Four guided projects, from your first validated model to an API and a streaming AI agent."
+icon: "graduation-cap"
+---
+
+Build something small, run it, then change one rule and observe the result. Each tutorial includes a complete executable, a success case and a way to explore its behavior.
+
+<div className="rd-guide-map" aria-label="Tutorial learning path"><span>Model</span><span aria-hidden="true">→</span><span>HTTP & storage</span><span aria-hidden="true">→</span><span>Typed AI</span><span aria-hidden="true">→</span><span>Streaming</span></div>
+
+## Choose a project
+
+<CardGroup cols={2}>
+  <Card title="01 · Your first data contract" icon="braces" href="/tutorials/first-model">Normalize signup data, inspect validation errors and generate a JSON Schema. About 10 minutes.</Card>
+  <Card title="02 · Build a CRUD API" icon="globe" href="/tutorials/http-api">Connect one model to Axum and SQLite. Exercise successful and rejected HTTP requests. About 20 minutes.</Card>
+  <Card title="03 · Build a typed agent" icon="bot" href="/tutorials/typed-agent">Route a support request, reject an invalid result and observe bounded correction. About 15 minutes.</Card>
+  <Card title="04 · Stream structured results" icon="waves" href="/tutorials/streaming-ai">Render partial previews, collect validated list items and handle attempt resets. About 15 minutes.</Card>
+</CardGroup>
+
+## Before you start
+
+You need Rust and Cargo. Familiarity with structs, `Result` and basic `async` Rust is enough. The repository is tested with Rust **1.98.1**. SQLite is bundled; the default tutorial path needs no database service or API credentials.
+
+For the complete runnable examples, start from the repository revision matching these docs:
+
+```sh
+git clone https://github.com/trotsky1997/Rydantic.git
+cd Rydantic
+cargo run --locked -p rydantic --example data_contract
+```
+
+<Note>
+These tutorials target Rydantic **0.7.0-beta.4** and RydanticAI **0.6.0**. A pull request preview can include examples that reach the default branch when merged. Use that pull request's source checkout when following a preview.
+</Note>
+
+The first-model and typed-agent tutorials also include standalone `Cargo.toml` files. Copy their complete source into `src/main.rs` to run outside the workspace.
+
+## Prefer a focused recipe?
+
+Open the [example library](/examples/overview) for individual programs, required feature flags, expected results and API prerequisites. Use the [integration guides](/integrations/overview) when connecting an existing application.
