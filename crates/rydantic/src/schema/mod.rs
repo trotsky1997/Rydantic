@@ -1,3 +1,6 @@
+#[cfg(feature = "openapi")]
+pub mod openapi;
+
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 

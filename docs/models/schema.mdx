@@ -46,3 +46,55 @@ assert!(model.validate(&json!({"age":17})).is_err());
 The workspace also contains [`rydantic-codegen`](https://github.com/trotsky1997/Rydantic/blob/main/crates/rydantic-codegen/README.md), an unpublished developer tool (`publish = false`). It is not included in the core release archives or available as a crates.io install. Use it from a repository checkout only after reviewing its deliberately limited JSON Schema 2020-12 subset, resource limits and validation semantics.
 
 This is not an OpenAPI/Protobuf generator or a drop-in replacement for `datamodel-code-generator`. Unsupported keywords and references are rejected rather than silently ignored; generated models still require ordinary Rydantic validation. The [tool guide](https://github.com/trotsky1997/Rydantic/blob/main/crates/rydantic-codegen/README.md) documents accepted inputs and safe output handling, including writing to a new temporary file so a failed command does not truncate an existing destination.
+
+## OpenAPI 3.1 model components (unreleased)
+
+The repository's optional `openapi` feature provides model-component assembly.
+It is not included in published stable 0.7.0 or core 0.8.0-beta.1. Use a reviewed
+repository checkout; no new package version is implied by this documentation.
+
+```rust
+use rydantic::{schema::openapi::OpenApiComponents, Model, SchemaMode};
+
+let mut components = OpenApiComponents::new();
+let input = components.insert::<User>("UserInput", SchemaMode::Input)?;
+let output = components.insert::<User>("UserOutput", SchemaMode::Output)?;
+```
+
+`input.reference` and `output.reference` are schema references for request and
+response bodies. Put `components.into_schemas()` specifically at the complete
+OpenAPI document's `components.schemas` location. It returns that map, not an
+entire `components` object or document. These references are not standalone JSON
+Schemas, and moving the map elsewhere breaks their document-root pointers.
+Use OpenAPI 3.1 with its standard 2020-12-based dialect; do not introduce an
+ancestor `$id` or alternate dialect that changes reference resolution.
+The [runnable assembly example](https://github.com/trotsky1997/Rydantic/blob/main/crates/rydantic/examples/openapi_components.rs)
+constructs `openapi: "3.1.1"`, `info`, a manually declared path, and both components:
+
+```bash
+cargo run --locked -p rydantic --example openapi_components --features openapi
+```
+
+Each component retains its own `$defs`; references are relocated without merging
+model definitions or dropping assertions. Register input and output views under
+different names. Component names must match `[A-Za-z0-9._-]+`; duplicates fail
+without replacing existing entries. Runtime-only rules remain in the schema and
+in `ComponentRef.local_rules`, whose paths are plain JSON Pointers relative to
+the full document. Consumers do not automatically execute those rules; keep
+Rydantic parsing/validation at application boundaries.
+
+The adapter traverses standard 2020-12 schema locations only, preserving defaults,
+examples, constants, enums and unknown extension values as opaque data. Custom
+vocabularies are not supported. It rejects resource IDs, anchors, dynamic/recursive
+references, external references, unsupported dialects, nested dialect declarations,
+legacy `definitions`/`dependencies`/`additionalItems`, malformed or dangling
+pointers, and references into data rather than schema nodes. Schema nesting is
+bounded at 128. Missing root dialect declarations assume 2020-12; boolean schemas
+are preserved. Caller-supplied custom `JsonType` implementations remain responsible
+for valid assertions: this adapter is not a general schema validator.
+
+This is bounded [OpenAPI 3.1](https://spec.openapis.org/oas/v3.1.1.html#schema-object)
+model interoperability, not OpenAPI 3.0 conversion, route discovery, full-document
+validation/import, Swagger UI, client SDK generation or server generation. The
+reference-resolution tests validate payloads against assembled schema references;
+they do not certify every OpenAPI tool or prove runtime-rule equivalence.
