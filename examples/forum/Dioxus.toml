@@ -1,0 +1,14 @@
+[application]
+name = "forum_example"
+default_platform = "web"
+
+[web.app]
+title = "栈间 · Rust 社区"
+
+[web.resource.dev]
+
+[web.watcher]
+watch_path = ["src", "assets"]
+
+[serve]
+fullstack = true

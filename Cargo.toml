@@ -1,5 +1,6 @@
 [workspace]
 members = ["crates/rydantic", "crates/rydantic-derive", "crates/rydantic-ai", "crates/rydantic-codegen", "crates/rydantic-cli", "fixtures/renamed", "fixtures/capnp", "fixtures/auto-capnp", "fixtures/direct-capnp"]
+exclude = ["examples/forum"]
 resolver = "2"
 
 [workspace.package]
