@@ -142,6 +142,8 @@ Breaking changes are allowed in this early-stage library. Application owners are
 
 ## Explore and contribute
 
+See the [project roadmap](ROADMAP.md) for Now / Next / Later priorities, acceptance gates and explicit non-goals.
+
 The workspace contains the `rydantic` runtime, `rydantic-derive` macros, and executable integration fixtures. Browse [examples](https://github.com/trotsky1997/Rydantic/tree/main/crates/rydantic/examples) for tool arguments, HTTP, databases, and binary protocols.
 
 ```sh
