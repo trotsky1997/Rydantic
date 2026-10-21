@@ -1,0 +1,84 @@
+---
+title: "Per-call business context"
+description: "Explicit request data for owned model validation"
+---
+
+<Note>
+The context APIs on this page are unreleased development features and are not included in Rydantic 0.7.0 stable. Use the matching development source; see [validator extensions](/models/validator-extensions) for scope and compatibility limits.
+</Note>
+
+Owned `Model` entry points accept explicit business data through their
+`_with_context` variants. For example:
+
+```rust
+use rydantic::{Context, Model, ValidationError};
+use std::sync::Arc;
+
+struct Policy { maximum: u32 }
+fn allowed(value: &u32, ctx: &Context) -> Result<(), ValidationError> {
+    let policy = ctx.require_data::<Policy>()?;
+    if *value > policy.maximum {
+        Err(ValidationError::new("limit", "request limit exceeded"))
+    } else {
+        Ok(())
+    }
+}
+#[derive(Model)]
+struct Request {
+    #[model(validate_with_context = allowed)]
+    amount: u32,
+}
+let policy = Arc::new(Policy { maximum: 10 });
+let request = Request::parse_json_with_context(r#"{"amount":8}"#, policy.clone())?;
+request.validate_with_context(policy.clone())?;
+let json = request.dump_json_with_context(policy)?;
+# Ok::<(), rydantic::ValidationErrors>(())
+```
+
+The same `Arc` is carried through nested containers, child collectors, synchronous
+validation, async validation, and encoding. Context-aware callback forms receive
+an immutable `&Context`; use `require_data::<Policy>()?` to require the exact type.
+Missing data returns `context_missing`; a different supplied type returns
+`context_type_mismatch`. These are ordinary validation errors at the callback's
+location, not panics or default values. Retrieval is checked at runtime; it does
+not make the derive's business-context type statically enforced.
+
+Synchronous methods are `parse_json_with_context`, `parse_slice_with_context`,
+`parse_reader_with_context`, `parse_raw_with_context`, `parse_value_with_context`,
+`validate_with_context`, `dump_with_context`, and `dump_json_with_context`.
+Async methods append `_with_context` to existing async names, e.g.
+`parse_json_async_with_context` and `validate_async_with_context`; raw/value parse
+and dump/dump_json also have these variants. Synchronous methods still reject
+models requiring async checks. Async checks only run after synchronous success.
+
+## Ownership and isolation
+
+Business data must implement `Any + Send + Sync`, which requires `'static` owned
+data. It cannot contain non-static borrowed request references or `Rc`/`RefCell`
+state. An owned struct with strings or `Arc` handles works. Context itself does
+not clone business data, mutate it, or store it globally. Debug output omits the
+payload. Each invocation has a fresh error/path collector. Distinct request data
+is isolated; deliberately reusing the same `Arc` or putting shared mutable state
+inside it is the caller's responsibility, not an isolation guarantee provided by
+the library. Cancellation drops the owned context references with the future.
+
+The resulting model does not retain context. Supply the data again when
+revalidating or dumping. Ordinary entry points, serde, `Validated`, and
+`AsyncValidated` remain context-free; context-required callbacks return a missing
+context error when invoked there. They do not silently skip required checks.
+`BorrowModel` high-level context entry points are not provided in this initial
+API. Low-level custom decoders/checkers may use `Context::with_data` and
+`Context::require_data`, propagate children with `Context::child`, and push
+relative errors into the active collector once. Do not include business secrets
+in custom error messages or parameters if those errors will be exposed publicly.
+
+## Panic-boundary compatibility
+
+The erased application payload means `Context` no longer implements the automatic
+`UnwindSafe` and `RefUnwindSafe` marker traits, even when created without data.
+Code that captures a context across `std::panic::catch_unwind` may therefore stop
+compiling. Prefer constructing and consuming the collector inside the closure,
+or keep the collector outside the captured state. Use `AssertUnwindSafe` only
+when the application has explicitly audited every captured value and any shared
+payload for panic safety; it is not a general migration shortcut. Validation
+errors remain ordinary `Result` values and do not require catching panics.

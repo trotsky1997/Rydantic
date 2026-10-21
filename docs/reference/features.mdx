@@ -14,9 +14,9 @@ The default feature is `derive`. Every integration below is opt-in.
 | `dynamic` | Runtime JSON Schema validation with `DynamicModel` |
 | `chrono` | `chrono` date and time support |
 | `decimal` | `rust_decimal` support |
-| `phone` | [Canonical E.164 phone type](/domain-types), available from 0.7.0-beta.4 |
-| `country` | [ISO 3166-1 code types](/domain-types), available from 0.7.0-beta.4 |
-| `currency` | [Known currency catalog codes](/domain-types), available from 0.7.0-beta.4 |
+| `phone` | [canonical E.164 phone type](/domain-types) (first published in beta.4) |
+| `country` | [ISO 3166-1 code types](/domain-types) (first published in beta.4) |
+| `currency` | [known currency catalog codes](/domain-types) (first published in beta.4) |
 | `capnp` | Native and packed Cap’n Proto serialization |
 | `axum` | Axum 0.8 extractors, responses and structured rejections |
 | `sqlx` | Shared SQL metadata and API, with no database driver |
@@ -26,16 +26,18 @@ The default feature is `derive`. Every integration below is opt-in.
 
 ## Example configurations
 
+These examples target 0.7.0. See the [release notes](/reference/releases) for publication details and migration guidance.
+
 <CodeGroup>
 ```toml JSON only
-rydantic = "=0.7.0-beta.4"
+rydantic = "=0.7.0"
 ```
 ```toml HTTP + PostgreSQL
-rydantic = { version = "=0.7.0-beta.4", features = ["axum", "postgres"] }
+rydantic = { version = "=0.7.0", features = ["axum", "postgres"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "net"] }
 ```
 ```toml Binary protocol
-rydantic = { version = "=0.7.0-beta.4", features = ["capnp"] }
+rydantic = { version = "=0.7.0", features = ["capnp"] }
 ```
 </CodeGroup>
 
@@ -43,4 +45,4 @@ Automatic Cap’n Proto binding generation requires the official `capnp` compile
 
 ## API reference
 
-The [0.7.0-beta.4 Rust API documentation](https://docs.rs/rydantic/0.7.0-beta.4/rydantic/) matches these guides. The [stable 0.6.0 reference](https://docs.rs/rydantic/0.6.0/rydantic/) remains available for applications on the stable release. The [source manifest](https://github.com/trotsky1997/Rydantic/blob/main/crates/rydantic/Cargo.toml) contains the complete dependency and feature definitions.
+The [0.7.0 Rust API documentation](https://docs.rs/rydantic/0.7.0/rydantic/) lists runtime traits and methods. The [source manifest](https://github.com/trotsky1997/Rydantic/blob/main/crates/rydantic/Cargo.toml) contains the complete dependency and feature definitions. For older deployments, use the [0.6.0 API reference](https://docs.rs/rydantic/0.6.0/rydantic/).

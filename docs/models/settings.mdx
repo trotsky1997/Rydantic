@@ -5,15 +5,15 @@ icon: "settings"
 ---
 
 <Warning>
-The `settings` feature was published in 0.7.0-beta.2; it is not included in 0.7.0-beta.1 or stable 0.6.0. Check [registry availability](https://crates.io/crates/rydantic/versions) before installing the candidate. This is a deliberately small settings API, not full pydantic-settings compatibility.
+The `settings` feature was first published in 0.7.0-beta.2 and is included in 0.7.0; it is not included in 0.7.0-beta.1 or stable 0.6.0. This is a deliberately small settings API, not full pydantic-settings compatibility.
 </Warning>
 
 Enable the `settings` Cargo feature in addition to the default `derive` feature. There are no added dependencies. Settings use the same `Model` fields, aliases, constraints, defaults and synchronous validators as ordinary JSON inputs.
 
-For the published beta.4 prerelease, opt in explicitly:
+For 0.7.0:
 
 ```toml
-rydantic = { version = "=0.7.0-beta.4", features = ["settings"] }
+rydantic = { version = "=0.7.0", features = ["settings"] }
 ```
 
 ## Start with deterministic input

@@ -28,7 +28,7 @@
       },
       {
         "label": "Rust API",
-        "href": "https://docs.rs/rydantic/0.7.0-beta.4/rydantic/"
+        "href": "https://docs.rs/rydantic/0.7.0/rydantic/"
       }
     ],
     "primary": {
@@ -64,7 +64,9 @@
             "pages": [
               "models/lifecycle",
               "models/settings",
-              "models/async"
+              "models/async",
+              "models/validation-context",
+              "models/validator-extensions"
             ]
           },
           {

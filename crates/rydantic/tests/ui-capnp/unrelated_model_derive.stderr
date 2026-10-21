@@ -4,7 +4,7 @@ error: cannot find attribute `model` in this scope
 4 | #[rydantic::capnp_models]
   | ^^^^^^^^^^^^^^^^^^^^^^^^^
   |
-  = note: this error originates in the attribute macro `rydantic::capnp_models` (in Nightly builds, run with -Z macro-backtrace for more info)
+  = note: this error originates in the derive macro `::rydantic::__RydanticCapnpConfigured` (in Nightly builds, run with -Z macro-backtrace for more info)
 help: `model` is an attribute that can be used by the derive macros `Model` and `SqlModel`, you might be missing a `derive` attribute
   |
 7 +     #[derive(Model, SqlModel)]
@@ -18,7 +18,7 @@ error: cannot find attribute `model` in this scope
   | ^^^^^^^^^^^^^^^^^^^^^^^^^
   |
   = note: `model` is an attribute that can be used by the derive macros `Model` and `SqlModel`, you might be missing a `derive` attribute
-  = note: this error originates in the attribute macro `rydantic::capnp_models` (in Nightly builds, run with -Z macro-backtrace for more info)
+  = note: this error originates in the derive macro `::rydantic::__RydanticCapnpConfigured` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error[E0277]: the trait bound `Unrelated: Model` is not satisfied
  --> tests/ui-capnp/unrelated_model_derive.rs:7:16

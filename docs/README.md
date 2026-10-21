@@ -1,6 +1,6 @@
 # Rydantic documentation
 
-Read the published guides at [Rydantic Docs](https://rydantic.mintlify.site/introduction). This directory is the [Mintlify](https://www.mintlify.com/) source project. These sources target the 0.7.0-beta.4 candidate, with prerelease installation and breaking changes called out explicitly. Version 0.6.0 remains the latest stable release until promotion. Candidate version metadata is not proof of publication.
+Read the published guides at [Rydantic Docs](https://rydantic.mintlify.site/introduction). This directory is the [Mintlify](https://www.mintlify.com/) source project. These sources describe stable 0.7.0, published on 2026-10-21, with breaking changes and migration responsibilities called out explicitly. See the [release record](https://github.com/trotsky1997/Rydantic/releases/tag/v0.7.0) for verification details; use the [versioned 0.6.0 source](https://github.com/trotsky1997/Rydantic/tree/v0.6.0) for older deployments.
 
 ## Read the guides
 

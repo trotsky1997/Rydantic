@@ -4,8 +4,13 @@ version.workspace = true
 edition.workspace = true
 publish = false
 
+[features]
+cfg-fixture = []
+
 [dependencies]
 rd = { package = "rydantic", path = "../../crates/rydantic", features = ["capnp", "chrono", "decimal"] }
+# An inactive direct macro dependency must not override the runtime's helper path.
+inactive_macros = { package = "rydantic-derive", path = "../../crates/rydantic-derive", optional = true }
 
 [dev-dependencies]
 tempfile = "3"

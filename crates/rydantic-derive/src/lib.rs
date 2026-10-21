@@ -43,9 +43,37 @@ pub fn derive_sql_model(input: TokenStream) -> TokenStream {
 #[cfg(feature = "capnp")]
 #[proc_macro_attribute]
 pub fn capnp_models(args: TokenStream, input: TokenStream) -> TokenStream {
-    auto_protocol::expand(args.into(), input.into())
+    auto_protocol::prepare(args.into(), input.into(), false)
         .unwrap_or_else(syn::Error::into_compile_error)
         .into()
+}
+
+// The runtime re-export selects its own helper path explicitly. A consumer may
+// also declare an inactive or differently versioned direct proc-macro dependency.
+#[doc(hidden)]
+#[cfg(feature = "capnp")]
+#[proc_macro_attribute]
+pub fn __rydantic_capnp_models_runtime(args: TokenStream, input: TokenStream) -> TokenStream {
+    auto_protocol::prepare(args.into(), input.into(), true)
+        .unwrap_or_else(syn::Error::into_compile_error)
+        .into()
+}
+
+// Internal compiler-driven cfg normalization for `capnp_models`.
+#[doc(hidden)]
+#[cfg(feature = "capnp")]
+#[proc_macro_derive(__RydanticCapnpConfigured, attributes(__rydantic_capnp_options))]
+pub fn capnp_configured(input: TokenStream) -> TokenStream {
+    auto_protocol::configured(input.into())
+        .unwrap_or_else(syn::Error::into_compile_error)
+        .into()
+}
+
+#[doc(hidden)]
+#[cfg(feature = "capnp")]
+#[proc_macro_attribute]
+pub fn __rydantic_capnp_discard(_: TokenStream, _: TokenStream) -> TokenStream {
+    TokenStream::new()
 }
 
 #[proc_macro_derive(Model, attributes(model))]
@@ -93,7 +121,7 @@ fn fields(
         if matches!(source,Fields::Unnamed(_)) && (attr.flatten||attr.extra||attr.rename.is_some()||attr.validation_alias.is_some()||attr.serialization_alias.is_some()||attr.exclude||attr.has_default()){
             return Err(syn::Error::new(field.span(),"tuple fields support validation and transformations; names, flatten, extra, exclude and defaults require named fields"));
         }
-        if (attr.flatten||attr.extra)&&(attr.rename.is_some()||attr.validation_alias.is_some()||attr.serialization_alias.is_some()||attr.before.is_some()||attr.coerce||attr.has_rules()){
+        if (attr.flatten||attr.extra)&&(attr.rename.is_some()||attr.validation_alias.is_some()||attr.serialization_alias.is_some()||!attr.before.is_empty()||attr.coerce||attr.has_rules()){
             return Err(syn::Error::new(field.span(),"flatten and extra fields use their inner model's names, transformations and constraints"));
         }
         let base=attr.rename.clone().unwrap_or_else(||if field.ident.is_some(){ident.to_string().trim_start_matches("r#").to_owned()}else{i.to_string()});
@@ -220,17 +248,26 @@ fn field_value(field: &Field, raw: Tokens, mode: &Mode) -> Tokens {
     } else {
         quote!(match <#ty as #tr>::missing(){Some(value)=>Some(value),None=>#missing_error})
     };
-    let before=field.attr.before.as_ref().map(|path|quote!{
+    let callback_context = field
+        .attr
+        .before_uses_context
+        .then(|| quote!(, &__rydantic_ctx));
+    let before=field.attr.before.iter().map(|path|quote!{
         let value=__rydantic_raw.into_value(__rydantic_ctx)?;
-        __rydantic_raw=match #path(value){Ok(value)=>#rd::Input::Owned(value),Err(error)=>{__rydantic_ctx.push(error.with_stage(#rd::Stage::Parse));return None;}};
-    });
+        __rydantic_raw=match #path(value #callback_context){Ok(value)=>#rd::Input::Owned(value),Err(error)=>{__rydantic_ctx.push(error.with_stage(#rd::Stage::Parse));return None;}};
+    }).collect::<Tokens>();
     let decoded = mode.decode(ty, quote!(__rydantic_raw), field.attr.coerce);
-    let default_flow = if field.attr.before.is_some() {
+    let default_flow = if !field.attr.before.is_empty() {
         quote! {let value:#ty=#missing?;let value=<#ty as #tr>::encode_input(&value,__rydantic_ctx);let mut __rydantic_raw=#rd::Input::Owned(value);#before #decoded?}
     } else {
         quote! {let value:#ty=#missing?;<#ty as #tr>::prepare_default(value,__rydantic_ctx)?}
     };
-    let custom=field.attr.validate.as_ref().map(|path|quote!{if __rydantic_ctx.error_count()==__rydantic_start{if let Err(error)=#path(&__rydantic_value){__rydantic_ctx.push(error);}}});
+    let callback_context = field
+        .attr
+        .validate_uses_context
+        .then(|| quote!(, &__rydantic_ctx));
+    let custom=field.attr.validate.iter().map(|path|quote!{if let Err(error)=#path(&__rydantic_value #callback_context){__rydantic_ctx.push(error);}}).collect::<Tokens>();
+    let custom = quote! {if __rydantic_ctx.error_count()==__rydantic_start{#custom}};
     let builtin=field.attr.has_rules().then(||quote!{let rules=#rule;__rydantic_value=<#ty as #tr>::normalize(__rydantic_value,rules,__rydantic_ctx)?;<#ty as #tr>::validate_rules(&__rydantic_value,rules,__rydantic_ctx);});
     quote! {
         let __rydantic_start=__rydantic_ctx.error_count();
@@ -426,7 +463,7 @@ fn validate_fields(fields: &[Field], values: &[Tokens], shape: Shape, mode: &Mod
     let checks=fields.iter().zip(values).enumerate().map(|(i,(field,value))|{
         let ty=&field.ty;let rule=rules(field,rd);
         let builtin=field.attr.has_rules().then(||quote!(<#ty as #tr>::validate_rules(#value,#rule,__rydantic_ctx);));
-        let custom=field.attr.validate.as_ref().map(|path|quote!(if let Err(error)=#path(#value){__rydantic_ctx.push(error);}));
+        let callback_context=field.attr.validate_uses_context.then(||quote!(, &__rydantic_ctx));let custom=field.attr.validate.iter().map(|path|quote!(if let Err(error)=#path(#value #callback_context){__rydantic_ctx.push(error);})).collect::<Tokens>();
         let body=quote!{let start=__rydantic_ctx.error_count();<#ty as #tr>::validate_into(#value,__rydantic_ctx);if start==__rydantic_ctx.error_count(){#builtin #custom}};
         with_location(field,if shape==Shape::Tuple&&fields.len()==1{usize::MAX}else{i},shape,body,rd)
     });
@@ -441,7 +478,7 @@ fn async_fields(fields: &[Field], values: &[Tokens], shape: Shape, rd: &Tokens) 
     let checks=fields.iter().zip(values).enumerate().map(|(i,(field,value))|{
         let ty=&field.ty;let input=&field.input;
         let segment=if field.attr.flatten||field.attr.extra||(shape==Shape::Tuple&&fields.len()==1){quote!(None)}else if shape==Shape::Tuple{quote!(Some(#rd::PathSegment::from(#i)))}else{quote!(Some(#rd::PathSegment::from(#input)))};
-        let custom=field.attr.async_validate.as_ref().map(|path|quote!{if child.error_count()==start{if let Err(error)=#path(#value).await{child.push(error);}}});
+        let callback_context=field.attr.async_validate_uses_context.then(||quote!(, &child));let custom=field.attr.async_validate.iter().map(|path|quote!{if let Err(error)=#path(#value #callback_context).await{child.push(error);}}).collect::<Tokens>();let custom=quote!{if child.error_count()==start{#custom}};
         quote!{let mut child=__rydantic_ctx.child(#segment);let start=child.error_count();<#ty as #rd::AsyncCheck>::check_async(#value,&mut child).await;#custom __rydantic_ctx.absorb(child);}
     });
     quote!(#(#checks)*)
@@ -452,13 +489,14 @@ fn property_schema(field: &Field, mode: &Mode) -> Tokens {
     let ty = &field.ty;
     let coerce = field.attr.coerce;
     let rule = rules(field, rd);
-    let before=field.attr.before.as_ref().map(|path|quote!{if __rydantic_ctx.mode==#rd::SchemaMode::Input{property=#rd::__private::serde_json::json!({});#rd::schema::annotate_local(&mut property,concat!("before:",stringify!(#path)));}});
-    let condition = if field.attr.before.is_some() {
+    let before_annotations=field.attr.before.iter().map(|path|quote!{#rd::schema::annotate_local(&mut property,concat!("before:",stringify!(#path)));});
+    let before=(!field.attr.before.is_empty()).then(||quote!{if __rydantic_ctx.mode==#rd::SchemaMode::Input{property=#rd::__private::serde_json::json!({});#(#before_annotations)*}});
+    let condition = if !field.attr.before.is_empty() {
         quote!(__rydantic_ctx.mode==#rd::SchemaMode::Output)
     } else {
         quote!(true)
     };
-    let custom=field.attr.validate.iter().map(|path|quote!(#rd::schema::annotate_local(&mut property,concat!("validate:",stringify!(#path)));));
+    let custom=field.attr.validate.iter().map(|path|quote!(#rd::schema::annotate_local(&mut property,concat!("validate:",stringify!(#path)));)).collect::<Tokens>();
     let asynchronous=field.attr.async_validate.iter().map(|path|quote!(#rd::schema::annotate_local(&mut property,concat!("async_validate:",stringify!(#path)));));
     let desc = field
         .doc
@@ -483,7 +521,7 @@ fn property_schema(field: &Field, mode: &Mode) -> Tokens {
         _ => None,
     });
     let annotation=literal.map(|v|{let text=v.to_string();quote!(if __rydantic_ctx.mode==#rd::SchemaMode::Input{property["default"]=#rd::__private::serde_json::from_str::<#rd::Value>(#text).expect("literal default");})});
-    quote! {{let mut property=<#ty as #tr>::schema(__rydantic_ctx,#coerce);#before if #condition{#rule.apply_schema(&mut property,__rydantic_ctx.mode,#coerce,<#ty as #tr>::kind());}#(#custom)* #(#asynchronous)* #desc #annotation property}}
+    quote! {{let mut property=<#ty as #tr>::schema(__rydantic_ctx,#coerce);#before if #condition{#rule.apply_schema(&mut property,__rydantic_ctx.mode,#coerce,<#ty as #tr>::kind());}#custom #(#asynchronous)* #desc #annotation property}}
 }
 fn schema_shape(
     fields: &[Field],
@@ -561,10 +599,10 @@ fn prepare_fields(fields: &[Field], shape: Shape, mode: &Mode, path: Tokens) -> 
     let constructor = constructor(fields, shape, path);
     let locals = (0..fields.len()).map(field_ident).collect::<Vec<_>>();
     let prepare=fields.iter().enumerate().map(|(i,f)|{let ty=&f.ty;let local=&locals[i];let rule=rules(f,rd);
-        let raw=if let Some(path)=&f.attr.before{let decoded=mode.decode(ty,quote!(#rd::Input::Owned(raw)),f.attr.coerce);quote!{let raw=<#ty as #tr>::encode_input(&#local,__rydantic_ctx);let raw=match #path(raw){Ok(v)=>v,Err(e)=>{__rydantic_ctx.push(e.with_stage(#rd::Stage::Parse));return None;}};let mut value=#decoded?;}}
+        let raw=if !f.attr.before.is_empty(){let decoded=mode.decode(ty,quote!(#rd::Input::Owned(raw)),f.attr.coerce);let callback_context=f.attr.before_uses_context.then(||quote!(, &__rydantic_ctx));let callbacks=f.attr.before.iter().map(|path|quote!{let raw=match #path(raw #callback_context){Ok(v)=>v,Err(e)=>{__rydantic_ctx.push(e.with_stage(#rd::Stage::Parse));return None;}};});quote!{let raw=<#ty as #tr>::encode_input(&#local,__rydantic_ctx);#(#callbacks)* let mut value=#decoded?;}}
         else{quote!(let mut value=<#ty as #tr>::prepare_default(#local,__rydantic_ctx)?;)};
         let builtin=f.attr.has_rules().then(||quote!{value=<#ty as #tr>::normalize(value,#rule,__rydantic_ctx)?;<#ty as #tr>::validate_rules(&value,#rule,__rydantic_ctx);});
-        let custom=f.attr.validate.as_ref().map(|path|quote!{if start==__rydantic_ctx.error_count(){if let Err(error)=#path(&value){__rydantic_ctx.push(error);}}});
+        let callback_context=f.attr.validate_uses_context.then(||quote!(, &__rydantic_ctx));let custom=f.attr.validate.iter().map(|path|quote!{if let Err(error)=#path(&value #callback_context){__rydantic_ctx.push(error);}}).collect::<Tokens>();let custom=quote!{if start==__rydantic_ctx.error_count(){#custom}};
         let body=quote!{let start=__rydantic_ctx.error_count();#raw #builtin #custom Some(value)};
         let body=with_location(f,if shape==Shape::Tuple&&fields.len()==1{usize::MAX}else{i},shape,body,rd);quote!(let #local=#body;)
     });
@@ -734,7 +772,7 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
                 if container.untagged {
                     let body = parse_shape(fields, *shape, ctor, &container, &mode, None);
                     decodes.push(quote!{
-                        {let mut trial=#rd::Context::new();let result={let __rydantic_ctx=&mut trial;let __rydantic_raw=__rydantic_raw.clone();(||{#body})()};
+                        {let mut trial=__rydantic_ctx.trial();let result={let __rydantic_ctx=&mut trial;let __rydantic_raw=__rydantic_raw.clone();(||{#body})()};
                         match trial.finish(result){Ok(value)=>return Some(value),Err(errors)=>__rydantic_branches.push(#rd::__private::serde_json::json!({"variant":#wire,"errors":errors.to_json()}))}}
                     });
                 } else if container.tag.is_some() {
@@ -814,7 +852,9 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
             }
             _ => unreachable!(),
         };
-        let custom=container.validate.as_ref().map(|path|quote!{if start==ctx.error_count(){if let Some(value)=&value{if let Err(errors)=#path(value){ctx.extend(errors);}}}});
+        let callback_context = container.validate_uses_context.then(|| quote!(, &ctx));
+        let custom=container.validate.iter().map(|path|quote!{if let Some(value)=&value{if let Err(errors)=#path(value #callback_context){ctx.extend(errors);}}}).collect::<Tokens>();
+        let custom = quote! {if start==ctx.error_count(){#custom}};
         quote! {fn prepare_default(self,ctx:&mut #rd::Context)->::core::option::Option<Self>{let start=ctx.error_count();let value={let __rydantic_ctx=&mut *ctx;match self{#arms}};#custom value}}
     };
     let mut generics = input.generics.clone();
@@ -881,12 +921,20 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
         de_generics.params.insert(0, parse_quote!('__rydantic_de));
     }
     let (de_impl_generics, _, de_where_clause) = de_generics.split_for_impl();
-    let custom_parse=container.validate.as_ref().map(|path|quote!{if __rydantic_ctx.error_count()==start{if let Some(value)=&value{if let Err(errors)=#path(value){__rydantic_ctx.extend(errors);}}}});
-    let custom_validate=container.validate.as_ref().map(|path|quote!{if __rydantic_ctx.error_count()==start{if let Err(errors)=#path(self){__rydantic_ctx.extend(errors);}}});
-    let schema_custom=container.validate.as_ref().map(|path|quote!(#rd::schema::annotate_local(&mut schema,concat!("validate:",stringify!(#path)));));
-    let schema_async=container.async_validate.as_ref().map(|path|quote!(#rd::schema::annotate_local(&mut schema,concat!("async_validate:",stringify!(#path)));));
-    let direct_async = container.async_validate.is_some()
-        || all_fields.iter().any(|f| f.attr.async_validate.is_some());
+    let callback_context = container
+        .validate_uses_context
+        .then(|| quote!(, &__rydantic_ctx));
+    let custom_parse=container.validate.iter().map(|path|quote!{if let Some(value)=&value{if let Err(errors)=#path(value #callback_context){__rydantic_ctx.extend(errors);}}}).collect::<Tokens>();
+    let custom_parse = quote! {if __rydantic_ctx.error_count()==start{#custom_parse}};
+    let callback_context = container
+        .validate_uses_context
+        .then(|| quote!(, &__rydantic_ctx));
+    let custom_validate=container.validate.iter().map(|path|quote!{if let Err(errors)=#path(self #callback_context){__rydantic_ctx.extend(errors);}}).collect::<Tokens>();
+    let custom_validate = quote! {if __rydantic_ctx.error_count()==start{#custom_validate}};
+    let schema_custom=container.validate.iter().map(|path|quote!(#rd::schema::annotate_local(&mut schema,concat!("validate:",stringify!(#path)));)).collect::<Tokens>();
+    let schema_async=container.async_validate.iter().map(|path|quote!(#rd::schema::annotate_local(&mut schema,concat!("async_validate:",stringify!(#path)));)).collect::<Tokens>();
+    let direct_async = !container.async_validate.is_empty()
+        || all_fields.iter().any(|f| !f.attr.async_validate.is_empty());
     let nested_async = all_fields.iter().map(|f| {
         let ty = &f.ty;
         quote!(<#ty as #tr>::async_required(seen))
@@ -926,7 +974,11 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
         p.bounds.push(parse_quote!(#rd::AsyncCheck));
     }
     let (async_impl_generics, _, async_where_clause) = async_generics.split_for_impl();
-    let custom_async=container.async_validate.as_ref().map(|path|quote!{if start==__rydantic_ctx.error_count(){if let Err(errors)=#path(self).await{__rydantic_ctx.extend(errors);}}});
+    let callback_context = container
+        .async_validate_uses_context
+        .then(|| quote!(, &__rydantic_ctx));
+    let custom_async=container.async_validate.iter().map(|path|quote!{if let Err(errors)=#path(self #callback_context).await{__rydantic_ctx.extend(errors);}}).collect::<Tokens>();
+    let custom_async = quote! {if start==__rydantic_ctx.error_count(){#custom_async}};
     let body = quote! {
         // Mixed-site hygiene does not isolate item names. Keep assertion helpers
         // outside the scope containing user callback paths and default expressions.

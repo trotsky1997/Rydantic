@@ -8,6 +8,19 @@ icon: "tag"
 
 [PDF inputs](/integrations/pdf) add `Pdf` and `Prompt::pdf()` for ordered document, image and text prompts. Embedded PDFs work through all nine protocol combinations, including JSON/SSE output, tool continuations, Partial and Iterable streams. Responses and Messages also support URL references; Chat Completions requires embedded PDF data. Validation bounds PDF data, names and counts, and replay uses compact attachment digests. CI covers 89 strict official Python SDK cases.
 
+## 0.7.0 · Stable
+
+Published on 2026-10-21 as stable: [runtime](https://crates.io/crates/rydantic/0.7.0) and [derive](https://crates.io/crates/rydantic-derive/0.7.0). Install with `rydantic = "=0.7.0"`; the runtime pins derive to the same exact version. The [guarded publication workflow](https://github.com/trotsky1997/Rydantic/actions/runs/39545120139) succeeded for source commit [09ad96d](https://github.com/trotsky1997/Rydantic/commit/09ad96d4852ae187d5ddeac096c690eef723a127). Both downloaded registry archives matched their API and sparse-index checksums and the final local packages.
+
+A fresh registry-only consumer passed 48 tests plus 3 isolated settings cases, 2 alternate-configuration tests, and 2 direct-macro tests in each configuration mode. Both packages resolved from crates.io without path patches. See the [release record](https://github.com/trotsky1997/Rydantic/releases/tag/v0.7.0) for detailed verification results.
+
+- Promote settings, partial JSON and domain types from the verified betas, with their documented limits. Fix callback-path hygiene and evaluate consumer cfg/cfg_attr before automatic Cap’n Proto schema generation.
+- **Breaking from 0.6.0:** explicitly derive Model on every capnp_models struct/enum. Conditional definitions create configuration-specific wire schemas; different feature/target sets are not automatically compatible. Preserve explicit ordinal checks; use fixed/schema-first protocols for shared wire formats.
+- SQLite migration guards reject unsupported index layouts rather than losing constraints. Back up data and review migrations; users remain responsible for existing deployments. No automatic production-data migration is performed.
+- Core archives contain only runtime and derive. AI is independently released; CLI/codegen remain unpublished source tools. Exact-version Skill/evaluation fixtures remain pinned to their original contracts.
+
+See the [complete changelog](https://github.com/trotsky1997/Rydantic/blob/main/CHANGELOG.md), [Cap’n Proto migration guidance](/integrations/capnp), [migration limits](/integrations/migrations), [settings](/models/settings), [partial JSON](/models/partial-json) and [domain provenance](/domain-types).
+
 ## RydanticAI 0.6.0
 
 All three providers and gateway frontends support ordered user image inputs across the nine protocol combinations, including URL references and Base64 images. Typed `Prompt` / `Image` builders work with Agents, Partial and Iterable output. Requests are bounded to 16 MiB with image-specific validation, and replay identity includes compact image digests. The release also carries the multi-turn replay fixes from main. See [image inputs](/integrations/images).
@@ -35,7 +48,7 @@ The independently versioned [rydantic-ai crate](https://crates.io/crates/rydanti
 
 ## 0.7.0-beta.4 · Published prerelease
 
-Published as [rydantic 0.7.0-beta.4](https://crates.io/crates/rydantic/0.7.0-beta.4). Opt in with `rydantic = "=0.7.0-beta.4"`. Stable remains 0.6.0.
+Published on 2026-10-20: [release and verification](https://github.com/trotsky1997/Rydantic/releases/tag/v0.7.0-beta.4). The published release record reports verified archives and a fresh registry-only consumer (46 tests plus 3 isolated environment cases). Opt in with `rydantic = "=0.7.0-beta.4"`.
 
 - Add individually optional [phone, country and currency types](/domain-types), with pinned offline catalogs and explicit local validation rules. Phones are not proof of reachability/ownership; currencies include legacy, fund and special entries, not a current-tender guarantee. Preserve upstream/data-source attribution.
 - The source-only JSON Schema-to-Rust developer tool remains unpublished (`publish = false`), outside the two core package archives. The source workspace also contains independent AI/Jev work; neither is part of the core archives or uploaded by this release.

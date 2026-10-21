@@ -41,7 +41,7 @@ email_address = "0.2"
 phonenumber = { version = "=0.3.10", optional = true }
 rust_iso3166 = { version = "=0.2.0", default-features = false, optional = true }
 iso_currency = { version = "=0.7.1", default-features = false, optional = true }
-rydantic-derive = { version = "=0.7.0-beta.4", path = "../rydantic-derive", optional = true }
+rydantic-derive = { version = "=0.7.0", path = "../rydantic-derive", optional = true }
 jsonschema = { workspace = true, optional = true }
 
 chrono = { version = "0.4", default-features = false, features = ["std"], optional = true }

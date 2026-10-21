@@ -117,3 +117,6 @@ pub fn example_user() -> models::User {
         internal: "local".into(),
     }
 }
+
+#[cfg(test)]
+mod configured;
