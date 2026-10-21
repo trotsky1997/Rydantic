@@ -1,0 +1,15 @@
+[package]
+name = "rydantic-direct-capnp-fixture"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[features]
+cfg-fixture = []
+
+[dependencies]
+rd = { package = "rydantic", path = "../../crates/rydantic", default-features = false, features = ["capnp"] }
+rd_macros = { package = "rydantic-derive", path = "../../crates/rydantic-derive", features = ["capnp"] }
+
+[lints]
+workspace = true

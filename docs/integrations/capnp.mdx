@@ -59,10 +59,6 @@ Default mappings cover nested and recursive models, `Box`, `Option`, `Vec`, fixe
 
 Models must use concrete, owned types within the annotated inline module. Data enums still declare their JSON representation: named fields can use `#[model(tag = "kind")]`, while tuple variants use `#[model(untagged)]`. `capnp_name` controls the protocol name independently. `capnp_skip` with a default preserves a local field. JSON aliases, flattening, extra fields, and exclusion continue to control the JSON representation. Unsupported external types can use a default with `capnp_skip`, or the [existing-schema integration](/integrations/existing-capnp).
 
-<Warning>
-Conditional model definitions inside `capnp_models` have a [known limitation](https://github.com/trotsky1997/Rydantic/issues/8): the macro can inspect and reject a definition even when its `#[cfg(...)]` condition disables it. Do not assume feature-gated or platform-gated definitions are excluded from schema analysis. General conditional schema generation is not currently supported.
-</Warning>
-
 ## Breaking change in 0.7.0-beta.1: explicit Model derives
 
 Version 0.7.0-beta.1 removes automatic `Model` derive insertion inside `capnp_models`. Existing code that relied on it will no longer compile. Add `#[derive(rydantic::Model)]` to every model struct and enum in the annotated module, including nested modules, or add `rydantic::Model` to the model's existing derive list. With a renamed dependency, use that dependency's name instead. Already-explicit derives, including aliases imported outside the annotated module, need no change. An unrelated derive named `Model` does not implement Rydantic's model traits.

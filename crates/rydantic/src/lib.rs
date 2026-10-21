@@ -48,8 +48,11 @@ pub use capnp;
 pub use capnp_support::CapnpSchema;
 #[cfg(feature = "capnp")]
 pub use capnp_support::{CapnpEnum, CapnpModel};
+/// Derive a complete Cap'n Proto protocol and bindings from an inline model module.
+/// Every model must explicitly derive `Model` (an imported alias also works).
+#[doc(inline)]
 #[cfg(all(feature = "capnp", feature = "derive"))]
-pub use rydantic_derive::capnp_models;
+pub use rydantic_derive::__rydantic_capnp_models_runtime as capnp_models;
 #[doc(hidden)]
 #[cfg(all(feature = "capnp", feature = "derive"))]
 pub use rydantic_derive::{__RydanticCapnpConfigured, __rydantic_capnp_discard};

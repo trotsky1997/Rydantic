@@ -2116,6 +2116,7 @@ name = "rydantic-auto-capnp-fixture"
 version = "0.7.0-beta.4"
 dependencies = [
  "rydantic",
+ "rydantic-derive",
  "tempfile",
  "tokio",
 ]
@@ -2163,6 +2164,14 @@ dependencies = [
  "sha2 0.10.9",
  "syn 2.0.119",
  "tempfile",
+]
+
+[[package]]
+name = "rydantic-direct-capnp-fixture"
+version = "0.7.0-beta.4"
+dependencies = [
+ "rydantic",
+ "rydantic-derive",
 ]
 
 [[package]]

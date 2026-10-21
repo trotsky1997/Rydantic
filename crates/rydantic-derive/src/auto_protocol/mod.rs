@@ -64,6 +64,19 @@ fn root_path() -> syn::Result<Tokens> {
         },
     )
 }
+// Keep private helpers on the same entrypoint route as the public attribute.
+// Fall back to the runtime for third-party re-exports without a direct macro dependency.
+fn macro_path(via_runtime: bool) -> syn::Result<Tokens> {
+    if !via_runtime {
+        if let Ok(proc_macro_crate::FoundCrate::Name(name)) =
+            proc_macro_crate::crate_name("rydantic-derive")
+        {
+            let name = syn::Ident::new(&name, Span::call_site());
+            return Ok(quote!(::#name));
+        }
+    }
+    root_path()
+}
 fn relative_root(scope: &[String]) -> Tokens {
     if scope.is_empty() {
         quote!(self)
@@ -547,7 +560,7 @@ fn compile(schema: &str, rd: &Tokens, span: Span) -> syn::Result<Vec<Item>> {
 /// The temporary enum is discarded; only the normalized original module is emitted.
 /// Do not evaluate cfg predicates in the proc-macro host environment: they belong
 /// to the consuming crate and target.
-pub(super) fn prepare(args: Tokens, input: Tokens) -> syn::Result<Tokens> {
+pub(super) fn prepare(args: Tokens, input: Tokens, via_runtime: bool) -> syn::Result<Tokens> {
     options(args.clone())?;
     let module: ItemMod = syn::parse2(input)?;
     if module.content.is_none() {
@@ -556,11 +569,11 @@ pub(super) fn prepare(args: Tokens, input: Tokens) -> syn::Result<Tokens> {
             "capnp_models requires an inline module containing the model definitions",
         ));
     }
-    let rd = root_path()?;
+    let macros = macro_path(via_runtime)?;
     let temporary = syn::Ident::new("__RydanticCapnpConfiguration", Span::mixed_site());
     Ok(quote! {
-        #[derive(#rd::__RydanticCapnpConfigured)]
-        #[#rd::__rydantic_capnp_discard]
+        #[derive(#macros::__RydanticCapnpConfigured)]
+        #[#macros::__rydantic_capnp_discard]
         #[__rydantic_capnp_options(#args)]
         enum #temporary { Configured = { #module } }
     })
