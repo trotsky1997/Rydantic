@@ -28,7 +28,7 @@
       },
       {
         "label": "Stable API reference",
-        "href": "https://docs.rs/rydantic/0.6.0/rydantic/"
+        "href": "https://docs.rs/rydantic/0.7.0/rydantic/"
       }
     ],
     "primary": {
