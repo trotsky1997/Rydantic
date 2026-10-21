@@ -5,7 +5,7 @@ license: MIT
 compatibility: Local file access; Cargo and prepared dependencies for typed verification. CLI is optional. No agent-specific tools required.
 metadata:
   toolkit-version: "0.1.0"
-  core-reference: "0.6.0"
+  core-reference: "0.6.0, 0.7.0"
   cli-protocol: "rydantic.cli/v1"
 ---
 
@@ -23,7 +23,8 @@ Rydantic or replace an established validator without a concrete benefit.
 Inspect Cargo.toml, Cargo.lock, dependency aliases, features and toolchain files.
 A declared version range is not a resolved version; neither proves a build ran.
 Use [version and feature discovery](references/features.md). This package's
-verified API track is exactly 0.6.0, including its derive crate. Unknown versions
+API tracks are exactly 0.6.0 and 0.7.0, each with matching derive pins and
+independent consumer tests. Select the matching reference, not the newest one. Unknown versions
 need their own source/API verification; beta behavior must not be backported in
 prose. [Compatibility data](compatibility.json) records the supported combination.
 
@@ -32,6 +33,10 @@ If an already available CLI supports them, use:
     rydantic capabilities --format json --protocol-version 1
     rydantic doctor --workspace . --format json --protocol-version 1
 
+The optional CLI still has only 0.6.0 knowledge; the 0.7.0 Skill track does not
+add CLI version support. Use source and the 0.7.0 consumer instead of treating
+`RD_VERSION_UNKNOWN` as an unavailable library feature.
+
 The P0 CLI only discovers and explains; it does not build, validate inputs or
 resolve Cargo features. `--resolve` is unsupported. If absent, continue with
 manifests, exact-version source and the project's Cargo workflow. Do not install
@@ -39,7 +44,8 @@ it silently or claim roadmap commands exist.
 
 ## Select the relevant route
 
-- Typed Rust models: read [stable 0.6.0](references/stable-0.6.0.md). Verify the
+- Typed Rust models: select [stable 0.6.0](references/stable-0.6.0.md) or
+  [stable 0.7.0](references/stable-0.7.0.md) by the exact core version. Verify the
   concrete model with Rust tests, not source scanning or JSON Schema alone.
 - Runtime schemas or exported contracts: read [schema boundaries](references/schema.md).
   Distinguish input from output, and typed execution from structural checking.
@@ -52,7 +58,8 @@ it silently or claim roadmap commands exist.
 ## Verify, repair, report
 
 Use [testing](references/testing.md) for the compile/test loop and the runnable
-[stable consumer](assets/stable-0.6.0/Cargo.toml). Adapt its model, not just its
+[0.6.0 consumer](assets/stable-0.6.0/Cargo.toml) or
+[0.7.0 consumer](assets/stable-0.7.0/Cargo.toml). Adapt its model, not just its
 schema, and cover valid, invalid and boundary inputs. Do not copy a beta fix into
 claims about stable. Direct struct construction is not proof of validation.
 
