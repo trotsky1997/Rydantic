@@ -58,9 +58,13 @@
 .rd-window-bar { display: flex; justify-content: space-between; align-items: center; padding: 0.85rem 1rem; color: #bfd4c5; border-bottom: 1px solid #314537; font-family: ui-monospace, monospace; font-size: 10px; letter-spacing: 0.06em; }
 .rd-window-bar > span:first-child { display: flex; align-items: center; gap: 7px; }
 .rd-code-dot { width: 6px; height: 6px; border-radius: 50%; background: #88c7a2; }
-.rd-contract .code-block, .rd-contract pre, .rd-contract [data-component-name="code-block"] { background: #14251c !important; border: 0 !important; border-radius: 0; margin: 0; box-shadow: none; }
-.rd-contract pre { padding: 1rem 1.1rem !important; }
+.rd-contract .code-block, .rd-contract pre, .rd-contract [data-component-part="code-block-root"] { background: #14251c !important; border: 0 !important; border-radius: 0; margin: 0; box-shadow: none; }
+.rd-contract pre { padding: 0 !important; font-size: 12px !important; line-height: 1.8 !important; }
 .rd-contract pre code, .rd-contract pre code span { color: var(--shiki-dark, #e0eee3) !important; }
+.rd-contract [data-component-part="scroll-area-viewport"] { padding: 1.2rem; }
+.rd-contract button { background: #20382a !important; }
+.rd-contract button svg { color: #afc9b9 !important; }
+.rd-contract [data-fade-overlay] { display: none; }
 .rd-contract-result { display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0.85rem 1rem; border-top: 1px solid #314537; color: #b2c5b7; font-size: 10px; line-height: 1.5; }
 .rd-result-check { color: #9de4b8; }
 .rd-contract-result > span:last-child { color: #a1bbaa; }
@@ -84,7 +88,7 @@
 .rd-release-strip strong { color: var(--rd-ink); font-weight: 600; }
 .rd-home .rd-release-strip > a { flex-shrink: 0; color: var(--rd-green); font-size: 0.75rem; font-weight: 600; text-decoration: none; }
 .rd-shortcuts { display: flex; flex-wrap: wrap; gap: 0.7rem 1.5rem; margin-top: 1.6rem; color: var(--rd-muted); font-size: 11px; }
-.rd-shortcuts > span { flex-basis: 100%; font-size: 8px; font-weight: 600; letter-spacing: 0.12em; }
+.rd-shortcuts > span { flex-basis: 100%; font-size: 10px; font-weight: 600; letter-spacing: 0.12em; }
 .rd-home .rd-shortcuts a { color: var(--rd-muted); font-weight: 500; text-decoration: none; }
 .rd-home .rd-shortcuts a:hover { color: var(--rd-green); }
 .rd-guide-map { display: flex; flex-wrap: wrap; align-items: center; gap: 0.65rem; margin: 1.5rem 0 2rem; padding: 0.9rem 1.1rem; border: 1px solid var(--rd-line); border-radius: 9px; background: var(--rd-soft); color: var(--rd-green); font-family: ui-monospace, monospace; font-size: 0.75rem; }
