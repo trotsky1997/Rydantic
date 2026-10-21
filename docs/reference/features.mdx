@@ -14,9 +14,9 @@ The default feature is `derive`. Every integration below is opt-in.
 | `dynamic` | Runtime JSON Schema validation with `DynamicModel` |
 | `chrono` | `chrono` date and time support |
 | `decimal` | `rust_decimal` support |
-| `phone` | Beta.4 source candidate [canonical E.164 phone type](/domain-types), available after beta.4 publication |
-| `country` | Beta.4 source candidate [ISO 3166-1 code types](/domain-types), available after beta.4 publication |
-| `currency` | Beta.4 source candidate [known currency catalog codes](/domain-types), available after beta.4 publication |
+| `phone` | [canonical E.164 phone type](/domain-types) (first published in beta.4) |
+| `country` | [ISO 3166-1 code types](/domain-types) (first published in beta.4) |
+| `currency` | [known currency catalog codes](/domain-types) (first published in beta.4) |
 | `capnp` | Native and packed Cap’n Proto serialization |
 | `axum` | Axum 0.8 extractors, responses and structured rejections |
 | `sqlx` | Shared SQL metadata and API, with no database driver |
@@ -26,16 +26,18 @@ The default feature is `derive`. Every integration below is opt-in.
 
 ## Example configurations
 
+These examples target 0.7.0. Confirm [registry availability](https://crates.io/crates/rydantic/versions) before installation; source metadata alone does not announce publication.
+
 <CodeGroup>
 ```toml JSON only
-rydantic = "=0.7.0-beta.4"
+rydantic = "=0.7.0"
 ```
 ```toml HTTP + PostgreSQL
-rydantic = { version = "=0.7.0-beta.4", features = ["axum", "postgres"] }
+rydantic = { version = "=0.7.0", features = ["axum", "postgres"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "net"] }
 ```
 ```toml Binary protocol
-rydantic = { version = "=0.7.0-beta.4", features = ["capnp"] }
+rydantic = { version = "=0.7.0", features = ["capnp"] }
 ```
 </CodeGroup>
 

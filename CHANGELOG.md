@@ -1,6 +1,38 @@
+# Rydantic 0.7.0 · Stable-release candidate
+
+This source prepares stable 0.7.0; it does not announce completed publication. Runtime and derive are promoted together, with an exact `=0.7.0` derive pin. Verify the [release](https://github.com/trotsky1997/Rydantic/releases/tag/v0.7.0) and both registry packages before installation. Stable remains 0.6.0 until that publication completes.
+
+## Included
+
+- Promote the previously published beta features: opt-in settings, bounded partial JSON snapshots, phone/country/currency domain types, exact zero-exponent normalization, Cap’n Proto compiler-path fixes and SQLite index-safety guards.
+- Fix callback path hygiene across `Model` and generated integrations; bare callback names no longer collide with internal locals or assertion helpers. Preserve SQL skipped-field behavior.
+- Evaluate consumer `cfg` / `cfg_attr` through Rust before automatic Cap’n Proto registry/schema generation. Disabled inline models, fields and variants no longer participate. Existing active-model validation and explicit ordinal gap/duplicate checks remain. Rust's existing restrictions on external file modules inside procedural-macro input still apply.
+- Preserve direct `rydantic-derive` consumers with runtime derive re-exports disabled, including renamed dependencies; runtime helper resolution remains isolated from unrelated direct macro dependencies.
+- Document and test the existing synchronous/asynchronous validator execution contract. This does not add a validator composition API or change callbacks into atomic operations.
+
+## Breaking upgrade from 0.6.0
+
+Every struct and enum inside `#[rydantic::capnp_models(...)]`, including nested models, must explicitly derive `Model`; automatic insertion was removed in beta.1. Add `#[derive(rydantic::Model)]` or an imported alias before upgrading. No legacy compatibility layer is provided.
+
+Conditional model definitions now affect generated schemas and automatic ordinals. Different target/feature configurations may therefore have different wire layouts. Do not assume cross-configuration compatibility, even with the same namespace. For a shared protocol, keep definitions fixed, use schema-first bindings, or intentionally separate protocol identities and validate interoperability. The unconditional explicit-derive change alone does not change wire layout.
+
+SQLite rebuilds reject unsupported custom index semantics, including non-BINARY collation and descending key order, instead of silently dropping constraints. Review migration plans and keep backups; application owners are responsible for existing data and deployments. Use a reviewed manual migration for unsupported layouts, never remove constraints merely to bypass guards. No production data is migrated by this release.
+
+## Data boundaries and package scope
+
+Settings source diagnostics redact values, but successful values can contain secrets. Partial JSON previews are not business-validated: require final producer input, `Complete` and Model validation before consequential use. Limits remain 1 MiB / 64 containers, incomplete strings/keys are rejected, and integer parts over 4300 digits are unsupported rather than rounded. Repeated prefix reparsing can cost quadratic work.
+
+Domain catalogs are pinned offline snapshots: phones do not prove reachability or ownership; currency membership includes legacy, fund and special codes, not a current-tender guarantee. Preserve upstream attribution.
+
+This promotion publishes only `rydantic` and `rydantic-derive`. RydanticAI has an independent version/publication lifecycle. `rydantic-cli` and `rydantic-codegen` remain unpublished source tools (`publish = false`); the Skill and frozen evaluation fixtures are repository assets, not extra crates. Their exact 0.6.0/beta.4 recipes retain their original version-specific contracts.
+
+## Release gates
+
+Before publication: resolve release-blocking review findings, pass fresh exact-commit main CI on Rust 1.98.1 (Linux/macOS, Windows compiler paths, PostgreSQL/MySQL, fixtures/Clippy/docs), inspect and verify both package archives and test a packaged consumer. Publish derive before runtime through the existing guarded workflow. After publication: verify registry/index/checksums and run a fresh registry-only consumer. Record actual results on the GitHub Release; do not infer a pass from author reports or an older beta.
+
 # Rydantic 0.7.0-beta.4
 
-Source candidate, not a publication announcement. Stable remains 0.6.0. After publication, opt in with `rydantic = "=0.7.0-beta.4"`; the runtime pins derive to exactly the same version.
+Published on 2026-10-20 as a prerelease: [GitHub Release](https://github.com/trotsky1997/Rydantic/releases/tag/v0.7.0-beta.4). The published release record reports verified archives and a fresh registry-only consumer (46 tests plus 3 isolated environment cases). The runtime pins derive to exactly the same version.
 
 ## Added and scope
 

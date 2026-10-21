@@ -2,11 +2,11 @@
 
 Procedural macros for [Rydantic](https://crates.io/crates/rydantic), a Rust library for data modeling, validation, JSON Schema and native Cap'n Proto.
 
-Use the `rydantic` crate, which enables and re-exports `#[derive(Model)]` by default:
+Use the `rydantic` crate, which enables and re-exports `#[derive(Model)]` by default. The following pin is for the 0.7.0 stable release candidate; publication is pending. Check the [release status](https://github.com/trotsky1997/Rydantic/releases/tag/v0.7.0) before using it:
 
 ```toml
 [dependencies]
-rydantic = "=0.7.0-beta.4"
+rydantic = "=0.7.0"
 ```
 
 ```rust

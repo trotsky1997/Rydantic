@@ -106,16 +106,16 @@ rydantic = { version = "0.6.0", features = ["axum", "postgres"] }
 
 See the [complete feature reference](https://rydantic.mintlify.site/reference/features). Automatic Cap'n Proto binding generation also requires the official `capnp` compiler on `PATH`.
 
-## Stable and beta
+## Stable promotion
 
 | Channel | Version | Use it for |
 | --- | --- | --- |
 | **Stable** | `0.6.0` | Published API, with [versioned source documentation](https://github.com/trotsky1997/Rydantic/tree/v0.6.0) and [Rust API reference](https://docs.rs/rydantic/0.6.0/rydantic/). |
-| **Source candidate** | `0.7.0-beta.4` | Testing opt-in phone, country and currency types; retaining partial JSON, settings and the beta.1 upgrade protections. |
+| **Stable-release candidate** | `0.7.0` | Promoting the tested beta features, callback hygiene and conditional Cap’n Proto generation; publication is pending verification. |
 
-A version in this branch is **not a publication announcement**. Check [published versions](https://crates.io/crates/rydantic/versions) before installing a candidate. Once published, opt in exactly with `rydantic = "=0.7.0-beta.4"`. The guides follow the working source; use the versioned links above for stable behavior.
+A version in this branch is **not a publication announcement**. Check [published versions](https://crates.io/crates/rydantic/versions) before installing a candidate. Once published, install with `rydantic = "=0.7.0"`. The guides follow the working source; use the versioned links above for stable behavior.
 
-> **Breaking upgrade:** 0.7.0-beta.1 removes automatic `Model` derive insertion inside `#[rydantic::capnp_models]`. Add an explicit `#[derive(rydantic::Model)]` to every model struct and enum, including nested models. The beta also rejects unsupported custom SQLite index layouts before a table rebuild. Read the [changelog and migration guidance](https://github.com/trotsky1997/Rydantic/blob/main/CHANGELOG.md) before upgrading.
+> **Breaking upgrade from 0.6.0:** 0.7.0 removes automatic `Model` derive insertion inside `#[rydantic::capnp_models]`. Add an explicit `#[derive(rydantic::Model)]` to every model struct and enum, including nested models. The release also rejects unsupported custom SQLite index layouts before a table rebuild. Conditional Cap’n Proto definitions produce configuration-specific wire schemas; different feature/target configurations are not automatically wire-compatible. Read the [changelog and migration guidance](https://github.com/trotsky1997/Rydantic/blob/main/CHANGELOG.md) before upgrading.
 
 Breaking changes are allowed in this early-stage library. Application owners are responsible for backups, migration review, and deployment validation. Unsupported SQLite layouts need a reviewed migration, not removal of constraints to bypass the guard. We do not describe destructive changes as lossless.
 
