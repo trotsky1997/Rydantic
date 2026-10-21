@@ -138,6 +138,9 @@ def main():
     cov, profdata = (llvm / (name + suffix) for name in ["llvm-cov", "llvm-profdata"])
     if not cov.is_file() or not profdata.is_file():
         parser.error("Install llvm-tools-preview for the active Rust toolchain first.")
+    # Capture source provenance before our own output can make a clean tree dirty.
+    source_revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
+    source_dirty = bool(subprocess.check_output(["git", "status", "--porcelain"], cwd=ROOT, text=True).strip())
     if args.output_dir:
         output = args.output_dir.resolve()
         output.mkdir(parents=True, exist_ok=False)  # Never mix stale profiles into a run.
@@ -151,8 +154,8 @@ def main():
     manifest = {
         "scope": "default-core-runtime", "features": ["derive"],
         "excluded_harnesses": ["compile"], "phases": dict(phases),
-        "toolchain": rustc, "source_revision": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
-        "source_dirty": bool(subprocess.check_output(["git", "status", "--porcelain"], cwd=ROOT, text=True).strip()),
+        "toolchain": rustc, "source_revision": source_revision,
+        "source_dirty": source_dirty,
         "cargo_lock_sha256": hashlib.sha256((ROOT / "Cargo.lock").read_bytes()).hexdigest(),
         "rust_flags": env["CARGO_ENCODED_RUSTFLAGS"].split("\x1f"),
         "commands": [],

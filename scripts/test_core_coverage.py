@@ -394,6 +394,7 @@ class RunnerTests(unittest.TestCase):
             (self.llvm / (command + suffix)).touch()
         self.output = self.root / "report"
         self.calls = []
+        self.source_dirty = True
         self.cargo_failure = False
         self.emit_profiles = True
         self.emit_objects = True
@@ -415,7 +416,7 @@ class RunnerTests(unittest.TestCase):
         if command == ["git", "rev-parse", "HEAD"]:
             return "fixture-commit\n"
         if command == ["git", "status", "--porcelain"]:
-            return " M scripts/core_coverage.py\n"
+            return " M scripts/core_coverage.py\n" if self.source_dirty else ("?? report/\n" if self.output.exists() else "")
         self.fail(f"Unexpected command: {command}")
 
     def run_command(self, command, **options):
@@ -458,6 +459,13 @@ class RunnerTests(unittest.TestCase):
         summary = json.loads((self.output / "summary.json").read_text())["current"]
         self.assertEqual(summary["files"], ["lib.rs"])
         self.assertIsNone(summary["branches"]["percent"])
+
+    def test_clean_source_is_captured_before_unignored_reports_are_created(self):
+        self.source_dirty = False
+        self.invoke()
+        manifest = json.loads((self.output / "manifest.json").read_text())
+        self.assertFalse(manifest["source_dirty"])
+        self.assertTrue((self.output / "toolchain.txt").is_file())
 
     def test_threshold_failure_preserves_report_and_logs(self):
         with self.assertRaises(ValueError):
