@@ -60,7 +60,7 @@ null. `project_code_executed` is false.
 
 The bundled feature set is grounded in the published 0.6.0 package. An exact
 `=0.6.0` registry declaration can be checked against that release's feature set
-(unless a patch/replace/alternative registry or root Cargo config makes that inference unknown).
+(unless a patch/replace/alternative registry or observed Cargo config makes that inference unknown).
 A range such as `0.6` is not upgraded to exact knowledge merely because a possibly
 stale lockfile contains 0.6.0. Path/git dependencies, unknown versions and patched
 sources receive unknown knowledge. Requested invalid stable features fail with 3.
@@ -108,3 +108,26 @@ locks, exact-version feature rejection, explicit formats, duplicate/invalid and
 bounded input, deterministic output, privacy markers and no generated project
 files. They use synthetic temporary projects, not application code. Linux is
 tested locally; cross-platform execution must be reported separately.
+
+
+### Static configuration and inherited defaults
+
+Doctor checks for Cargo configuration at the invocation directory and its ancestors,
+the inspected workspace root and its ancestors, and `CARGO_HOME` (or the platform
+home's `.cargo` directory). It observes legacy `config` and `config.toml` presence
+only: it does not read values, resolve precedence, or disclose config contents.
+Any observed configuration makes source-dependent feature knowledge unknown;
+unavailable home/current-directory information or inspection errors also fail
+closed. `cargo_config_present` is null when presence cannot be established.
+A child package's config is relevant when invoked from that child, not merely
+because it is listed as a workspace member. Inspection of the explicit target
+root is conservative when it differs from the invocation directory.
+
+For inherited dependencies, a member's `default-features = false` conflicting
+with enabled workspace defaults is ignored on editions before 2024. Edition
+2024 rejects the combination through Cargo 1.98 and overrides it from 1.99.
+Doctor does not execute Cargo or infer the installed version from a toolchain
+filename. For edition 2024 or an unknown edition, it therefore emits
+`RD_DEFAULT_FEATURES_UNKNOWN` and null `declared_default_features` for this
+combination. Workspace-inherited package editions are inspected explicitly.
+These declaration facts remain separate from resolved and verified features.
