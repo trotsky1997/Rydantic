@@ -81,8 +81,10 @@ jobs:
         run: |
           cargo test -p rydantic-direct-capnp-fixture --lib --locked
           cargo test -p rydantic-direct-capnp-fixture --lib --features cfg-fixture --locked
-      - name: Verify exact stable agent Skill consumer
-        run: cargo test --manifest-path skills/rydantic/assets/stable-0.6.0/Cargo.toml --locked
+      - name: Verify exact stable agent Skill consumers
+        run: |
+          cargo test --manifest-path skills/rydantic/assets/stable-0.6.0/Cargo.toml --locked
+          cargo test --manifest-path skills/rydantic/assets/stable-0.7.0/Cargo.toml --locked
       - name: Clippy
         run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
       - name: Verify all gateway protocols with official Python SDKs

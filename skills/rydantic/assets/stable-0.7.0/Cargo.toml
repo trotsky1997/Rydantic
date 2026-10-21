@@ -1,0 +1,13 @@
+[package]
+name = "rydantic-skill-stable-070-contracts"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+# Independent consumer: never resolve through monorepo path dependencies.
+[workspace]
+
+[dependencies]
+rydantic = { version = "=0.7.0", features = ["dynamic", "settings", "partial-json"] }
+# Explicit core/derive pins keep the consumer track auditable.
+rydantic-derive = "=0.7.0"

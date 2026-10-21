@@ -53,3 +53,18 @@ Skill frontmatter passed the official `skills-ref validate` implementation from
 [agentskills/agentskills commit 69ef37e](https://github.com/agentskills/agentskills/tree/69ef37e9424c0a7ea9dd2293b559e43ec8176379/skills-ref).
 All relative Markdown references were checked for existence. Format validation
 is not a claim of measured Agent task performance.
+
+## Independent 0.7.0 consumer
+
+For exactly 0.7.0 core/derive, select `assets/stable-0.7.0/` instead. It retains
+the six typed/dynamic contracts above and adds two tests for settings source
+precedence/final validation and provisional partial-JSON versus typed parsing.
+It enables `derive`, `dynamic`, `settings`, `partial-json`; it does not certify
+all optional features. The package has its own registry-only lockfile/workspace.
+
+    cargo +1.98.1 test --manifest-path assets/stable-0.7.0/Cargo.toml --frozen
+
+Repository CI runs both consumers separately with `--locked` on Linux and macOS.
+The 0.6.0 verification receipt above does not claim 0.7.0 execution. Report the
+actual result for the selected version. Neither consumer is an Agent trial;
+the evaluation task pins and hidden tests remain unchanged.
