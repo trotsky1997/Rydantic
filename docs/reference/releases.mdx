@@ -4,6 +4,17 @@ description: "Release history and the current migration path."
 icon: "tag"
 ---
 
+## 0.7.0 · Stable-release candidate
+
+Prepared for stable promotion; publication is pending verification. Check the [release](https://github.com/trotsky1997/Rydantic/releases/tag/v0.7.0) and [registry](https://crates.io/crates/rydantic/versions) before installing `rydantic = "=0.7.0"`. Source version metadata alone does not prove publication.
+
+- Promote settings, partial JSON and domain types from the verified betas, with their documented limits. Fix callback-path hygiene and evaluate consumer cfg/cfg_attr before automatic Cap’n Proto schema generation.
+- **Breaking from 0.6.0:** explicitly derive Model on every capnp_models struct/enum. Conditional definitions create configuration-specific wire schemas; different feature/target sets are not automatically compatible. Preserve explicit ordinal checks; use fixed/schema-first protocols for shared wire formats.
+- SQLite migration guards reject unsupported index layouts rather than losing constraints. Back up data and review migrations; users remain responsible for existing deployments. No automatic production-data migration is performed.
+- Core archives contain only runtime and derive. AI is independently released; CLI/codegen remain unpublished source tools. Exact-version Skill/evaluation fixtures remain pinned to their original contracts.
+
+See the [complete changelog](https://github.com/trotsky1997/Rydantic/blob/main/CHANGELOG.md), [Cap’n Proto migration guidance](/integrations/capnp), [migration limits](/integrations/migrations), [settings](/models/settings), [partial JSON](/models/partial-json) and [domain provenance](/domain-types).
+
 ## RydanticAI 0.6.0
 
 All three providers and gateway frontends support ordered user image inputs across the nine protocol combinations, including URL references and Base64 images. Typed `Prompt` / `Image` builders work with Agents, Partial and Iterable output. Requests are bounded to 16 MiB with image-specific validation, and replay identity includes compact image digests. The release also carries the multi-turn replay fixes from main. See [image inputs](/integrations/images).
@@ -29,9 +40,9 @@ The independently versioned [rydantic-ai crate](https://crates.io/crates/rydanti
 - Explicit model-call numbers and reset reasons cover validation correction and tool continuations. Completion retains usage and history. Cancellation, deadlines, bounded queues and byte/depth/item limits cover stream processing.
 - Preserve native Responses events and support custom providers without HTTP features. Non-streaming providers fall back to processing their completed response.
 
-## 0.7.0-beta.4 · Source candidate
+## 0.7.0-beta.4 · Published prerelease
 
-After publication, opt in with `rydantic = "=0.7.0-beta.4"`. Source metadata is not proof of publication. Stable remains 0.6.0.
+Published on 2026-10-20: [release and verification](https://github.com/trotsky1997/Rydantic/releases/tag/v0.7.0-beta.4). The published release record reports verified archives and a fresh registry-only consumer (46 tests plus 3 isolated environment cases). Opt in with `rydantic = "=0.7.0-beta.4"`.
 
 - Add individually optional [phone, country and currency types](/domain-types), with pinned offline catalogs and explicit local validation rules. Phones are not proof of reachability/ownership; currencies include legacy, fund and special entries, not a current-tender guarantee. Preserve upstream/data-source attribution.
 - The source-only JSON Schema-to-Rust developer tool remains unpublished (`publish = false`), outside the two core package archives. The source workspace also contains independent AI/Jev work; neither is part of the core archives or uploaded by this release.
