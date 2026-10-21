@@ -37,7 +37,15 @@ impl Drop for Fixture {
     }
 }
 fn run(args: &[&str]) -> (i32, Value, String) {
-    let out = Command::new(env!("CARGO_BIN_EXE_rydantic"))
+    let environment = Fixture::new();
+    let mut command = Command::new(env!("CARGO_BIN_EXE_rydantic"));
+    command
+        .current_dir(&environment.0)
+        .env("CARGO_HOME", environment.0.join("cargo-home"));
+    run_command(command, args)
+}
+fn run_command(mut command: Command, args: &[&str]) -> (i32, Value, String) {
+    let out = command
         .args(args)
         .args(["--format", "json", "--protocol-version", "1"])
         .env("PATH", "/nonexistent")
@@ -485,5 +493,147 @@ fn reserved_number_objects_cannot_impersonate_location_indices() {
     ] {
         f.write("s.json", input);
         assert_eq!(f.doctor(&["--schema", &f.path("s.json")]).0, 2);
+    }
+}
+
+#[test]
+fn cargo_home_ancestor_and_invocation_configs_make_feature_knowledge_unknown() {
+    for config in [
+        "home/config",
+        "home/config.toml",
+        ".cargo/config.toml",
+        "consumer/nested/.cargo/config.toml",
+    ] {
+        let f = Fixture::new();
+        f.write(
+            "consumer/Cargo.toml",
+            manifest("[dependencies]\nrydantic={version='=0.6.0',features=['settings']}"),
+        );
+        f.write(config, "paths=['SECRET_OVERRIDE']\n");
+        fs::create_dir_all(f.0.join("consumer/nested")).unwrap();
+        let mut command = Command::new(env!("CARGO_BIN_EXE_rydantic"));
+        command
+            .current_dir(f.0.join("consumer/nested"))
+            .env("CARGO_HOME", f.0.join("home"));
+        let (exit, value, output) =
+            run_command(command, &["doctor", "--workspace", &f.path("consumer")]);
+        assert_eq!(exit, 0);
+        assert_eq!(value["data"]["cargo_config_present"], true);
+        assert_eq!(
+            value["data"]["declared_dependencies"][0]["feature_knowledge"],
+            "unknown"
+        );
+        assert!(!output.contains("RD_FEATURE_UNAVAILABLE"));
+        assert!(!output.contains("SECRET_OVERRIDE"));
+    }
+}
+
+#[test]
+fn inherited_2024_defaults_are_unknown_without_verified_cargo_version() {
+    for inherited_edition in [false, true] {
+        let f = Fixture::new();
+        f.write("Cargo.toml", "[workspace]\nmembers=['a']\n[workspace.package]\nedition='2024'\n[workspace.dependencies]\nrd={package='rydantic',version='=0.6.0'}\n");
+        let edition = if inherited_edition {
+            "edition.workspace=true"
+        } else {
+            "edition='2024'"
+        };
+        f.write("a/Cargo.toml", format!("[package]\nname='a'\nversion='0.1.0'\n{edition}\n[dependencies]\nrd={{workspace=true,default-features=false}}\n"));
+        let (exit, value, _) = f.doctor(&[]);
+        assert_eq!(exit, 0);
+        assert!(value["data"]["declared_dependencies"][0]["declared_default_features"].is_null());
+        assert!(value["diagnostics"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|d| d["code"] == "RD_DEFAULT_FEATURES_UNKNOWN"));
+        assert!(value["data"]["resolved_features"].is_null());
+        assert_eq!(value["data"]["project_code_executed"], false);
+    }
+}
+
+#[test]
+fn home_fallback_missing_home_and_relative_cargo_home_fail_closed() {
+    for mode in ["fallback", "missing", "relative"] {
+        let f = Fixture::new();
+        f.write(
+            "Cargo.toml",
+            manifest("[dependencies]\nrydantic={version='=0.6.0',features=['settings']}"),
+        );
+        let mut command = Command::new(env!("CARGO_BIN_EXE_rydantic"));
+        command
+            .current_dir(&f.0)
+            .env_remove("CARGO_HOME")
+            .env_remove("HOME")
+            .env_remove("USERPROFILE");
+        match mode {
+            "fallback" => {
+                f.write("home/.cargo/config.toml", "paths=['SECRET_OVERRIDE']\n");
+                command.env(
+                    if cfg!(windows) { "USERPROFILE" } else { "HOME" },
+                    f.0.join("home"),
+                );
+            }
+            "relative" => {
+                f.write("relative/config", "paths=['SECRET_OVERRIDE']\n");
+                command.env("CARGO_HOME", "relative");
+            }
+            _ => {}
+        }
+        let (exit, value, output) = run_command(command, &["doctor", "--workspace", &f.path("")]);
+        assert_eq!(exit, 0, "{mode}");
+        assert_eq!(
+            value["data"]["cargo_config_present"],
+            if mode == "missing" {
+                Value::Null
+            } else {
+                json!(true)
+            },
+            "{mode}"
+        );
+        assert_eq!(
+            value["data"]["declared_dependencies"][0]["feature_knowledge"], "unknown",
+            "{mode}"
+        );
+        assert!(!output.contains("RD_FEATURE_UNAVAILABLE"));
+        assert!(!output.contains("SECRET_OVERRIDE"));
+    }
+}
+
+#[test]
+fn inherited_defaults_preserve_unambiguous_additive_cases() {
+    for (edition, workspace, member, expected) in [
+        ("edition='2015'", true, Some(false), Some(true)),
+        ("edition='2018'", true, Some(false), Some(true)),
+        ("edition='2021'", true, Some(false), Some(true)),
+        ("edition.workspace=true", true, Some(false), Some(true)),
+        ("edition='2099'", true, Some(false), None),
+        ("edition='2024'", false, Some(true), Some(true)),
+        ("edition='2024'", false, Some(false), Some(false)),
+        ("edition='2024'", false, None, Some(false)),
+        ("edition='2024'", true, Some(true), Some(true)),
+        ("edition='2024'", true, None, Some(true)),
+    ] {
+        let f = Fixture::new();
+        f.write("Cargo.toml", format!("[workspace]\nmembers=['a']\n[workspace.package]\nedition='2021'\n[workspace.dependencies]\nrd={{package='rydantic',version='=0.6.0',default-features={workspace}}}\n"));
+        let member = member
+            .map(|v| format!(",default-features={v}"))
+            .unwrap_or_default();
+        f.write("a/Cargo.toml", format!("[package]\nname='a'\nversion='0.1.0'\n{edition}\n[dependencies]\nrd={{workspace=true{member}}}\n"));
+        let (exit, value, _) = f.doctor(&[]);
+        assert_eq!(exit, 0);
+        assert_eq!(
+            value["data"]["declared_dependencies"][0]["declared_default_features"],
+            json!(expected),
+            "{edition}, workspace={workspace}, member={member}"
+        );
+        assert_eq!(
+            value["diagnostics"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|d| d["code"] == "RD_DEFAULT_FEATURES_UNKNOWN"),
+            expected.is_none()
+        );
     }
 }

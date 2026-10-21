@@ -14,8 +14,7 @@ pub fn run(a: &Args) -> Result<Report> {
         .canonicalize()
         .map_err(|_| fail(4, "RD_INPUT_IO", "Cannot inspect workspace root."))?;
     // Internal observation only; never copy config content into diagnostics.
-    let config_present =
-        root.join(".cargo/config").exists() || root.join(".cargo/config.toml").exists();
+    let config_present = cargo_config_presence(&canonical_root);
     let mut report = Report::new(
         json!({"verification":"static","project_code_executed":false,"resolution":"unknown","build":"unknown","tests":"unknown","resolved_features":null,"verified_features":null}),
     );
@@ -75,7 +74,11 @@ pub fn run(a: &Args) -> Result<Report> {
         })
         .collect();
     if selected.is_empty() || (a.get("--package").is_some() && selected.len() != 1) {
-        return Err(fail(5,"RD_PACKAGE_UNKNOWN","Cannot identify the requested package from explicit manifests. Glob and external workspace members are not expanded."));
+        return Err(fail(
+            5,
+            "RD_PACKAGE_UNKNOWN",
+            "Cannot identify the requested package from explicit manifests. Glob and external workspace members are not expanded.",
+        ));
     }
     if !discovery_complete {
         report.diagnostics.push(diagnostic("RD_DISCOVERY_INCOMPLETE","warning","discovery","Some workspace members need Cargo resolution; glob and external paths were not expanded."));
@@ -130,8 +133,9 @@ pub fn run(a: &Args) -> Result<Report> {
                 section,
                 None,
                 package_name(d),
+                package_edition(d, &doc),
                 &doc,
-                config_present,
+                config_present != Some(false),
                 &locked,
                 &known_features,
                 &mut declarations,
@@ -146,8 +150,9 @@ pub fn run(a: &Args) -> Result<Report> {
                         section,
                         Some(target),
                         package_name(d),
+                        package_edition(d, &doc),
                         &doc,
-                        config_present,
+                        config_present != Some(false),
                         &locked,
                         &known_features,
                         &mut declarations,
@@ -167,8 +172,7 @@ pub fn run(a: &Args) -> Result<Report> {
     report.data["explicit_manifest_reads_complete"] = json!(discovery_complete);
     report.data["lockfile_present"] = json!(lock.exists());
     // Presence only: configuration may contain credentials and is never executed or echoed.
-    report.data["cargo_config_present"] =
-        json!(root.join(".cargo/config").exists() || root.join(".cargo/config.toml").exists());
+    report.data["cargo_config_present"] = json!(config_present);
     report.data["toolchain_file_present"] =
         json!(root.join("rust-toolchain").exists() || root.join("rust-toolchain.toml").exists());
     report.data["toolchain_installed"] = Value::Null;
@@ -194,6 +198,82 @@ pub fn run(a: &Args) -> Result<Report> {
     }
     Ok(report)
 }
+// Presence only. Never read configuration contents, execute Cargo, or infer
+// which source replacement wins. Also inspect the target root conservatively
+// when --workspace differs from Cargo's invocation directory.
+fn cargo_config_presence(root: &Path) -> Option<bool> {
+    let mut paths = BTreeSet::new();
+    let cwd = std::env::current_dir().ok();
+    for dir in [Some(root), cwd.as_deref()].into_iter().flatten() {
+        for ancestor in dir.ancestors() {
+            paths.insert(ancestor.join(".cargo/config"));
+            paths.insert(ancestor.join(".cargo/config.toml"));
+        }
+    }
+    let home = std::env::var_os("CARGO_HOME")
+        .filter(|p| !p.is_empty())
+        .map(PathBuf::from)
+        .or_else(|| {
+            std::env::var_os(if cfg!(windows) { "USERPROFILE" } else { "HOME" })
+                .filter(|p| !p.is_empty())
+                .map(|p| PathBuf::from(p).join(".cargo"))
+        });
+    let mut unknown = cwd.is_none() || home.is_none();
+    if let Some(home) = home {
+        paths.insert(home.join("config"));
+        paths.insert(home.join("config.toml"));
+    }
+    for path in paths {
+        match path.try_exists() {
+            Ok(true) => return Some(true),
+            Ok(false) => {}
+            Err(_) => unknown = true,
+        }
+    }
+    if unknown {
+        None
+    } else {
+        Some(false)
+    }
+}
+fn package_edition<'a>(package: &'a toml::Value, root: &'a toml::Value) -> Option<&'a str> {
+    let Some(edition) = package.get("package").and_then(|p| p.get("edition")) else {
+        return Some("2015");
+    };
+    if edition.get("workspace").and_then(toml::Value::as_bool) == Some(true) {
+        root.get("workspace")?
+            .get("package")?
+            .get("edition")?
+            .as_str()
+    } else {
+        edition.as_str()
+    }
+}
+fn declared_defaults(
+    dependency: &toml::Value,
+    member: &toml::Value,
+    inherited: bool,
+    edition: Option<&str>,
+) -> Option<bool> {
+    let base = match dependency.get("default-features") {
+        Some(value) => value.as_bool()?,
+        None => true,
+    };
+    if !inherited {
+        return Some(base);
+    }
+    let member = match member.get("default-features") {
+        Some(value) => value.as_bool()?,
+        None => return Some(base),
+    };
+    if base && !member && !matches!(edition, Some("2015" | "2018" | "2021")) {
+        // Edition 2024 rejects this through Cargo 1.98 and overrides to false
+        // from 1.99. This static CLI does not establish the executing version.
+        return None;
+    }
+    Some(base || member)
+}
+
 fn package_name(d: &toml::Value) -> Option<&str> {
     d.get("package")?.get("name")?.as_str()
 }
@@ -213,6 +293,7 @@ fn inspect_deps(
     kind: &str,
     target: Option<&str>,
     package: Option<&str>,
+    edition: Option<&str>,
     root: &toml::Value,
     source_config_unknown: bool,
     locked: &[Value],
@@ -310,19 +391,10 @@ fn inspect_deps(
         if !can_check {
             report.diagnostics.push(diagnostic("RD_VERSION_UNKNOWN","warning","discovery","Feature availability is unknown without an exact supported registry declaration; lockfile candidates are not resolved evidence."));
         }
-        let base_defaults = dep
-            .get("default-features")
-            .and_then(toml::Value::as_bool)
-            .unwrap_or(true);
-        let default_features = if inherited {
-            base_defaults
-                || original
-                    .get("default-features")
-                    .and_then(toml::Value::as_bool)
-                    .unwrap_or(false)
-        } else {
-            base_defaults
-        };
+        let default_features = declared_defaults(dep, original, inherited, edition);
+        if default_features.is_none() {
+            report.diagnostics.push(diagnostic("RD_DEFAULT_FEATURES_UNKNOWN", "warning", "discovery", "Declared default features depend on an unverified package edition or Cargo version. No toolchain was executed."));
+        }
         out.push(json!({"package":package,"dependency_name":alias,"crate":"rydantic","kind":kind,"target":target,"declared_version":req,"declared_features":features,"declared_default_features":default_features,"optional":original.get("optional").and_then(toml::Value::as_bool).unwrap_or(false),"workspace_inherited":inherited,"source_kind":source_kind,"locked_version_candidates":candidates,"supported_lock_candidate":stable_lock,"version_association":"unknown","feature_knowledge":if can_check{"exact_declaration_0.6.0"}else{"unknown"},"resolved_features":null,"verified_features":null}));
     }
     Ok(())
