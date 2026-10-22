@@ -121,5 +121,41 @@
       "requires_execution_authorization": true,
       "verification": "typed-tests-and-explicit-structural-assertions"
     }
+  ],
+  "source_tracks": [
+    {
+      "id": "source-6006720",
+      "version": "0.8.0-beta.1",
+      "derive_version": "0.8.0-beta.1",
+      "repository": "https://github.com/trotsky1997/Rydantic",
+      "revision": "60067205276e314653f46a75c213ec1756c7ad7c",
+      "source": "git+https://github.com/trotsky1997/Rydantic?rev=60067205276e314653f46a75c213ec1756c7ad7c#60067205276e314653f46a75c213ec1756c7ad7c",
+      "distribution": "unpublished-workspace-snapshot",
+      "reference": "references/source-6006720.md",
+      "consumer_manifest": "assets/source-6006720/Cargo.toml",
+      "consumer_lock": "assets/source-6006720/Cargo.lock",
+      "consumer_features": [
+        "derive"
+      ],
+      "consumer_toolchain": "1.98.1"
+    }
+  ],
+  "source_recipes": [
+    {
+      "id": "source-context-contracts",
+      "track": "source-6006720",
+      "manifest": "assets/source-6006720/Cargo.toml",
+      "command": [
+        "cargo",
+        "+1.98.1",
+        "test",
+        "--manifest-path",
+        "assets/source-6006720/Cargo.toml",
+        "--frozen"
+      ],
+      "working_directory": "skill-root",
+      "requires_execution_authorization": true,
+      "verification": "typed-tests-and-explicit-structural-assertions"
+    }
   ]
 }

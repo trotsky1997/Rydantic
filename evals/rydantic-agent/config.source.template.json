@@ -1,0 +1,35 @@
+{
+  "protocol": 1,
+  "campaign_id": "REPLACE_WITH_UNIQUE_CAMPAIGN_ID",
+  "repository_commit": null,
+  "rust_toolchain": "1.98.1",
+  "target": "x86_64-unknown-linux-gnu",
+  "host_adapter_version": null,
+  "sandbox_description": null,
+  "base_tools": "Identical pinned shell, filesystem, Cargo and public library docs in A/B/C",
+  "network": "disabled",
+  "model": {
+    "provider": null,
+    "model": null,
+    "revision": null,
+    "parameters": {}
+  },
+  "budgets": {
+    "wall_seconds": 600,
+    "input_tokens": 60000,
+    "output_tokens": 12000,
+    "repair_rounds": 5
+  },
+  "seed": 104729,
+  "repetitions": 3,
+  "artifacts": {
+    "skill_bundle": "pins/source-skill.tar",
+    "cli_binary": "pins/rydantic-p0",
+    "public_docs": "pins/source-public-docs.tar"
+  },
+  "locks": {
+    "source-context-policy": "packs/source-60067205276e314653f46a75c213ec1756c7ad7c/tasks/source-context-policy/Cargo.lock"
+  },
+  "eval_pack": "source-60067205276e314653f46a75c213ec1756c7ad7c",
+  "library_source_commit": "60067205276e314653f46a75c213ec1756c7ad7c"
+}

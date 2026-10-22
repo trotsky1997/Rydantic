@@ -1,0 +1,12 @@
+[package]
+name = "eval-candidate"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[workspace]
+
+[dependencies]
+serde_json = "=1.0.154"
+rydantic = { git = "https://github.com/trotsky1997/Rydantic", rev = "60067205276e314653f46a75c213ec1756c7ad7c" }
+rydantic-derive = { git = "https://github.com/trotsky1997/Rydantic", rev = "60067205276e314653f46a75c213ec1756c7ad7c" }

@@ -5,7 +5,7 @@ license: MIT
 compatibility: Local file access; Cargo and prepared dependencies for typed verification. CLI is optional. No agent-specific tools required.
 metadata:
   toolkit-version: "0.1.0"
-  core-reference: "0.6.0, 0.7.0"
+  core-reference: "0.6.0, 0.7.0, source-6006720"
   cli-protocol: "rydantic.cli/v1"
 ---
 
@@ -23,10 +23,15 @@ Rydantic or replace an established validator without a concrete benefit.
 Inspect Cargo.toml, Cargo.lock, dependency aliases, features and toolchain files.
 A declared version range is not a resolved version; neither proves a build ran.
 Use [version and feature discovery](references/features.md). This package's
-API tracks are exactly 0.6.0 and 0.7.0, each with matching derive pins and
+published API tracks are exactly 0.6.0 and 0.7.0, each with matching derive pins and
 independent consumer tests. Select the matching reference, not the newest one. Unknown versions
 need their own source/API verification; beta behavior must not be backported in
 prose. [Compatibility data](compatibility.json) records the supported combination.
+
+For the exact workspace revision `60067205276e314653f46a75c213ec1756c7ad7c`,
+select [the source track](references/source-6006720.md) by Git provenance, not
+its `0.8.0-beta.1` version string. It is distinct from the published beta and
+from future main. Other source revisions need independent verification.
 
 If an already available CLI supports them, use:
 
@@ -47,6 +52,7 @@ it silently or claim roadmap commands exist.
 - Typed Rust models: select [stable 0.6.0](references/stable-0.6.0.md) or
   [stable 0.7.0](references/stable-0.7.0.md) by the exact core version. Verify the
   concrete model with Rust tests, not source scanning or JSON Schema alone.
+  For the verified Git revision, use [source 6006720](references/source-6006720.md).
 - Runtime schemas or exported contracts: read [schema boundaries](references/schema.md).
   Distinguish input from output, and typed execution from structural checking.
   Do not silently choose structural-only validation when local rules exist.
@@ -59,7 +65,8 @@ it silently or claim roadmap commands exist.
 
 Use [testing](references/testing.md) for the compile/test loop and the runnable
 [0.6.0 consumer](assets/stable-0.6.0/Cargo.toml) or
-[0.7.0 consumer](assets/stable-0.7.0/Cargo.toml). Adapt its model, not just its
+[0.7.0 consumer](assets/stable-0.7.0/Cargo.toml), or the separately pinned
+[source consumer](assets/source-6006720/Cargo.toml). Adapt its model, not just its
 schema, and cover valid, invalid and boundary inputs. Do not copy a beta fix into
 claims about stable. Direct struct construction is not proof of validation.
 

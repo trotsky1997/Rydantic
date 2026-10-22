@@ -48,3 +48,30 @@ PR review regression, 2026-10-20:
   with explicit per-metric overrun counts. Noncompleted hidden passes remain invalid.
 - Negative tests also retain all four failure/blocker terminal states and reject
   missing token telemetry. All 28 harness unit tests pass; no Agent trials run.
+
+
+Source-pack extension, 2026-10-22 (harness checks only):
+
+- 43 Python standard-library unit tests passed: the original 28 plus 15 source-pack
+  regressions. Coverage includes explicit full pack selection, exact source and
+  toolchain requirements, both core/derive manifest pins, lock drift/duplicates,
+  host-lock byte identity, missing hidden contract, catalog/lock cohort separation,
+  unchanged legacy hash, independent pack hashing, and cross-campaign import refusal.
+- Legacy task/hidden bytes and default catalog are unchanged. The legacy pack hash
+  remains `915e9bec9917a95603a893ea5c33e6586d007644b9d5639fcbb23fecb55190e7`.
+- The new source task lock was generated with installed Cargo 1.98.1; both Rydantic
+  packages resolve to git revision `60067205276e314653f46a75c213ec1756c7ad7c`.
+- Installed Rust/Cargo 1.98.1 ran `tests/smoke_source_context.py` against the pinned
+  git lock with `--frozen --offline`: reference 4/4 tests passed. Both mutants
+  compiled first; the no-hook mutant failed 3 behavioral tests and the fallback-
+  context mutant failed 2. These were trusted reference/negative-control harness
+  executions, not agent trials. The script copies evaluator-only artifacts into
+  temporary candidates; no hidden feedback is supplied to an agent.
+- Actual source-cohort A/B/C trials, sandboxed authorized-host execution, blind
+  review and performance comparisons remain pending. No provider/model execution
+  or performance improvement is claimed. Published beta and the P0 CLI's stable
+  capability boundary remain distinct from this exact source snapshot.
+- Source-trial isolation remains unimplemented: an ordinary Cargo git checkout and
+  its bare objects expose older Skill/evaluator files. A host must hide those paths
+  and objects or audit minimal dependency materialization before any agent trial;
+  otherwise record environment_blocked. The smoke did not validate isolation.

@@ -13,6 +13,11 @@ ROOT = Path(__file__).resolve().parent
 ARMS = ('A', 'B', 'C')
 COUNTS = ('invalid_api', 'wrong_feature', 'invented_method')
 RUBRICS = ('security', 'maintainability', 'unnecessary_complexity')
+SOURCE_REVISION = '60067205276e314653f46a75c213ec1756c7ad7c'
+SOURCE_PACK = 'source-' + SOURCE_REVISION
+SOURCE_GIT = 'https://github.com/trotsky1997/Rydantic'
+SOURCE_TASK = {'id': 'source-context-policy', 'track': SOURCE_PACK,
+               'compile_applicable': True, 'serde_choice_applicable': False}
 
 
 def require(condition, message):
@@ -49,10 +54,54 @@ def file_hash(path):
     return hasher.hexdigest()
 
 
-def pack_hash():
-    return digest({str(p.relative_to(ROOT)): file_hash(p)
+def pack_root(selection=None):
+    if selection is None:
+        return ROOT
+    require(selection == SOURCE_PACK, 'unknown eval_pack; exact source pack ID required')
+    return ROOT / 'packs' / selection
+
+
+def pack_hash(selection=None):
+    # Keep the legacy path keys and bytes unchanged when no pack is selected.
+    root = pack_root(selection)
+    return digest({str(p.relative_to(root)): file_hash(p)
                    for folder in ('tasks', 'hidden')
-                   for p in sorted((ROOT / folder).rglob('*')) if p.is_file() and '__pycache__' not in p.parts})
+                   for p in sorted((root / folder).rglob('*')) if p.is_file() and '__pycache__' not in p.parts})
+
+
+def source_pins(config, base, tasks, root):
+    """Validate the opt-in source cohort before accepting host artifact paths."""
+    import tomllib  # Source-pack planning requires Python 3.11+; no third-party modules.
+
+    require(config.get('library_source_commit') == SOURCE_REVISION,
+            'source pack requires exact library_source_commit')
+    require(tasks == [SOURCE_TASK], 'source catalog must contain only its independent task')
+    require(set(config['locks']) == {SOURCE_TASK['id']},
+            'source pack locks must not mix cohorts or omit tasks')
+    task = root / 'tasks' / SOURCE_TASK['id']
+    for path in (task / 'TASK.md', task / 'src/lib.rs',
+                 root / 'hidden' / (SOURCE_TASK['id'] + '.rs')):
+        file_hash(path)  # Missing public inputs or evaluator contract fail planning.
+    manifest = tomllib.loads((task / 'Cargo.toml').read_text())
+    for crate in ('rydantic', 'rydantic-derive'):
+        require(manifest['dependencies'].get(crate) == {
+            'git': SOURCE_GIT, 'rev': SOURCE_REVISION},
+            crate + ' must use the same exact git source revision, not a release/path/branch')
+    require(not any(key in manifest for key in ('patch', 'replace', 'target')),
+            'source manifest must not override dependency sources')
+    toolchain = tomllib.loads((task / 'rust-toolchain.toml').read_text())
+    require(config['rust_toolchain'] == toolchain['toolchain']['channel'] == '1.98.1',
+            'source pack requires its exact installed toolchain')
+    lock = task / 'Cargo.lock'
+    packages = tomllib.loads(lock.read_text())['package']
+    expected_source = 'git+' + SOURCE_GIT + '?rev=' + SOURCE_REVISION + '#' + SOURCE_REVISION
+    for crate in ('rydantic', 'rydantic-derive'):
+        entries = [p for p in packages if p['name'] == crate]
+        require(len(entries) == 1 and entries[0].get('source') == expected_source
+                and entries[0]['version'] == '0.8.0-beta.1',
+                crate + ' lock must pin only the exact source snapshot')
+    require(file_hash(base / config['locks'][SOURCE_TASK['id']]) == file_hash(lock),
+            'source host lock must match the committed task lock byte-for-byte')
 
 
 def integer(value, label, minimum=0):
@@ -85,12 +134,21 @@ def plan(config, base):
     integer(config['repetitions'], 'repetitions', 1)
     integer(config['seed'], 'seed')
     require(config['repetitions'] <= 100, 'maximum 100 repetitions')
-    tasks = read(ROOT / 'tasks/catalog.json')
+    selection = config.get('eval_pack')
+    if 'eval_pack' in config:
+        require(selection == SOURCE_PACK, 'unknown eval_pack; omit for legacy P0')
+    else:
+        require('library_source_commit' not in config,
+                'library_source_commit requires explicit eval_pack selection')
+    root = pack_root(selection)
+    tasks = read(root / 'tasks/catalog.json')
+    if selection is not None:
+        source_pins(config, base, tasks, root)
     pins = {}
     for key in ('skill_bundle', 'cli_binary', 'public_docs'):
         pins[key] = file_hash(base / config['artifacts'][key])
     locks = {task['id']: file_hash(base / config['locks'][task['id']]) for task in tasks}
-    frozen = dict(config, artifact_sha256=pins, lock_sha256=locks, pack_sha256=pack_hash())
+    frozen = dict(config, artifact_sha256=pins, lock_sha256=locks, pack_sha256=pack_hash(selection))
     trials = []
     rng = random.Random(config['seed'])
     for task in tasks:

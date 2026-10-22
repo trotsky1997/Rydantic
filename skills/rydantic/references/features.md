@@ -66,3 +66,12 @@ It additionally provides `settings`, `partial-json`, `phone`, `country` and
 CLI still supports only 0.6.0 knowledge. Track-specific manifests, locks and
 feature lists are recorded in [compatibility data](../compatibility.json).
 Do not replace frozen evaluation cohorts when adding a newer supported track.
+
+## Exact workspace snapshot
+
+[Source 60067205276e314653f46a75c213ec1756c7ad7c](source-6006720.md) has a separate Git-pinned
+consumer and reference. Compare the resolved repository and full commit for both
+core and derive. Do not select it merely because a manifest says
+`0.8.0-beta.1`: the published beta predates the workspace OpenAPI feature.
+Missing lock/source evidence or another revision means unverified, not supported.
+No CLI knowledge is added by this source track.
