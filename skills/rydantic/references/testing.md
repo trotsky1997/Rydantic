@@ -68,3 +68,21 @@ Repository CI runs both consumers separately with `--locked` on Linux and macOS.
 The 0.6.0 verification receipt above does not claim 0.7.0 execution. Report the
 actual result for the selected version. Neither consumer is an Agent trial;
 the evaluation task pins and hidden tests remain unchanged.
+
+## Exact-source consumer
+
+The separate [source reference](source-6006720.md) and
+[consumer](../assets/source-6006720/Cargo.toml) pin both core and derive to Git commit
+`60067205276e314653f46a75c213ec1756c7ad7c`. They do not use registry beta bytes or local workspace paths.
+CI runs its context contract separately on Linux and macOS. Record actual
+execution results; the source fixture is neither a provider run nor proof of
+Agent-performance improvement.
+
+On 2026-10-22, Linux x86_64 with Rust 1.98.1, the exact-source consumer
+passed all three tests with `--frozen`; formatting and all-target Clippy with
+warnings denied passed. Cargo metadata confirmed both core and derive resolved
+from the full Git revision above. A temporary copy that disabled policy-limit
+rejection compiled but failed two of these tests. This is fixture sensitivity,
+not mutation testing of Rydantic itself. The unchanged registry consumers also
+passed their six (0.6.0) and eight (0.7.0) tests with `--locked` after explicit
+cache preparation. These local receipts do not pre-claim CI or other platforms.

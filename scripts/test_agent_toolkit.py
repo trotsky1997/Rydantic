@@ -2,6 +2,8 @@
 import json
 from pathlib import Path
 import re
+import shutil
+import tempfile
 import tomllib
 import unittest
 
@@ -25,6 +27,72 @@ class ToolkitPackagingTests(unittest.TestCase):
                 resolved = (path.parent / target.split("#", 1)[0]).resolve()
                 self.assertTrue(resolved.is_relative_to(ROOT), (path, target))
                 self.assertTrue(resolved.exists(), (path, target))
+
+    def check_source_track(self, skill):
+        compat = json.loads((skill / "compatibility.json").read_text())
+        self.assertEqual(len(compat["source_tracks"]), 1)
+        track = compat["source_tracks"][0]
+        revision = "60067205276e314653f46a75c213ec1756c7ad7c"
+        repository = "https://github.com/trotsky1997/Rydantic"
+        self.assertEqual(track["revision"], revision)
+        self.assertEqual(track["version"], "0.8.0-beta.1")
+        self.assertEqual(track["derive_version"], "0.8.0-beta.1")
+        self.assertEqual(track["repository"], repository)
+        self.assertEqual(track["distribution"], "unpublished-workspace-snapshot")
+        self.assertEqual(track["source"], f"git+{repository}?rev={revision}#{revision}")
+        self.assertEqual(track["consumer_features"], ["derive"])
+        self.assertEqual(track["consumer_toolchain"], "1.98.1")
+        for key in ("reference", "consumer_manifest", "consumer_lock"):
+            self.assertTrue((skill / track[key]).is_file())
+        manifest = tomllib.loads((skill / track["consumer_manifest"]).read_text())
+        self.assertEqual(manifest["workspace"], {})
+        toolchain = tomllib.loads((skill / track["consumer_manifest"]).with_name("rust-toolchain.toml").read_text())
+        self.assertEqual(toolchain["toolchain"]["channel"], track["consumer_toolchain"])
+        self.assertFalse({"patch", "replace"} & manifest.keys())
+        for name in ("rydantic", "rydantic-derive"):
+            self.assertEqual(manifest["dependencies"][name], {
+                "git": repository, "rev": revision, "version": "=0.8.0-beta.1"})
+        lock = tomllib.loads((skill / track["consumer_lock"]).read_text())
+        for name in ("rydantic", "rydantic-derive"):
+            packages = [p for p in lock["package"] if p["name"] == name]
+            self.assertEqual(len(packages), 1)
+            self.assertEqual(packages[0]["version"], "0.8.0-beta.1")
+            self.assertEqual(packages[0]["source"], track["source"])
+            self.assertNotIn("checksum", packages[0])
+        workflow = (ROOT / ".github/workflows/ci.yml").read_text()
+        self.assertIn("cargo test --manifest-path skills/rydantic/" + track["consumer_manifest"] + " --locked", workflow)
+        self.assertEqual(len(compat["source_recipes"]), 1)
+        recipe = compat["source_recipes"][0]
+        self.assertEqual(recipe["track"], track["id"])
+        self.assertEqual(recipe["manifest"], track["consumer_manifest"])
+        self.assertTrue(recipe["requires_execution_authorization"])
+        self.assertEqual(recipe["command"], ["cargo", "+1.98.1", "test", "--manifest-path", track["consumer_manifest"], "--frozen"])
+
+    def test_exact_source_track_matches_consumer(self):
+        self.check_source_track(SKILL)
+
+    def test_source_track_rejects_wrong_revision_and_registry_substitution(self):
+        with tempfile.TemporaryDirectory() as temp:
+            copied = Path(temp) / "skill"
+            shutil.copytree(SKILL, copied, ignore=shutil.ignore_patterns("target"))
+            manifest_path = copied / "assets/source-6006720/Cargo.toml"
+            original = manifest_path.read_text()
+            for altered in (
+                original.replace("60067205276e314653f46a75c213ec1756c7ad7c", "0" * 40),
+                original.replace('git = "https://github.com/trotsky1997/Rydantic", ', ''),
+                original + '\n[patch.crates-io]\nrydantic = { path = "/tmp/override" }\n',
+            ):
+                with self.subTest(manifest=altered):
+                    manifest_path.write_text(altered)
+                    with self.assertRaises(AssertionError):
+                        self.check_source_track(copied)
+            manifest_path.write_text(original)
+            lock_path = copied / "assets/source-6006720/Cargo.lock"
+            lock_path.write_text(lock_path.read_text().replace(
+                'git+https://github.com/trotsky1997/Rydantic?rev=60067205276e314653f46a75c213ec1756c7ad7c#60067205276e314653f46a75c213ec1756c7ad7c',
+                'registry+https://github.com/rust-lang/crates.io-index'))
+            with self.assertRaises(AssertionError):
+                self.check_source_track(copied)
 
     def test_versioned_compatibility_matches_actual_artifacts(self):
         compat = json.loads((SKILL / "compatibility.json").read_text())

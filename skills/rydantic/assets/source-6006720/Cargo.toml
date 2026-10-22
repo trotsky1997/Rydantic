@@ -1,0 +1,12 @@
+[package]
+name = "rydantic-skill-source-contracts"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+# An independent Git consumer, not the identically versioned registry release.
+[workspace]
+
+[dependencies]
+rydantic = { git = "https://github.com/trotsky1997/Rydantic", rev = "60067205276e314653f46a75c213ec1756c7ad7c", version = "=0.8.0-beta.1" }
+rydantic-derive = { git = "https://github.com/trotsky1997/Rydantic", rev = "60067205276e314653f46a75c213ec1756c7ad7c", version = "=0.8.0-beta.1" }

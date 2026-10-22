@@ -26,6 +26,22 @@ pins. Future aliases/defaults/async/renamed/codegen/offline-cache tasks are defe
 not silently claimed as coverage. Beta is a distinct cohort; if the P0 Skill only
 supports stable, report that coverage limitation instead of borrowing stable APIs.
 
+## Opt-in exact-source pack
+
+A separate [source context-policy pack](packs/source-60067205276e314653f46a75c213ec1756c7ad7c/README.md)
+adds one owned Model context task at exact git revision
+`60067205276e314653f46a75c213ec1756c7ad7c`. Use `config.source.template.json`
+and its full `eval_pack` and `library_source_commit` selectors explicitly. It
+requires Python 3.11+ for strict manifest/lock inspection and never joins the four
+legacy tasks. Omission preserves the existing default campaign and pack hash.
+Core and derive share the full git revision; a matching package version alone
+is not sufficient. The source cohort is neither published-beta nor stable evidence,
+and P0 CLI capability output is not source-aware. See the pack README for staging,
+offline reference/negative-control smoke and the unchanged no-agent-results boundary.
+An unfiltered Cargo git cache exposes the pinned repository's Skill/evaluator files
+and bare objects: source trials are blocked until the host enforces that extra
+leakage boundary. Smoke checks do not establish isolation.
+
 ## Arms and leakage boundary
 
 - A: pinned public library docs plus base shell/filesystem/Cargo tools; **no Skill,
