@@ -32,16 +32,10 @@ impl<'de> Input<'de> {
     pub fn object(self, ctx: &mut Context) -> Option<BTreeMap<String, Self>> {
         match self {
             Self::Object(object) => Some(object),
-            Self::Borrowed(raw) => {
-                serde_json::from_str::<BTreeMap<String, &'de RawValue>>(raw.get())
-                    .map(|map| {
-                        map.into_iter()
-                            .map(|(k, v)| (k, Self::Borrowed(v)))
-                            .collect()
-                    })
-                    .map_err(|_| ctx.push(type_error("object")))
-                    .ok()
-            }
+            Self::Borrowed(raw) => serde_json::from_str::<BorrowedObject<'de>>(raw.get())
+                .map(|object| object.0)
+                .map_err(|_| ctx.push(type_error("object")))
+                .ok(),
             Self::Owned(Value::Object(map)) => {
                 Some(map.into_iter().map(|(k, v)| (k, Self::Owned(v))).collect())
             }
@@ -79,6 +73,37 @@ impl<'de> Input<'de> {
         }
     }
 }
+// Deserialize a typed map, rather than `deserialize_any`: JSON objects whose keys
+// resemble serde_json's private number/raw-value markers must remain objects.
+// Values stay raw and borrowed; insertion preserves BTreeMap ordering and the
+// previous last-value-wins policy without constructing an intermediate map.
+struct BorrowedObject<'de>(BTreeMap<String, Input<'de>>);
+
+impl<'de> serde::Deserialize<'de> for BorrowedObject<'de> {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct ObjectVisitor;
+        impl<'de> Visitor<'de> for ObjectVisitor {
+            type Value = BorrowedObject<'de>;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("a map")
+            }
+
+            fn visit_map<A: de::MapAccess<'de>>(
+                self,
+                mut access: A,
+            ) -> Result<Self::Value, A::Error> {
+                let mut object = BTreeMap::new();
+                while let Some((key, value)) = access.next_entry::<String, &'de RawValue>()? {
+                    object.insert(key, Input::Borrowed(value));
+                }
+                Ok(BorrowedObject(object))
+            }
+        }
+        deserializer.deserialize_map(ObjectVisitor)
+    }
+}
+
 pub(crate) fn json_error(error: serde_json::Error) -> ValidationError {
     ValidationError::new("json_invalid", error.to_string())
         .with_stage(Stage::Parse)
@@ -726,3 +751,127 @@ impl<'de, T: BorrowType<'de>, S: BuildHasher + Default> BorrowType<'de> for Hash
 }
 
 owned!(Box<RawValue>);
+
+#[cfg(test)]
+mod object_materialization_tests {
+    use super::*;
+
+    fn compare(text: &str) {
+        let old = serde_json::from_str::<BTreeMap<String, &RawValue>>(text);
+        let new = serde_json::from_str::<BorrowedObject<'_>>(text);
+        match (old, new) {
+            (Ok(old), Ok(new)) => {
+                assert_eq!(old.len(), new.0.len(), "{text}");
+                for ((old_key, old_value), (new_key, new_value)) in old.iter().zip(&new.0) {
+                    assert_eq!(old_key, new_key);
+                    let Input::Borrowed(new_value) = new_value else {
+                        panic!("lost borrow")
+                    };
+                    assert_eq!(old_value.get(), new_value.get());
+                    assert_eq!(old_value.get().as_ptr(), new_value.get().as_ptr());
+                }
+            }
+            (Err(old), Err(new)) => {
+                assert_eq!(old.to_string(), new.to_string(), "{text}");
+                assert_eq!(old.classify(), new.classify());
+                assert_eq!((old.line(), old.column()), (new.line(), new.column()));
+            }
+            _ => panic!("different acceptance for {text}"),
+        }
+    }
+
+    #[test]
+    fn typed_object_map_matches_previous_parser_on_edge_cases() {
+        for input in [
+            "{}",
+            " { } ",
+            "null",
+            "true",
+            "42",
+            "1e9999",
+            "[]",
+            "[{}]",
+            "\"text\"",
+            r#"{"z":1,"a":2,"z":3}"#,
+            r#"{"a":1,"\u0061":2,"a":3}"#,
+            r#"{"escaped\"\\\n": "\uD834\uDD1E", "unicode":"中文"}"#,
+            r#"{"$serde_json::private::Number":"123456789012345678901234567890"}"#,
+            r#"{"$serde_json::private::RawValue":"{\"x\":1}"}"#,
+            r#"{"n":-0.000e+9,"large":340282366920938463463374607431768211456,"tiny":1e-9999}"#,
+            r#"{"a/b~c":{"x":1,"x":2},"items":[{},null,true]}"#,
+            "",
+            "{",
+            "{\"a\":}",
+            "{\"a\":1,}",
+            "{\"a\":1} trailing",
+            "{1:2}",
+            "{\"a\":1\n\"b\":2}",
+            "{\"a\":\"\\uD800\"}",
+        ] {
+            compare(input);
+        }
+        // Cross BTree node splits with ascending, descending and duplicate keys.
+        for width in [12, 32, 128, 1024] {
+            let entries = (0..width)
+                .rev()
+                .map(|i| format!("\"key{i:04}\":{i}"))
+                .chain((0..width).map(|i| format!("\"key{i:04}\":-1")))
+                .collect::<Vec<_>>()
+                .join(",");
+            compare(&format!("{{{entries}}}"));
+        }
+        for depth in [1, 32, 127, 128, 129, 256] {
+            compare(&format!(
+                "{{\"deep\":{}0{}}}",
+                "[".repeat(depth),
+                "]".repeat(depth)
+            ));
+        }
+    }
+
+    #[test]
+    fn generated_objects_match_previous_parser_including_duplicate_keys() {
+        let keys = [
+            "a",
+            "z",
+            "a/b~c",
+            "中文",
+            "$serde_json::private::Number",
+            "$serde_json::private::RawValue",
+            "quote\"slash\\",
+        ];
+        let values = [
+            "null",
+            "false",
+            "0",
+            "-0",
+            "1.000e+20",
+            "18446744073709551616",
+            "1e-9999",
+            "\"borrow me\"",
+            "\"escaped\\ntext\"",
+            "[]",
+            "{}",
+            "{\"duplicate\":1,\"duplicate\":2}",
+            "[1,{},null]",
+        ];
+        // Deterministic generated differential corpus; no dependency or fixture shortcut.
+        let mut state = 0x9e3779b97f4a7c15_u64;
+        for case in 0..2048 {
+            let mut entries = Vec::new();
+            for _ in 0..case % 37 {
+                state ^= state << 13;
+                state ^= state >> 7;
+                state ^= state << 17;
+                let key = serde_json::to_string(keys[state as usize % keys.len()]).unwrap();
+                let value = values[(state >> 8) as usize % values.len()];
+                entries.push(format!("{key}:{value}"));
+            }
+            let input = format!("{{{}}}", entries.join(","));
+            compare(&input);
+            // Truncations and trailing invalid bytes must fail in the same way.
+            compare(&input[..input.len() - 1]);
+            compare(&(input + "!"));
+        }
+    }
+}
