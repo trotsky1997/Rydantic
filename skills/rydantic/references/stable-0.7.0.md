@@ -50,9 +50,10 @@ all optional integrations or domain validators.
 
 ## Boundaries and verification
 
-The optional toolkit CLI still bundles only 0.6.0 knowledge. For 0.7.0, its
-unknown-version response is not evidence that settings or partial-json is absent.
-Use this exact source and the consumer. No automatic install, release, provider
+The optional toolkit CLI bundles exact 0.7.0 feature/common-diagnostic knowledge.
+Check its capabilities: older CLI builds may support only 0.6.0, whose unknown-version
+response is not evidence that settings or partial-json is absent. Discovery remains
+static and explanations do not validate a model. Use this exact source and consumer. No automatic install, release, provider
 execution or application upgrade is authorized by this reference.
 
 Run the consumer as described in [testing](testing.md). Source inspection and

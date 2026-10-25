@@ -9,7 +9,15 @@ use std::{
     path::PathBuf,
 };
 
-pub const KNOWLEDGE: &str = include_str!("../knowledge/stable-0.6.0.json");
+pub const KNOWLEDGE_VERSIONS: &[&str] = &["0.6.0", "0.7.0"];
+pub fn knowledge(version: &str) -> Option<Value> {
+    let raw = match version {
+        "0.6.0" => include_str!("../knowledge/stable-0.6.0.json"),
+        "0.7.0" => include_str!("../knowledge/stable-0.7.0.json"),
+        _ => return None,
+    };
+    Some(serde_json::from_str(raw).expect("bundled knowledge is valid"))
+}
 pub const LIMIT: usize = 1_048_576;
 pub type Result<T> = std::result::Result<T, Failure>;
 
@@ -133,7 +141,7 @@ fn usage() -> Failure {
 fn run(a: &Args) -> Result<Report> {
     match a.command.as_str() {
         "capabilities" => Ok(Report::new(
-            json!({"commands":["capabilities","doctor","explain"],"protocol_versions":[1],"knowledge_versions":["0.6.0"],"linked_engines":{"core":null,"codegen":null,"backend":null},"typed_adapter":false,"resolve":false,"configuration":false,"offline":true,"project_code_executed":false,"schema_dialects":[],"schema_inspection":"annotations_only","limits":{"file_bytes":LIMIT,"schema_bytes":65536,"diagnostics":100},"exit_codes":{"0":"success","1":"check_failed_reserved","2":"invalid_input","3":"unsupported","4":"io","5":"environment","6":"execution_reserved","7":"resource_limit","8":"policy_reserved","70":"internal"}}),
+            json!({"commands":["capabilities","doctor","explain"],"protocol_versions":[1],"knowledge_versions":KNOWLEDGE_VERSIONS,"linked_engines":{"core":null,"codegen":null,"backend":null},"typed_adapter":false,"resolve":false,"configuration":false,"offline":true,"project_code_executed":false,"schema_dialects":[],"schema_inspection":"annotations_only","limits":{"file_bytes":LIMIT,"schema_bytes":65536,"diagnostics":100},"exit_codes":{"0":"success","1":"check_failed_reserved","2":"invalid_input","3":"unsupported","4":"io","5":"environment","6":"execution_reserved","7":"resource_limit","8":"policy_reserved","70":"internal"}}),
         )),
         "doctor" => doctor::run(a),
         "explain" => explain::run(a),

@@ -637,3 +637,200 @@ fn inherited_defaults_preserve_unambiguous_additive_cases() {
         );
     }
 }
+
+#[test]
+fn exact_070_capabilities_and_explanations() {
+    let (_, v, _) = run(&["capabilities"]);
+    assert_eq!(v["data"]["knowledge_versions"], json!(["0.6.0", "0.7.0"]));
+    let knowledge: Value =
+        serde_json::from_str(include_str!("../knowledge/stable-0.7.0.json")).unwrap();
+    for (code, entry) in knowledge["explanations"].as_object().unwrap() {
+        let (exit, v, _) = run(&["explain", code, "--core-version", "0.7.0"]);
+        assert_eq!(exit, 0);
+        assert_eq!(v["data"]["core_version"], "0.7.0");
+        assert_eq!(
+            v["data"]["knowledge_version"],
+            knowledge["knowledge_version"]
+        );
+        assert_eq!(v["data"]["explanations"][0]["message"], entry["message"]);
+        assert_eq!(
+            v["data"]["explanations"][0]["next_action"],
+            entry["next_action"]
+        );
+    }
+    let (exit, v, text) = run(&["explain", "SECRET-CALLBACK", "--core-version", "0.7.0"]);
+    assert_eq!(exit, 0);
+    assert_eq!(v["data"]["explanations"][0]["known"], false);
+    assert!(!text.contains("SECRET-CALLBACK"));
+    for version in [
+        "0.7",
+        "=0.7.0",
+        "0.7.1",
+        "0.7.0-beta.4",
+        "0.8.0-beta.1",
+        "0.7.0+local",
+        " 0.7.0",
+    ] {
+        let (exit, v, _) = run(&["explain", "missing", "--core-version", version]);
+        assert_eq!(exit, 3, "{version}");
+        assert!(v["data"]["core_version"].is_null());
+        assert_eq!(v["data"]["explanations"][0]["known"], false);
+    }
+}
+
+#[test]
+fn exact_070_features_are_version_specific_and_static() {
+    let f = Fixture::new();
+    f.write("Cargo.toml", manifest("[dependencies]\nrd={package='rydantic',version='=0.7.0',features=['settings','partial-json','phone','country','currency']}"));
+    let (exit, v, _) = f.doctor(&[]);
+    assert_eq!(exit, 0);
+    let d = &v["data"]["declared_dependencies"][0];
+    assert_eq!(d["feature_knowledge"], "exact_declaration_0.7.0");
+    assert_eq!(d["version_association"], "unknown");
+    assert!(d["verified_features"].is_null());
+    assert!(!f.0.join("Cargo.lock").exists());
+    assert!(!v["diagnostics"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|d| d["code"] == "RD_VERSION_UNKNOWN"));
+    f.write(
+        "Cargo.toml",
+        manifest(
+            "[dependencies]\nrydantic={version='=0.7.0',features=['openapi','not-a-feature']}",
+        ),
+    );
+    let (exit, v, _) = f.doctor(&[]);
+    assert_eq!(exit, 3);
+    let d = v["diagnostics"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|d| d["code"] == "RD_FEATURE_UNAVAILABLE")
+        .unwrap();
+    assert_eq!(d["params"]["core_version"], "0.7.0");
+    assert_eq!(d["params"]["features"], json!(["not-a-feature", "openapi"]));
+}
+
+#[test]
+fn mixed_exact_versions_select_per_declaration() {
+    let f = Fixture::new();
+    f.write("Cargo.toml", "[workspace]\nmembers=['a','b']\n[workspace.dependencies]\nrd={package='rydantic',version='=0.7.0',features=['settings']}\n");
+    f.write("a/Cargo.toml", "[package]\nname='a'\nversion='0.1.0'\n[dependencies]\nrd.workspace=true\n[target.'cfg(unix)'.dev-dependencies]\nold={package='rydantic',version='=0.6.0',features=['settings']}\n");
+    f.write("b/Cargo.toml", "[package]\nname='b'\nversion='0.1.0'\n[build-dependencies]\nrd={package='rydantic',version='=0.7.0',features=['partial-json']}\n");
+    let (exit, v, _) = f.doctor(&[]);
+    assert_eq!(exit, 3);
+    let declarations = v["data"]["declared_dependencies"].as_array().unwrap();
+    assert_eq!(declarations.len(), 3);
+    for d in declarations {
+        assert_eq!(
+            d["feature_knowledge"],
+            if d["dependency_name"] == "old" {
+                "exact_declaration_0.6.0"
+            } else {
+                "exact_declaration_0.7.0"
+            }
+        );
+    }
+    let failures: Vec<_> = v["diagnostics"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|d| d["code"] == "RD_FEATURE_UNAVAILABLE")
+        .collect();
+    assert_eq!(failures.len(), 1);
+    assert_eq!(failures[0]["params"]["core_version"], "0.6.0");
+}
+
+#[test]
+fn exact_070_source_and_range_uncertainty_stays_unknown() {
+    for dep in [
+        "version='0.7'",
+        "version='0.7.0'",
+        "version='>=0.7.0'",
+        "version='=0.7.1'",
+        "version='=0.7.0+local'",
+        "version='=0.8.0-beta.1'",
+        "version='=0.7.0',path='../local'",
+        "version='=0.7.0',git='https://SECRET.invalid'",
+        "version='=0.7.0',registry='private'",
+    ] {
+        let f = Fixture::new();
+        f.write(
+            "Cargo.toml",
+            manifest(&format!(
+                "[dependencies]\nrydantic={{{dep},features=['openapi']}}"
+            )),
+        );
+        f.write("Cargo.lock", "version=4\n[[package]]\nname='rydantic'\nversion='0.7.0'\nsource='registry+https://SECRET.invalid'\n");
+        let (exit, v, text) = f.doctor(&[]);
+        assert_eq!(exit, 0, "{dep}");
+        assert_eq!(
+            v["data"]["declared_dependencies"][0]["feature_knowledge"], "unknown",
+            "{dep}"
+        );
+        assert_eq!(v["data"]["resolution"], "unknown");
+        assert!(!text.contains("SECRET"));
+    }
+    for suffix in [
+        "[patch.crates-io]\nrydantic={path='../local'}",
+        "[replace]\n'rydantic:0.7.0'={path='../local'}",
+    ] {
+        let f = Fixture::new();
+        f.write(
+            "Cargo.toml",
+            manifest(&format!(
+                "[dependencies]\nrydantic={{version='=0.7.0',features=['openapi']}}\n{suffix}"
+            )),
+        );
+        let (exit, v, _) = f.doctor(&[]);
+        assert_eq!(exit, 0);
+        assert_eq!(
+            v["data"]["declared_dependencies"][0]["feature_knowledge"],
+            "unknown"
+        );
+    }
+}
+
+#[test]
+fn exact_070_config_and_stale_locks_never_resolve() {
+    let f = Fixture::new();
+    f.write(
+        "Cargo.toml",
+        manifest("[dependencies]\nrydantic={version='=0.7.0',features=['settings']}"),
+    );
+    f.write("Cargo.lock", "version=4\n[[package]]\nname='rydantic'\nversion='0.6.0'\nsource='registry+https://SECRET.invalid'\n");
+    let (exit, v, _) = f.doctor(&[]);
+    assert_eq!(exit, 0);
+    assert_eq!(
+        v["data"]["declared_dependencies"][0]["feature_knowledge"],
+        "exact_declaration_0.7.0"
+    );
+    assert_eq!(
+        v["data"]["declared_dependencies"][0]["supported_lock_candidate"],
+        false
+    );
+    assert!(v["diagnostics"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|d| d["code"] == "RD_LOCK_MISMATCH"));
+    f.write("Cargo.lock", "version=4\n[[package]]\nname='rydantic'\nversion='0.7.0'\nsource='registry+https://SECRET.invalid'\n");
+    let (_, v, _) = f.doctor(&[]);
+    assert_eq!(
+        v["data"]["declared_dependencies"][0]["supported_lock_candidate"],
+        true
+    );
+    assert_eq!(
+        v["data"]["declared_dependencies"][0]["version_association"],
+        "unknown"
+    );
+    f.write(".cargo/config.toml", "SECRET");
+    let (exit, v, text) = f.doctor(&[]);
+    assert_eq!(exit, 0);
+    assert_eq!(
+        v["data"]["declared_dependencies"][0]["feature_knowledge"],
+        "unknown"
+    );
+    assert!(!text.contains("SECRET"));
+}

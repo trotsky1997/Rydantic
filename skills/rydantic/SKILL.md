@@ -38,9 +38,10 @@ If an already available CLI supports them, use:
     rydantic capabilities --format json --protocol-version 1
     rydantic doctor --workspace . --format json --protocol-version 1
 
-The optional CLI still has only 0.6.0 knowledge; the 0.7.0 Skill track does not
-add CLI version support. Use source and the 0.7.0 consumer instead of treating
-`RD_VERSION_UNKNOWN` as an unavailable library feature.
+The optional CLI bundles exact 0.6.0 and 0.7.0 knowledge. Check its capabilities
+before use; an older installed build may support only 0.6.0. Treat
+`RD_VERSION_UNKNOWN` as missing CLI knowledge, not an unavailable library feature.
+Use the selected release's source and consumer for actual typed verification.
 
 The P0 CLI only discovers and explains; it does not build, validate inputs or
 resolve Cargo features. `--resolve` is unsupported. If absent, continue with

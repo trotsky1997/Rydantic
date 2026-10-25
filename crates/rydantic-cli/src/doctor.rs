@@ -1,4 +1,4 @@
-use crate::{diagnostic, fail, input, Args, Report, Result, KNOWLEDGE};
+use crate::{diagnostic, fail, input, Args, Report, Result};
 use semver::{Version, VersionReq};
 use serde_json::{json, Value};
 use std::{
@@ -118,13 +118,6 @@ pub fn run(a: &Args) -> Result<Report> {
     }
     locked.sort_by_key(|v| v.to_string());
     locked.dedup();
-    let knowledge: Value = serde_json::from_str(KNOWLEDGE).expect("valid bundled knowledge");
-    let known_features: BTreeSet<_> = knowledge["features"]
-        .as_array()
-        .expect("feature array")
-        .iter()
-        .filter_map(Value::as_str)
-        .collect();
     let mut declarations = vec![];
     for (_, d) in selected {
         for section in ["dependencies", "dev-dependencies", "build-dependencies"] {
@@ -137,7 +130,6 @@ pub fn run(a: &Args) -> Result<Report> {
                 &doc,
                 config_present != Some(false),
                 &locked,
-                &known_features,
                 &mut declarations,
                 &mut report,
             )?;
@@ -154,7 +146,6 @@ pub fn run(a: &Args) -> Result<Report> {
                         &doc,
                         config_present != Some(false),
                         &locked,
-                        &known_features,
                         &mut declarations,
                         &mut report,
                     )?;
@@ -297,7 +288,6 @@ fn inspect_deps(
     root: &toml::Value,
     source_config_unknown: bool,
     locked: &[Value],
-    known: &BTreeSet<&str>,
     out: &mut Vec<Value>,
     report: &mut Report,
 ) -> Result<()> {
@@ -361,13 +351,25 @@ fn inspect_deps(
             })
             .map(|l| l["version"].clone())
             .collect();
-        let exact_stable = req.is_some_and(|r| r.trim() == "=0.6.0") && source_kind == "registry";
-        let stable_lock =
-            candidates.len() == 1 && candidates[0] == "0.6.0" && source_kind == "registry";
+        let exact_version = req.and_then(|r| r.trim().strip_prefix('='));
+        let knowledge = exact_version.and_then(crate::knowledge);
+        let stable_lock = candidates.len() == 1
+            && candidates[0].as_str().and_then(crate::knowledge).is_some()
+            && source_kind == "registry";
         // A lock candidate is never a resolved association: it may be stale or patched.
         let patches = root.get("patch").is_some() || root.get("replace").is_some();
-        let can_check =
-            exact_stable && !patches && dep.get("registry").is_none() && !source_config_unknown;
+        let can_check = knowledge.is_some()
+            && source_kind == "registry"
+            && !patches
+            && dep.get("registry").is_none()
+            && !source_config_unknown;
+        let known: BTreeSet<_> = knowledge
+            .as_ref()
+            .and_then(|k| k["features"].as_array())
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_str)
+            .collect();
         let unavailable: Vec<_> = features
             .iter()
             .filter(|f| can_check && !known.contains(f.as_str()))
@@ -379,9 +381,12 @@ fn inspect_deps(
                 "RD_FEATURE_UNAVAILABLE",
                 "error",
                 "discovery",
-                "The exactly declared 0.6.0 release does not provide a requested feature.",
+                &format!(
+                    "The exactly declared {} release does not provide a requested feature.",
+                    exact_version.expect("known exact version")
+                ),
             );
-            d["params"] = json!({"features":unavailable,"core_version":"0.6.0","evidence":"exact_declaration"});
+            d["params"] = json!({"features":unavailable,"core_version":exact_version,"evidence":"exact_declaration"});
             d["next_action"] = json!({"kind":"review_version_choice"});
             report.diagnostics.push(d);
         }
@@ -395,7 +400,7 @@ fn inspect_deps(
         if default_features.is_none() {
             report.diagnostics.push(diagnostic("RD_DEFAULT_FEATURES_UNKNOWN", "warning", "discovery", "Declared default features depend on an unverified package edition or Cargo version. No toolchain was executed."));
         }
-        out.push(json!({"package":package,"dependency_name":alias,"crate":"rydantic","kind":kind,"target":target,"declared_version":req,"declared_features":features,"declared_default_features":default_features,"optional":original.get("optional").and_then(toml::Value::as_bool).unwrap_or(false),"workspace_inherited":inherited,"source_kind":source_kind,"locked_version_candidates":candidates,"supported_lock_candidate":stable_lock,"version_association":"unknown","feature_knowledge":if can_check{"exact_declaration_0.6.0"}else{"unknown"},"resolved_features":null,"verified_features":null}));
+        out.push(json!({"package":package,"dependency_name":alias,"crate":"rydantic","kind":kind,"target":target,"declared_version":req,"declared_features":features,"declared_default_features":default_features,"optional":original.get("optional").and_then(toml::Value::as_bool).unwrap_or(false),"workspace_inherited":inherited,"source_kind":source_kind,"locked_version_candidates":candidates,"supported_lock_candidate":stable_lock,"version_association":"unknown","feature_knowledge":if can_check{format!("exact_declaration_{}", exact_version.expect("known exact version"))}else{"unknown".into()},"resolved_features":null,"verified_features":null}));
     }
     Ok(())
 }

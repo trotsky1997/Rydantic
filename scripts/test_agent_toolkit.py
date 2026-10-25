@@ -97,21 +97,24 @@ class ToolkitPackagingTests(unittest.TestCase):
     def test_versioned_compatibility_matches_actual_artifacts(self):
         compat = json.loads((SKILL / "compatibility.json").read_text())
         crate = tomllib.loads((CLI / "Cargo.toml").read_text())
-        knowledge = json.loads((CLI / "knowledge/stable-0.6.0.json").read_text())
+        knowledge = {v: json.loads((CLI / f"knowledge/stable-{v}.json").read_text()) for v in ("0.6.0", "0.7.0")}
         schema = json.loads((CLI / "protocol-v1.schema.json").read_text())
         self.assertEqual(compat["cli"]["version"], crate["package"]["version"])
         self.assertFalse(crate["package"]["publish"])
         self.assertEqual(compat["cli"]["protocol"], schema["properties"]["schema_version"]["const"])
-        self.assertEqual(compat["cli"]["knowledge_version"], knowledge["knowledge_version"])
+        for version, bundle in knowledge.items():
+            self.assertEqual(bundle["core_version"], version)
+            self.assertEqual(compat["cli"]["knowledge_version"], bundle["knowledge_version"])
         self.assertEqual(compat["cli"]["commands"], ["capabilities", "doctor", "explain"])
         self.assertEqual(compat["beta_tracks"], [])
-        self.assertEqual(compat["cli"]["core_versions"], [knowledge["core_version"]])
+        self.assertEqual(compat["cli"]["core_versions"], list(knowledge))
         tracks = compat["core_tracks"]
         self.assertEqual([t["version"] for t in tracks], ["0.6.0", "0.7.0"])
         for track in tracks:
             with self.subTest(version=track["version"]):
                 if track["version"] in compat["cli"]["core_versions"]:
-                    self.assertEqual(set(track["available_features"]), set(knowledge["features"]) - {"default"})
+                    self.assertEqual(set(track["available_features"]), set(knowledge[track["version"]]["features"]) - {"default"})
+                    self.assertEqual(track["default_features"], knowledge[track["version"]]["default_features"])
                 for key in ("reference", "consumer_manifest", "consumer_lock"):
                     self.assertTrue((SKILL / track[key]).is_file())
                 manifest = tomllib.loads((SKILL / track["consumer_manifest"]).read_text())
