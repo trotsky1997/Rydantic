@@ -1,0 +1,1 @@
+PASS: all 49 rows manually recomputed; 294 oracle results; 205 source hashes match committed candidate; binary hashes and separate optimized non-fresh build artifacts match; stale preflight distinct/excluded; gzip lossless.

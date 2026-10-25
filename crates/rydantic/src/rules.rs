@@ -21,6 +21,11 @@ pub struct Rules {
 
 /// Compare JSON decimal representations without casting 64-bit integers to floats.
 pub fn compare_numbers(left: &Number, right: &Number) -> Ordering {
+    // With arbitrary_precision, this parses the borrowed representation exactly.
+    // Decimal/exponent forms and integers outside i128 retain the fallback below.
+    if let (Some(left), Some(right)) = (left.as_i128(), right.as_i128()) {
+        return left.cmp(&right);
+    }
     fn parts(number: &Number) -> (bool, Vec<u8>, i64) {
         let text = number.to_string();
         let negative = text.starts_with('-');
