@@ -115,3 +115,10 @@ python3 scripts/context-migration.py --version 0.8.0-beta.1 --output results/bet
 The positive case executes a safe panic boundary. Each negative case must fail
 compilation with the intended diagnostic, not merely any Cargo failure. These
 compile checks are migration evidence, not application adoption.
+
+## Published beta.2 follow-up
+
+The [beta.2 registry receipt](BETA2-REGISTRY.md) records actual published-package
+application/OpenAPI acceptance, independent repeats and archive verification.
+Earlier beta.1/source records above remain historical; stable 0.8.0 commands are
+still planned until their own publication and acceptance receipts exist.

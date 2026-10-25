@@ -12,18 +12,20 @@ what users can install.
 - **Core 0.7.0 stable** remains the default and Latest release. Runtime and derive
   are published together with an exact derive dependency. See the
   [stable release](https://github.com/trotsky1997/Rydantic/releases/tag/v0.7.0).
-- **Core 0.8.0-beta.1** is a published, verified opt-in prerelease, not a stable
+- **Core 0.8.0-beta.2** is a published, verified opt-in prerelease, not a stable
   promotion. Ordered callback lists, per-call context and typed pipelines are
   implemented, not a future feature wishlist. See [#72](https://github.com/trotsky1997/Rydantic/issues/72),
   [#73](https://github.com/trotsky1997/Rydantic/pull/73),
   [#79](https://github.com/trotsky1997/Rydantic/pull/79) and the
-  [beta release](https://github.com/trotsky1997/Rydantic/releases/tag/v0.8.0-beta.1).
-  Publication documentation merged in [#81](https://github.com/trotsky1997/Rydantic/pull/81);
+  [beta.2 release](https://github.com/trotsky1997/Rydantic/releases/tag/v0.8.0-beta.2) and
+  [registry acceptance](acceptance/core-0.8/BETA2-REGISTRY.md). Beta.2 includes the
+  optional bounded OpenAPI components added after beta.1.
+  Earlier beta.1 publication documentation merged in [#81](https://github.com/trotsky1997/Rydantic/pull/81);
   its post-merge checks are tracked separately from the verified package release.
 - **RydanticAI 0.6.0** is independently published. PDF inputs and the refreshed
   tutorials merged in [#75](https://github.com/trotsky1997/Rydantic/pull/75), but
   the PDF API is not in the published 0.6.0 package. The workspace AI source now
-  depends on core `=0.8.0-beta.2`; this does not republish or change the old package.
+  depends on candidate core `=0.8.0`; this does not republish or change the old package.
 - CLI and codegen remain unpublished source tools. Agent evaluation infrastructure
   exists, but no measured agent-performance improvement is established.
 - An open issue is not proof of an unimplemented defect. Existing repair and
@@ -69,11 +71,12 @@ This is a bounded first-party interpretation of the concrete-integration gate,
 not an external-adopter claim or a substitute for the remaining platform/package gates.
 No library contract failure was confirmed by this bounded integration.
 
-The current source is prepared as **0.8.0-beta.2** because optional OpenAPI was
-added after published beta.1. Publish and verify beta.2 as a fresh registry consumer
-before an equivalent 0.8.0 stable promotion; do not introduce untested runtime
-changes during promotion. Stable remains 0.7.0 until its successor is actually
-verified. Compatibility, breaking migration notes, paired pins, exact-main CI and
+The current source is prepared as an equivalent **0.8.0 stable candidate**, not
+a published stable release. Beta.2 was published and independently verified with
+fresh registry-only application and migration checks; see the
+[receipt](acceptance/core-0.8/BETA2-REGISTRY.md). Promotion changes only paired
+versions, metadata and documentation, not runtime behavior. Stable remains 0.7.0
+until 0.8.0 publication and fresh registry acceptance are actually verified. Compatibility, breaking migration notes, paired pins, exact-main CI and
 package/registry receipts remain mandatory, tracked in
 [#105](https://github.com/trotsky1997/Rydantic/issues/105).
 
