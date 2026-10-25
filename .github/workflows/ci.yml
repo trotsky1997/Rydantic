@@ -110,6 +110,14 @@ jobs:
         run: |
           python3 scripts/with_source_checkout.py .ci-source-6006720 -- cargo fetch --manifest-path evals/rydantic-agent/packs/source-60067205276e314653f46a75c213ec1756c7ad7c/tasks/source-context-policy/Cargo.toml --locked
           python3 evals/rydantic-agent/tests/smoke_source_context.py --cargo "$(rustup which --toolchain 1.98.1 cargo)" --rustc "$(rustup which --toolchain 1.98.1 rustc)"
+      - name: Verify core 0.8 application acceptance
+        env:
+          CARGO_TARGET_DIR: ${{ github.workspace }}/target
+        run: |
+          cargo fmt --manifest-path acceptance/core-0.8/Cargo.toml -- --check
+          cargo test --manifest-path acceptance/core-0.8/Cargo.toml --locked --features openapi-acceptance
+          cargo clippy --manifest-path acceptance/core-0.8/Cargo.toml --locked --all-targets --features openapi-acceptance -- -D warnings
+          python3 acceptance/core-0.8/scripts/context-migration.py --dependency-path crates/rydantic --output "$RUNNER_TEMP/core-080-migration"
       - name: Clippy
         run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
       - name: Verify all gateway protocols with official Python SDKs
