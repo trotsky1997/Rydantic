@@ -94,3 +94,10 @@ regression without controlled repeated measurements.
 - [Pydantic performance guidance](https://pydantic.dev/docs/validation/latest/concepts/performance/)
 - [Pydantic 2.14.1 on PyPI](https://pypi.org/project/pydantic/2.14.1/)
 - [Rust `black_box`](https://doc.rust-lang.org/std/hint/fn.black_box.html)
+
+## Recorded sample
+
+[2026-10-25 cloud sample and complete tables](evidence/2026-10-25.md) retain the
+raw output and exact measured source commit. Pydantic was faster on the main
+successful JSON fixtures in that run; this is workload-specific evidence, not a
+universal ranking. Re-run on your deployment hardware before drawing conclusions.
