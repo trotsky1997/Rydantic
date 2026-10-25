@@ -22,6 +22,8 @@ extern crate self as rydantic;
 mod asynchronous;
 #[cfg(feature = "axum")]
 pub mod axum;
+#[cfg(feature = "jsonrpc")]
+pub mod jsonrpc;
 #[cfg(feature = "partial-json")]
 pub mod partial_json;
 #[cfg(feature = "sqlx")]

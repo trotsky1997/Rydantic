@@ -19,6 +19,7 @@ default = ["derive"]
 derive = ["dep:rydantic-derive"]
 partial-json = ["dep:jiter"]
 settings = []
+jsonrpc = []
 openapi = []
 dynamic = ["dep:jsonschema"]
 chrono = ["dep:chrono"]
@@ -85,3 +86,7 @@ required-features = ["derive", "sqlite"]
 [[example]]
 name = "openapi_components"
 required-features = ["derive", "openapi"]
+
+[[example]]
+name = "jsonrpc"
+required-features = ["derive", "jsonrpc"]

@@ -1,3 +1,12 @@
+# Unreleased
+
+- Add opt-in `jsonrpc`: transport-neutral synchronous JSON-RPC 2.0 typed method
+  parameters/results, sequential batches, notification suppression and redacted
+  model errors. Explicit named/positional parameter mode; no network listener,
+  async/context integration, authentication or transport resource limits.
+- This is source-only, **not available in published 0.8.0**. No existing API or
+  stored-data migration is changed; no new version is published by this change.
+
 # Rydantic 0.8.0 · Stable
 
 Published on 2026-10-25 as stable: [runtime](https://crates.io/crates/rydantic/0.8.0)

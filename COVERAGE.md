@@ -169,6 +169,8 @@ Settings and partial JSON already execute in the all-features workspace CI.
 The separate `Optional runtime contracts` workflow additionally verifies their
 minimal feature configurations on Linux with Rust 1.98.1:
 
+- `jsonrpc`: only `derive,jsonrpc`, selecting `tests/jsonrpc.rs` and exercising
+  `src/jsonrpc.rs`; this is a protocol correctness gate, not numerical coverage.
 - `settings`: only `derive,settings`, selecting `tests/settings.rs` and exercising
   `src/settings.rs`.
 - `partial-json`: only `partial-json` (no derive), selecting
