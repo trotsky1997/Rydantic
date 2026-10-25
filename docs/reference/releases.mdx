@@ -4,7 +4,34 @@ description: "Release history and the current migration path."
 icon: "tag"
 ---
 
-For planned work and acceptance gates, see the canonical [project roadmap](https://github.com/trotsky1997/Rydantic/blob/main/ROADMAP.md). Release records below describe delivered versions, not roadmap commitments.
+For planned work and acceptance gates, see the canonical [project roadmap](https://github.com/trotsky1997/Rydantic/blob/main/ROADMAP.md). Published records describe delivered versions; entries explicitly marked source candidate are not publication receipts or roadmap commitments.
+
+## 0.8.0-beta.2 · Source candidate, not a publication receipt
+
+Core 0.8 remains on the prerelease channel; default/stable stays **0.7.0**.
+This source candidate retains callback/context/pipeline contracts and adds the
+existing optional OpenAPI component feature to the package scope. It is not route
+inference, full document validation, or portable execution of arbitrary callbacks.
+
+A [first-party application](https://github.com/trotsky1997/Rydantic/tree/main/acceptance/core-0.8)
+now exercises real loopback HTTP, explicit request policy, model parse/revalidation/dump,
+fail-fast pipelines and isolated SQLite commit/rollback. Its synthetic inputs and
+maintainer-operated checks are not outside adoption. Exact source and published
+beta.1 results are recorded separately; beta.2 registry verification is still a
+required step before stable promotion. See [release readiness #105](https://github.com/trotsky1997/Rydantic/issues/105).
+
+**Breaking upgrade from 0.7.x:** `Context` loses `UnwindSafe`/`RefUnwindSafe`, even
+without data. Construct/use it inside a suitable `catch_unwind` closure instead of
+blind `AssertUnwindSafe`; all other captures retain their own safety obligations.
+Business context must be owned and `Send + Sync`, supplied explicitly again for
+revalidation/output. Failed trials can leave shared effects; pipelines do not
+provide rollback or prove model validity. Transforms/checks can change accepted
+or emitted data. Review behavior and back up your own data/deployment; no automatic
+or lossless persisted-data migration is promised.
+
+The candidate version and links do not prove registry availability. Only core and
+derive are in this release scope; AI publication, CLI distribution and provider
+Agent trials remain independent. Existing published notes below remain historical.
 
 ## 0.8.0-beta.1 · Published prerelease
 

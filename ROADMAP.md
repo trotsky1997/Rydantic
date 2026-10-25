@@ -1,6 +1,6 @@
 # Rydantic roadmap
 
-**Baseline: 2026-10-21.** Stabilize contracts before expanding capabilities.
+**Baseline: 2026-10-25.** Stabilize contracts before expanding capabilities.
 Now / Next / Later express priority and dependencies, not promised dates or
 release commitments. An item is complete only when its acceptance evidence is
 recorded; source availability, passing tests and publication are separate states.
@@ -23,7 +23,7 @@ what users can install.
 - **RydanticAI 0.6.0** is independently published. PDF inputs and the refreshed
   tutorials merged in [#75](https://github.com/trotsky1997/Rydantic/pull/75), but
   the PDF API is not in the published 0.6.0 package. The workspace AI source now
-  depends on core `=0.8.0-beta.1`; this does not republish or change the old package.
+  depends on core `=0.8.0-beta.2`; this does not republish or change the old package.
 - CLI and codegen remain unpublished source tools. Agent evaluation infrastructure
   exists, but no measured agent-performance improvement is established.
 - An open issue is not proof of an unimplemented defect. Existing repair and
@@ -59,6 +59,23 @@ synthetic regressions for failed untagged alternatives: shared effects persist,
 branch errors stay relative, successful fallback discards rejected-branch errors,
 and context ownership is released. The tests cover JSON and Value entry points.
 This is regression evidence, not external adoption or stable-promotion evidence.
+
+**Application feedback and release sequence:** [#106](https://github.com/trotsky1997/Rydantic/pull/106)
+adds a concrete maintainer-operated HTTP/context/pipeline/SQLite application,
+actual OpenAPI request/response components and migration probes. The
+[record](acceptance/core-0.8/VALIDATION.md) separates source from published beta.1,
+independent reruns from author results, and synthetic input from outside adoption.
+This is a bounded first-party interpretation of the concrete-integration gate,
+not an external-adopter claim or a substitute for the remaining platform/package gates.
+No library contract failure was confirmed by this bounded integration.
+
+The current source is prepared as **0.8.0-beta.2** because optional OpenAPI was
+added after published beta.1. Publish and verify beta.2 as a fresh registry consumer
+before an equivalent 0.8.0 stable promotion; do not introduce untested runtime
+changes during promotion. Stable remains 0.7.0 until its successor is actually
+verified. Compatibility, breaking migration notes, paired pins, exact-main CI and
+package/registry receipts remain mandatory, tracked in
+[#105](https://github.com/trotsky1997/Rydantic/issues/105).
 
 **Dependencies:** beta usage evidence and the layered verification below.
 The existing package and synthetic-test receipts are a starting point, not a
