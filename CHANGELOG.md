@@ -1,3 +1,55 @@
+# Rydantic 0.8.0-beta.2 · Candidate (not published)
+
+This is a planned breaking prerelease of core `rydantic` and `rydantic-derive`.
+Stable/default remains 0.7.0 until the distinct 0.8.0 registry promotion is verified.
+Runtime and derive must use matching 0.8.0-beta.2 versions and an exact derive pin.
+Do not interpret this candidate note as a publication or registry-acceptance receipt.
+
+## Since published beta.1
+
+- Retain optional OpenAPI schema components with explicit input/output projection,
+  root-local reference relocation, runtime-only rule metadata and fail-closed
+  unsupported-scope boundaries. It is not HTTP route discovery, a complete OpenAPI
+  document generator, or portable enforcement of arbitrary Rust callbacks.
+- Add a reproducible first-party application acceptance harness combining actual
+  loopback HTTP, per-request context policy, model parse/revalidation/output,
+  typed fail-fast pipeline, and isolated SQLite commit/rollback. Synthetic input
+  and maintainer-operated integration do not constitute external adoption.
+- Preserve context mutation and untagged-alternative behavior as explicit contracts
+  and regressions; unsuccessful trials do not promise rollback.
+
+## Breaking upgrade from 0.7.x
+
+`Context` no longer implements `UnwindSafe`/`RefUnwindSafe`, including empty contexts.
+Construct and consume it inside `catch_unwind` when that design is appropriate;
+other captured values still need to satisfy their bounds. Do not add blanket
+`AssertUnwindSafe` wrappers. Business data must be owned (`Any`/`'static`) and
+`Send + Sync`; borrowed references and `Rc` are not accepted.
+
+Supply context explicitly for each context-aware operation. Models do not retain
+it, and existing context-free high-level Axum/SQL/Cap'n Proto, Serde and `Validated`
+entry points do not automatically forward request policy. Failed trial branches
+can leave shared-context effects. Pipelines are sequential/fail-fast, permit
+explicit wrappers to skip/repeat continuation, and do not imply validated-value
+proofs or transactional rollback.
+
+Transforms/checks can change accepted data and emitted output. No automatic or
+lossless persisted-data/deployment upgrade is promised. Review wire/schema and
+validation behavior, make appropriate backups, and migrate your own deployment
+explicitly. The project acceptance harness never operates production data.
+
+## Verification status
+
+The [application acceptance record](acceptance/core-0.8/VALIDATION.md) records
+first-party source and published beta.1 integration checks plus independent
+reruns. This is a bounded engineering interpretation of concrete-application
+feedback, not a claim of outside adoption. Final beta.2 source CI, package contents,
+matching pins, publication checksums and fresh registry-only acceptance remain
+separate required receipts; the preparation PR does not pre-claim them.
+Beta.2 registry application acceptance is a prerequisite to an equivalent stable
+0.8.0 promotion. AI, CLI distribution and provider-based Agent campaigns remain
+separate tracks, not implicit achievements of this core release.
+
 # Rydantic 0.8.0-beta.1 · Published prerelease
 
 Published on 2026-10-21 as a prerelease: [runtime](https://crates.io/crates/rydantic/0.8.0-beta.1) and [derive](https://crates.io/crates/rydantic-derive/0.8.0-beta.1). This is a breaking opt-in beta, not a new stable release. Stable/default remains 0.7.0. Install with `rydantic = "=0.8.0-beta.1"`; runtime and derive share that version with an exact `=0.8.0-beta.1` derive pin. See the [release record](https://github.com/trotsky1997/Rydantic/releases/tag/v0.8.0-beta.1).

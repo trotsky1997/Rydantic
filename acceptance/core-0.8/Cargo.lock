@@ -794,7 +794,7 @@ checksum = "d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4"
 
 [[package]]
 name = "rydantic"
-version = "0.8.0-beta.1"
+version = "0.8.0-beta.2"
 dependencies = [
  "axum",
  "email_address",
@@ -817,7 +817,7 @@ dependencies = [
 
 [[package]]
 name = "rydantic-derive"
-version = "0.8.0-beta.1"
+version = "0.8.0-beta.2"
 dependencies = [
  "heck",
  "proc-macro-crate",

@@ -2,11 +2,11 @@
 
 Procedural macros for [Rydantic](https://crates.io/crates/rydantic), a Rust library for data modeling, validation, JSON Schema and native Cap'n Proto.
 
-Use the `rydantic` crate, which enables and re-exports `#[derive(Model)]` by default. This package describes the **0.8.0-beta.1 prerelease contract**, including ordered callback lists, typed per-call context callbacks and integration with synchronous/asynchronous pipelines. Runtime and derive use matching versions with an exact `=0.8.0-beta.1` derive dependency. Source metadata alone does not prove registry availability: verify both [runtime](https://crates.io/crates/rydantic/0.8.0-beta.1) and [derive](https://crates.io/crates/rydantic-derive/0.8.0-beta.1) packages and the [release notes](https://rydantic.mintlify.site/reference/releases) before using this exact beta pin:
+Use the `rydantic` crate, which enables and re-exports `#[derive(Model)]` by default. This package describes the **0.8.0-beta.2 prerelease contract**, including ordered callback lists, typed per-call context callbacks and integration with synchronous/asynchronous pipelines. Runtime and derive use matching versions with an exact `=0.8.0-beta.2` derive dependency. Source metadata alone does not prove registry availability: verify both [runtime](https://crates.io/crates/rydantic/0.8.0-beta.2) and [derive](https://crates.io/crates/rydantic-derive/0.8.0-beta.2) packages and the [release notes](https://rydantic.mintlify.site/reference/releases) before using this exact beta pin:
 
 ```toml
 [dependencies]
-rydantic = "=0.8.0-beta.1"
+rydantic = "=0.8.0-beta.2"
 ```
 
 The default stable release remains 0.7.0 (`rydantic = "=0.7.0"`); it does not include these new validator APIs. `before` lists run left to right and stop on failure; typed validator lists run sequentially and accumulate errors behind the existing prerequisite gates. Pipelines instead fail fast between stages. Existing single callbacks use the same mechanism, not a compatibility layer.
