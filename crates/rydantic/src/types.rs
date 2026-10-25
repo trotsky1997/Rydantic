@@ -43,7 +43,15 @@ macro_rules! integer {
                     }
                 }
                 let Value::Number(number) = &value else { mismatch(ctx, "integer", &value); return None; };
-                let parsed = crate::rules::integer_text(number).and_then(|text| text.parse::<Self>().ok());
+                // Borrowed lexical integer accessors avoid normalization buffers.
+                // Integral decimals/exponents retain the exact normalization fallback.
+                let parsed = if let Some(integer) = number.as_i128() {
+                    Self::try_from(integer).ok()
+                } else if let Some(integer) = number.as_u128() {
+                    Self::try_from(integer).ok()
+                } else {
+                    crate::rules::integer_text(number).and_then(|text| text.parse::<Self>().ok())
+                };
                 if parsed.is_none() {
                     ctx.push(ValidationError::new(if number.is_f64() { "int_type" } else { "int_out_of_range" }, concat!("value must be an integer representable as ", stringify!($ty))).with_stage(Stage::Parse));
                 }

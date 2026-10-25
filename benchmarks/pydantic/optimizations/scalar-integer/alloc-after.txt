@@ -1,0 +1,14 @@
+i64(42): accepted=true, 0 calls / 0 bytes
+u128(42): accepted=true, 0 calls / 0 bytes
+i64(-0): accepted=true, 0 calls / 0 bytes
+u128(-0): accepted=true, 0 calls / 0 bytes
+i64(42.0): accepted=true, 2 calls / 16 bytes
+u128(42.0): accepted=true, 2 calls / 16 bytes
+i64(4.2e1): accepted=true, 2 calls / 16 bytes
+u128(4.2e1): accepted=true, 2 calls / 16 bytes
+i64(9223372036854775808): accepted=false, 3 calls / 477 bytes
+u128(9223372036854775808): accepted=true, 0 calls / 0 bytes
+i64(340282366920938463463374607431768211455): accepted=false, 3 calls / 477 bytes
+u128(340282366920938463463374607431768211455): accepted=true, 0 calls / 0 bytes
+i64(0e999999999999999999999999): accepted=true, 2 calls / 28 bytes
+u128(0e999999999999999999999999): accepted=true, 2 calls / 28 bytes
