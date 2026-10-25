@@ -68,6 +68,20 @@ authorized. Cloud virtualization, scheduling, thermal state and other tenants
 cannot be fully controlled; record that limitation. The runner serializes engine
 processes and varies their order, but does not guarantee a dedicated host.
 
+## Repeated payloads and string caching
+
+Each worker repeatedly validates the **same fixed fixture** after warmup. This
+measures warmed, repeated-payload throughput, not cold-cache or high-cardinality
+traffic. Pydantic retains its documented default `cache_strings=True` (`all`),
+which can reuse Python string objects during JSON parsing. We do not disable this
+normal optimization to improve Rydantic's relative numbers. See the official
+[string-caching documentation](https://pydantic.dev/docs/validation/latest/concepts/json/#caching-strings).
+
+Cache-disabled or varied-payload experiments must be separately labeled
+**diagnostics**, not substituted for this default baseline. The current run does
+not isolate how much of the observed timing difference comes from caching;
+profiling or controlled experiments are required before attributing causes.
+
 ## Reading results
 
 Imports, process startup, class/schema setup, fixture loading, correctness checks
