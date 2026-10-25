@@ -250,3 +250,22 @@ jobs:
         run: cargo test -p rydantic --all-features --test server_databases --locked -- --include-ignored
       - name: Test automatic model migrations on real server databases
         run: cargo test -p rydantic --all-features --test migrations --locked -- --include-ignored
+
+  grpc-capnp:
+    name: Capnp over gRPC unary integration
+    runs-on: ubuntu-latest
+    env:
+      RUSTUP_TOOLCHAIN: 1.98.1
+      CARGO_INCREMENTAL: "0"
+      CARGO_PROFILE_DEV_DEBUG: "0"
+      CARGO_PROFILE_TEST_DEBUG: "0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - run: rustup toolchain install 1.98.1 --profile minimal --component clippy --component rustfmt
+      - run: sudo apt-get update -qq && sudo apt-get install -y capnproto
+      - run: cargo check --locked -p rydantic --no-default-features --features grpc --lib
+      - run: cargo test --locked -p rydantic --features grpc --lib --test grpc
+      - run: cargo run --locked -p rydantic --features grpc --example grpc_capnp
+      - run: cargo clippy --locked -p rydantic --features grpc --lib --test grpc --example grpc_capnp -- -D warnings

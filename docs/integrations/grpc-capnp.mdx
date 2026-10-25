@@ -1,0 +1,57 @@
+---
+title: "Cap’n Proto over gRPC"
+description: "Unreleased, opt-in unary tonic integration without protobuf models"
+---
+
+<Warning>
+This adapter is **unreleased source work**, not part of the published `rydantic = "=0.8.0"` package. It does not change the immutable 0.8.0 release. Use a reviewed source checkout; a new registry version is not yet claimed.
+</Warning>
+
+## One model, a different transport
+
+The optional `grpc` feature enables `capnp` and a tonic 0.14 custom codec. Existing `CapnpModel` readers/builders supply **unpacked Cap’n Proto** message payloads inside gRPC framing. There is no second protobuf DTO and no JSON/base64 envelope.
+
+Run the [complete unary client/server example](https://github.com/trotsky1997/Rydantic/blob/main/crates/rydantic/examples/grpc_capnp.rs) from this source checkout, with the official `capnp` compiler on `PATH`:
+
+```sh
+cargo run --locked -p rydantic --example grpc_capnp --features grpc
+```
+
+It binds only an ephemeral loopback port, sends a typed request over an actual tonic channel, validates and normalizes the request, validates the server response, and shuts down the server. It is a development example, not a deployed service.
+
+The key wiring is:
+
+```rust
+use rydantic::grpc::{CapnpCodec, Limits};
+
+let limits = Limits::default();
+// E is outgoing, D is incoming; reverse them at the opposite endpoint.
+let server_codec = CapnpCodec::<Greeting, Hello>::server(limits);
+let client_codec = CapnpCodec::<Hello, Greeting>::client(limits);
+let request = rydantic::grpc::request(hello, limits)?;
+```
+
+Wire the server codec into `tonic::server::Grpc::new`, and pass the client codec to `tonic::client::Grpc::unary`. Set **both** tonic `max_decoding_message_size` and `max_encoding_message_size` to `limits.message_bytes()` on both peers, as the runnable example does. The example explicitly implements tonic service routing; this adapter does not generate service stubs or `.proto` files.
+
+## Validation and status semantics
+
+- Incoming messages use `parse_capnp_with_options`: existing parsing, field/model validation and normalization run. For example, `trim` can change the received name. This is not lossless byte preservation.
+- Outgoing models use `to_capnp_message`: validation runs, but the model is **not normalized or mutated**. A receiver may therefore normalize an outgoing value differently. Use the same model contract on both sides.
+- Call `grpc::request(model, limits)` to preflight client requests. Invalid local input returns redacted `InvalidArgument` before dispatch. Tonic wraps errors raised by its encoder as `Internal`; omitting preflight does not preserve the local request status. Encoding checks again, so custom validators should be deterministic and side-effect free.
+- Invalid/malformed server-side request decoding returns `InvalidArgument`. Invalid server output or malformed/invalid client-side response decoding returns `Internal`. Adapter-generated error text does not include validator diagnostics or model values. Application-supplied handler statuses and transport diagnostics are outside that redaction guarantee. Tonic may add an `Error encoding` wrapper.
+- A tonic frame-size rejection is `OutOfRange`, not a model validation error. Network/service failures retain tonic's transport statuses.
+- Models requiring asynchronous validation are rejected by these synchronous codec paths, never silently accepted. Context-aware validation, async validator execution and custom status-detail schemas are not provided.
+
+## Limits and security boundaries
+
+`Limits::new(message_bytes, traversal_words, nesting_depth)` requires positive finite values. Defaults are 4 MiB per message, 8 Mi words of Cap’n Proto traversal and nesting depth 64. Decoder byte checks happen before parsing and use the existing contiguous tonic buffer without an additional payload copy. Trailing bytes and additional concatenated messages are rejected.
+
+The codec runs **after** tonic has buffered the framed payload. Its byte limit alone does not prevent transport buffering: configure the tonic limits too. Outgoing model construction/validation and Cap’n Proto builder allocation occur before the serialized-size guard; this is not a total memory/CPU budget for arbitrary models or custom validators. Applications must also bound inputs, concurrency, request durations and their handlers. Compression is not enabled by this adapter.
+
+TLS, authentication, authorization, rate limiting and deployment are application responsibilities. The loopback example intentionally does not claim production security. Never expose it unchanged as a public service.
+
+## Interoperability is an explicit contract
+
+Both peers must agree on the service/method path, Cap’n Proto root type, field ordinals and types, and generated configuration. Cap’n Proto message payloads do not embed a root schema identity: some mismatched schemas can decode as another shape. The codec validates against its configured model; it does not negotiate or universally detect schema mismatches. Preserve explicit schema IDs/ordinals when interoperability matters, and review conditional-model wire differences documented in [Cap’n Proto integration](/integrations/capnp).
+
+This is **Cap’n Proto serialization over gRPC**, not native Cap’n Proto RPC. Promise pipelining/capabilities, protobuf reflection, protobuf-generated clients and `grpcurl` protobuf descriptors are not supplied. Other-language peers require their own matching codec/service integration. This PR verifies unary operation only; streaming, protocol negotiation and service generation are outside its scope.
