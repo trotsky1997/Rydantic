@@ -299,6 +299,14 @@ fn collision_checks(
     rd: &Tokens,
     tag: ::core::option::Option<&str>,
 ) -> Tokens {
+    // Static names and enum-tag collisions were checked by `fields` at derive time.
+    // Flatten/extra names can depend on another type or the instance and still need checks.
+    if !fields
+        .iter()
+        .any(|field| field.attr.flatten || field.attr.extra)
+    {
+        return quote!();
+    }
     let tag = tag.map(|key| quote!(names.push(#key.to_owned());));
     let entries = fields.iter().zip(values).map(|(field, value)| {
         let ty=&field.ty; let input=&field.input; let output=&field.output; let exclude=field.attr.exclude;
@@ -318,6 +326,13 @@ fn collision_checks(
     }
 }
 fn layout_check(fields: &[Field], rd: &Tokens, tag: ::core::option::Option<&str>) -> Tokens {
+    // With no flattened or extra fields, all names are compile-time checked.
+    if !fields
+        .iter()
+        .any(|field| field.attr.flatten || field.attr.extra)
+    {
+        return quote!();
+    }
     let names = object_names(fields, rd, tag);
     let catches=fields.iter().filter(|f|f.attr.extra||f.attr.flatten).map(|f|{let ty=&f.ty;quote!(usize::from(<#ty as #rd::ObjectType>::captures_extra(&mut ::std::collections::HashSet::new())))});
     quote! {
@@ -1020,4 +1035,108 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
             fn deserialize<D:#rd::__private::serde::Deserializer<'__rydantic_de>>(deserializer:D)->::core::result::Result<Self,D::Error>{#deserialize}
         }
     })
+}
+
+#[cfg(test)]
+mod static_layout_tests {
+    use super::*;
+
+    fn parsed(input: DeriveInput, tag: Option<&str>) -> syn::Result<Vec<Field>> {
+        let Data::Struct(data) = &input.data else {
+            unreachable!()
+        };
+        fields(&data.fields, tag, &attrs::container(&input.attrs)?)
+    }
+
+    #[test]
+    fn static_layouts_do_not_emit_runtime_name_checks() {
+        for input in [
+            parse_quote!(
+                struct Plain {
+                    id: i64,
+                    name: String,
+                }
+            ),
+            parse_quote!(
+                struct Aliased {
+                    #[model(validation_alias = "in", serialization_alias = "out")]
+                    value: i64,
+                }
+            ),
+            parse_quote!(
+                struct Borrowed<'a> {
+                    value: &'a str,
+                }
+            ),
+        ] {
+            let fields = parsed(input, Some("kind")).unwrap();
+            assert!(layout_check(&fields, &quote!(rydantic), Some("kind")).is_empty());
+            assert!(collision_checks(&fields, &[], &quote!(rydantic), Some("kind")).is_empty());
+        }
+    }
+
+    #[test]
+    fn dynamic_layouts_keep_runtime_name_checks() {
+        for input in [
+            parse_quote!(
+                struct Flattened {
+                    #[model(flatten)]
+                    inner: Inner,
+                }
+            ),
+            parse_quote!(
+                #[model(extra = "allow")]
+                struct Extras {
+                    #[model(extra)]
+                    extra: std::collections::BTreeMap<String, i64>,
+                }
+            ),
+        ] {
+            let fields = parsed(input, None).unwrap();
+            let values = [quote!(&self.inner)];
+            for generated in [
+                layout_check(&fields, &quote!(rydantic), None),
+                collision_checks(&fields, &values, &quote!(rydantic), None),
+            ] {
+                let generated = generated.to_string();
+                assert!(generated.contains("check_names"), "{generated}");
+                assert!(generated.contains("flatten_ambiguous"), "{generated}");
+            }
+        }
+    }
+
+    #[test]
+    fn static_alias_and_tag_collisions_remain_compile_errors() {
+        for input in [
+            parse_quote!(
+                struct InputCollision {
+                    #[model(validation_alias = "same")]
+                    a: i64,
+                    #[model(validation_alias = "same")]
+                    b: i64,
+                }
+            ),
+            parse_quote!(
+                struct OutputCollision {
+                    #[model(serialization_alias = "same")]
+                    a: i64,
+                    #[model(serialization_alias = "same")]
+                    b: i64,
+                }
+            ),
+            parse_quote!(
+                struct TagCollision {
+                    kind: i64,
+                }
+            ),
+            parse_quote!(
+                struct OutputTagCollision {
+                    #[model(serialization_alias = "kind")]
+                    value: i64,
+                }
+            ),
+        ] {
+            assert!(parsed(input, Some("kind")).is_err());
+        }
+    }
 }
