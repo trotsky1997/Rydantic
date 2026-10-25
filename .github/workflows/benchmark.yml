@@ -1,0 +1,47 @@
+name: Benchmark correctness
+
+"on":
+  pull_request:
+    paths:
+      - 'benchmarks/pydantic/**'
+      - 'crates/rydantic/**'
+      - 'crates/rydantic-derive/**'
+      - 'Cargo.lock'
+      - 'Cargo.toml'
+      - '.github/workflows/benchmark.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'benchmarks/pydantic/**'
+      - 'crates/rydantic/**'
+      - 'crates/rydantic-derive/**'
+      - 'Cargo.lock'
+      - 'Cargo.toml'
+      - '.github/workflows/benchmark.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  parity:
+    name: Pydantic semantic parity and smoke (not a speed gate)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      RUSTUP_TOOLCHAIN: 1.98.1
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - run: rustup toolchain install 1.98.1 --profile minimal
+      - name: Install pinned comparison dependencies
+        run: |
+          python3 -m venv .venv-benchmark
+          .venv-benchmark/bin/python -m pip install -r benchmarks/pydantic/requirements.txt
+      - name: Verify harness negative controls
+        run: .venv-benchmark/bin/python -m unittest discover -s benchmarks/pydantic -p 'test_*.py' -v
+      - name: Build release worker, prove fixture semantics, smoke timing pipeline
+        run: |
+          .venv-benchmark/bin/python benchmarks/pydantic/run.py \
+            --smoke --output /tmp/pydantic-benchmark-smoke.json
