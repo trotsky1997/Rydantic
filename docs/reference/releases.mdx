@@ -6,17 +6,27 @@ icon: "tag"
 
 For planned work and acceptance gates, see the canonical [project roadmap](https://github.com/trotsky1997/Rydantic/blob/main/ROADMAP.md). Published records describe delivered versions; entries explicitly marked source candidate are not publication receipts or roadmap commitments.
 
-## 0.8.0 · Stable candidate, not published
+## 0.8.0 · Stable
 
-This candidate preserves the independently verified beta.2 runtime contract;
-only paired versions, metadata and documentation change. Runtime and derive must
-match exactly `0.8.0`. Do not install that pin until both packages are published
-and independently verified. Public stable/default remains **0.7.0**.
+Published on 2026-10-25 as stable: [runtime](https://crates.io/crates/rydantic/0.8.0)
+and [derive](https://crates.io/crates/rydantic-derive/0.8.0), with the runtime's exact
+`=0.8.0` derive pin. Stable/default is now **0.8.0**. This promotion preserves the
+verified beta.2 runtime contract; only paired versions, metadata and documentation changed.
 
-The breaking 0.7.x migration warning below still applies. Exact-candidate CI,
-package comparison and fresh stable registry acceptance remain required. The
-[beta.2 receipt](https://github.com/trotsky1997/Rydantic/blob/main/acceptance/core-0.8/BETA2-REGISTRY.md)
-is supporting evidence, not a stable publication receipt.
+The [publication workflow](https://github.com/trotsky1997/Rydantic/actions/runs/40203697840) succeeded for exact
+source `337c8b05798fa4d02eb75359ba9c9980901949df`. See the
+[stable registry receipt](https://github.com/trotsky1997/Rydantic/blob/main/acceptance/core-0.8/STABLE-REGISTRY.md)
+for independently verified checksums and fresh registry-only consumer results:
+author and independent reviewer each passed three application tests plus one OpenAPI test, repeated all four with `--locked`, and passed four migration probes on Linux.
+
+**Breaking from 0.7.x:** `Context` loses unwind auto-traits even without data.
+Use owned `Send + Sync` context explicitly per operation. Do not blindly wrap
+captures in `AssertUnwindSafe`. Failed trials retain shared effects; pipelines
+are not transactions or validation proofs. Transformations/checks can change data;
+no automatic/lossless stored-data migration is promised. Back up and review your
+own deployment. The full warning in the beta.2 notes below continues to apply.
+Core and derive alone are promoted; AI, CLI distribution and provider campaigns
+remain separate. First-party synthetic application acceptance is not outside adoption.
 
 ## 0.8.0-beta.2 · Published prerelease
 
