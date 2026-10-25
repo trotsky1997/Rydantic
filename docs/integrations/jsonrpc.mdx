@@ -27,15 +27,17 @@ struct Hello {
 #[derive(Model)]
 struct Reply { greeting: String }
 
-let mut router = Router::new();
-router.register("hello", Params::Named, |input: Hello| {
-    Ok(Reply { greeting: format!("Hello, {}!", input.name) })
-})?;
-let response = router.handle_json(
-    r#"{"jsonrpc":"2.0","method":"hello","params":{"name":" Alice "},"id":1}"#,
-);
-// Some({"jsonrpc":"2.0","id":1,"result":{"greeting":"Hello, Alice!"}})
-# Ok::<(), rydantic::jsonrpc::RegistrationError>(())
+fn main() -> Result<(), rydantic::jsonrpc::RegistrationError> {
+    let mut router = Router::new();
+    router.register("hello", Params::Named, |input: Hello| {
+        Ok(Reply { greeting: format!("Hello, {}!", input.name) })
+    })?;
+    let response = router.handle_json(
+        r#"{"jsonrpc":"2.0","method":"hello","params":{"name":" Alice "},"id":1}"#,
+    );
+    assert_eq!(response.unwrap()["result"]["greeting"], "Hello, Alice!");
+    Ok(())
+}
 ```
 
 `Params::Named` accepts objects. `Params::Positional` accepts arrays, for example
