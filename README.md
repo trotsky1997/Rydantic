@@ -8,7 +8,7 @@
 [![crates.io](https://img.shields.io/crates/v/rydantic.svg)](https://crates.io/crates/rydantic)
 [![License: MIT](https://img.shields.io/badge/license-MIT-31A879.svg)](https://github.com/trotsky1997/Rydantic/blob/main/LICENSE)
 
-[Documentation](https://rydantic.mintlify.site/introduction) · [Quick start](https://rydantic.mintlify.site/quickstart) · [Tutorials](https://rydantic.mintlify.site/tutorials/overview) · [Examples](https://rydantic.mintlify.site/examples/overview) · [Stable API](https://docs.rs/rydantic/0.7.0/rydantic/) · [Homepage](https://trotsky1997.github.io/Rydantic/)
+[Documentation](https://rydantic.mintlify.site/introduction) · [Quick start](https://rydantic.mintlify.site/quickstart) · [Tutorials](https://rydantic.mintlify.site/tutorials/overview) · [Examples](https://rydantic.mintlify.site/examples/overview) · [API documentation](https://docs.rs/rydantic/latest/rydantic/) · [Homepage](https://trotsky1997.github.io/Rydantic/)
 
 </div>
 
@@ -49,7 +49,10 @@ Integrations are opt-in Cargo features. The default `derive` feature covers the 
 
 ## Start with a validated model
 
-For the **0.7.0 stable release** (verify registry availability before installation):
+Installation snapshot prepared on **2026-10-25 before 0.8.0 publication**: this
+example selects the then-current **0.7.0 stable release**. Consult the
+[live release record](https://rydantic.mintlify.site/reference/releases) for the
+current stable version and verify registry availability before installation:
 
 ```toml
 [dependencies]
@@ -94,7 +97,7 @@ The development source adds [PDF document inputs](https://rydantic.mintlify.site
 Enable features on the version you selected:
 
 ```toml
-# Stable HTTP + PostgreSQL example
+# 0.7.0 HTTP + PostgreSQL installation snapshot (see live release status)
 rydantic = { version = "=0.7.0", features = ["axum", "postgres"] }
 ```
 
@@ -108,9 +111,9 @@ rydantic = { version = "=0.7.0", features = ["axum", "postgres"] }
 
 See the [complete feature reference](https://rydantic.mintlify.site/reference/features). Automatic Cap'n Proto binding generation also requires the official `capnp` compiler on `PATH`.
 
-## Source stable candidate contract: 0.8.0
+## Core 0.8.0 contract
 
-This source tree and its packaged README describe the **0.8.0 stable candidate contract**, not a publication receipt. The public stable default remains 0.7.0, as used in the quickstart above. The candidate retains the verified 0.8.0-beta.2 runtime contract without new runtime behavior. Use the following exact stable pin only after both [runtime](https://crates.io/crates/rydantic/0.8.0) and [derive](https://crates.io/crates/rydantic-derive/0.8.0) are published and independently verified:
+This package describes the **0.8.0 contract**, retaining the verified beta.2 runtime behavior. Source metadata alone is not proof of publication. Consult the [live release status](https://rydantic.mintlify.site/reference/releases) and verify matching [runtime](https://crates.io/crates/rydantic/0.8.0) and [derive](https://crates.io/crates/rydantic-derive/0.8.0) availability before using the exact version pin:
 
 ```toml
 [dependencies]
@@ -125,11 +128,11 @@ The 0.8 contract does not migrate stored data or promise lossless conversion. Th
 
 The optional `openapi` feature in this source adds bounded input/output schema components, local reference relocation and runtime-only rule metadata. It is not route discovery or complete OpenAPI document validation, and unsupported schema scopes fail closed. Published beta.1 predates this feature; published beta.2 includes it. See [beta.2 registry acceptance](https://github.com/trotsky1997/Rydantic/blob/main/acceptance/core-0.8/BETA2-REGISTRY.md) for verified packages and maintainer-operated integration results. See the [first-party application acceptance](https://github.com/trotsky1997/Rydantic/blob/v0.8.0-beta.2/acceptance/core-0.8/README.md) for integration feedback and limits; synthetic requests are not external adoption evidence.
 
-## Stable release 0.7.0
+## Historical 0.7.0 installation and migration snapshot
 
-The default stable release is 0.7.0: tested settings, partial JSON and domain types, callback hygiene, and conditional Cap’n Proto generation. Its runtime and derive use matching 0.7.0 versions, with an exact derive dependency pin. The 0.8 validator APIs above are not included in 0.7.0.
+At this README's 2026-10-25 preparation checkpoint, before 0.8.0 publication, the default stable release was 0.7.0: tested settings, partial JSON and domain types, callback hygiene, and conditional Cap’n Proto generation. Its runtime and derive use matching 0.7.0 versions, with an exact derive dependency pin. The 0.8 validator APIs above are not included in 0.7.0.
 
-Source metadata alone does not prove registry availability. Before installing, verify both [runtime](https://crates.io/crates/rydantic/0.7.0) and [derive](https://crates.io/crates/rydantic-derive/0.7.0) packages and the [release record](https://github.com/trotsky1997/Rydantic/releases/tag/v0.7.0). Use `rydantic = "=0.7.0"` for this release. For older 0.6.0 deployments, consult the [versioned source](https://github.com/trotsky1997/Rydantic/tree/v0.6.0) and [API reference](https://docs.rs/rydantic/0.6.0/rydantic/); the live guides default to stable 0.7.0 and explicitly mark 0.8 APIs and their publication status.
+Source metadata alone does not prove registry availability. Before installing, verify both [runtime](https://crates.io/crates/rydantic/0.7.0) and [derive](https://crates.io/crates/rydantic-derive/0.7.0) packages and the [release record](https://github.com/trotsky1997/Rydantic/releases/tag/v0.7.0). Use `rydantic = "=0.7.0"` for this release. For older 0.6.0 deployments, consult the [versioned source](https://github.com/trotsky1997/Rydantic/tree/v0.6.0) and [API reference](https://docs.rs/rydantic/0.6.0/rydantic/); consult the live guides and release status for the current default; the versioned 0.7.0 guides do not include the 0.8 APIs.
 
 > **Breaking upgrade from 0.6.0:** 0.7.0 removes automatic `Model` derive insertion inside `#[rydantic::capnp_models]`. Add an explicit `#[derive(rydantic::Model)]` to every model struct and enum, including nested models. The release also rejects unsupported custom SQLite index layouts before a table rebuild. Conditional Cap’n Proto definitions produce configuration-specific wire schemas; different feature/target configurations are not automatically wire-compatible. Read the [changelog and migration guidance](https://github.com/trotsky1997/Rydantic/blob/main/CHANGELOG.md) before upgrading.
 
