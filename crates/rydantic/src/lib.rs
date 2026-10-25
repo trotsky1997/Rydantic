@@ -24,6 +24,8 @@ mod asynchronous;
 pub mod axum;
 #[cfg(feature = "grpc")]
 pub mod grpc;
+#[cfg(feature = "jsonrpc")]
+pub mod jsonrpc;
 #[cfg(feature = "partial-json")]
 pub mod partial_json;
 #[cfg(feature = "sqlx")]

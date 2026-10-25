@@ -47,7 +47,7 @@ class GateTests(unittest.TestCase):
             verify_result("test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\ntest result: FAILED. broken", 2)
 
     def test_runner_records_success_and_failed_control(self):
-        for selected, disabled, succeeds, fail_build in [("settings", "0 tests, 0 benchmarks\n", True, False), ("partial-json", "0 tests, 0 benchmarks\n", True, False), ("settings", "oops\n0 tests, 0 benchmarks\n", False, False), ("settings", "", False, True)]:
+        for selected, disabled, succeeds, fail_build in [("jsonrpc", "0 tests, 0 benchmarks\n", True, False), ("settings", "0 tests, 0 benchmarks\n", True, False), ("partial-json", "0 tests, 0 benchmarks\n", True, False), ("settings", "oops\n0 tests, 0 benchmarks\n", False, False), ("settings", "", False, True)]:
             suite = LAYERS[selected]["test"]
             with self.subTest(disabled=disabled), tempfile.TemporaryDirectory() as temp:
                 root = Path(temp)
@@ -80,7 +80,7 @@ class GateTests(unittest.TestCase):
                 self.assertFalse(manifest["source_dirty"])
                 self.assertEqual(len(manifest["commands"]), 5)
                 disabled_command = manifest["commands"][3]
-                if selected == "settings":
+                if selected in ("settings", "jsonrpc"):
                     self.assertEqual(disabled_command[-2:], ["--features", "derive"])
                 else:
                     self.assertNotIn("--features", disabled_command)
@@ -95,6 +95,7 @@ class GateTests(unittest.TestCase):
                 verify_result(output, 18)
 
     def test_minimal_features(self):
+        self.assertEqual(LAYERS["jsonrpc"]["features"], ["derive", "jsonrpc"])
         self.assertEqual(LAYERS["settings"]["features"], ["derive", "settings"])
         self.assertEqual(LAYERS["partial-json"]["features"], ["partial-json"])
 

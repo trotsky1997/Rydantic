@@ -13,6 +13,7 @@ import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 LAYERS = {
+    "jsonrpc": {"features": ["derive", "jsonrpc"], "test": "jsonrpc", "source": "jsonrpc.rs"},
     "settings": {"features": ["derive", "settings"], "test": "settings", "source": "settings.rs"},
     "partial-json": {"features": ["partial-json"], "test": "partial_json", "source": "partial_json.rs"},
 }

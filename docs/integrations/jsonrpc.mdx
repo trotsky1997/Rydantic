@@ -1,0 +1,100 @@
+---
+title: "JSON-RPC 2.0"
+description: "Unreleased, synchronous typed methods without a transport dependency."
+icon: "network"
+---
+
+<Warning>
+This optional adapter is **unreleased source functionality**, not part of the
+published `rydantic = "0.8.0"` package. Use the repository checkout to run the
+example. No package version or existing wire format is changed by enabling it.
+</Warning>
+
+```sh
+cargo run -p rydantic --example jsonrpc --no-default-features --features derive,jsonrpc --locked
+```
+
+## Register typed methods
+
+```rust
+use rydantic::{Model, jsonrpc::{Params, Router}};
+
+#[derive(Model)]
+struct Hello {
+    #[model(trim, min_length = 2)]
+    name: String,
+}
+#[derive(Model)]
+struct Reply { greeting: String }
+
+fn main() -> Result<(), rydantic::jsonrpc::RegistrationError> {
+    let mut router = Router::new();
+    router.register("hello", Params::Named, |input: Hello| {
+        Ok(Reply { greeting: format!("Hello, {}!", input.name) })
+    })?;
+    let response = router.handle_json(
+        r#"{"jsonrpc":"2.0","method":"hello","params":{"name":" Alice "},"id":1}"#,
+    );
+    assert_eq!(response.unwrap()["result"]["greeting"], "Hello, Alice!");
+    Ok(())
+}
+```
+
+`Params::Named` accepts objects. `Params::Positional` accepts arrays, for example
+a `#[derive(Model)] struct Pair(i32, i32)`. The adapter never converts an array to
+field names or an object to positional arguments. Omitted `params` becomes `{}`
+or `[]` according to the registered mode; the model then decides whether that
+empty input is valid. Model aliases, extra-field policy and normalization apply
+exactly as in `Model::parse_value`. Choose the model policy for your method.
+
+Output uses `Model::dump`, which revalidates and serializes but does **not**
+normalize a value constructed by the handler. Invalid output produces an internal
+error rather than a successful response. Handler effects are not rolled back.
+
+## Protocol boundary
+
+The [JSON-RPC 2.0 specification](https://www.jsonrpc.org/specification) is the
+protocol reference. This adapter supports server-side single requests and
+sequential batches, not a client or service/code generator.
+
+- Missing `id` means a notification; a valid notification executes but produces
+  `None`, including when its method, parameters or output fail. Send **no JSON
+  body**, not `null` or `[]`. An explicit `id: null` still receives a response.
+- String, number and null IDs are retained without numeric coercion. Fractional
+  IDs are accepted although discouraged by the protocol. Arbitrary-precision
+  JSON numbers retain their representation through the configured serde_json.
+- Invalid JSON returns `-32700`; invalid envelopes return `-32600` with null ID.
+  A malformed object without an ID is not a valid notification. `params` must be
+  an object or array when present, even for unknown methods.
+- Unknown methods return `-32601`; wrong parameter mode or failed model parsing
+  returns `-32602`; failed output revalidation/serialization returns `-32603`.
+  Model error details and input values are not included in these messages.
+- Empty batches return one invalid-request response. Invalid items (including
+  nested arrays) each yield errors. Notification responses are omitted; an
+  all-notification batch yields `None`, not an empty array. Items execute in order.
+- Methods match case-sensitively. Duplicate registration and reserved `rpc.`
+  method names are rejected. Extra envelope members are ignored. Duplicate JSON
+  object keys follow a last-value policy. Private serde marker keys remain ordinary
+  object data. JSON text nesting is bounded to 128 materialization levels; exceeding
+  this parser limit returns `-32700`. No unbounded parser is implied.
+
+A handler can return `Error::application(code, message)` with a non-reserved code
+(the constructor returns `None` for `-32768..=-32000`). That message is explicitly
+public: do not include secrets. No error `data` extension is supplied.
+
+## Application responsibilities
+
+This module is synchronous. Async validators and context-dependent models are not
+supported; use a separately designed async/context integration rather than
+pretending this wrapper awaits rules or supplies business context. Panics propagate;
+there is no catch-unwind, transaction, timeout, concurrency or rollback boundary.
+
+The caller owns HTTP/WebSocket/framing, authorization, authentication, request and
+batch limits, rate limits, cancellation and resource budgets. Bound input before
+calling the adapter. It is not a network server or a security boundary. Transport
+status codes for no-response notifications are the transport's policy.
+
+The adapter adds no dependency and is absent without the `jsonrpc` feature. Its
+minimal CI gate executes the complete protocol test inventory, checks the disabled
+feature control and runs the example; those synthetic checks are not production
+or external-adoption evidence.

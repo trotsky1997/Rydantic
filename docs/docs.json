@@ -122,6 +122,7 @@
             "group": "Serve an API",
             "pages": [
               "integrations/axum",
+              "integrations/jsonrpc",
               "integrations/http-database"
             ]
           },

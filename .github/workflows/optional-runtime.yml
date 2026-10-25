@@ -39,7 +39,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        layer: [settings, partial-json]
+        layer: [settings, partial-json, jsonrpc]
     env:
       RUSTUP_TOOLCHAIN: 1.98.1
       CARGO_TARGET_DIR: target/optional-runtime
@@ -53,6 +53,11 @@ jobs:
         run: python3 -m unittest discover -s scripts -p 'test_optional_runtime.py' -v
       - name: Run minimal feature suite and disabled-feature negative control
         run: python3 scripts/optional_runtime.py --layer '${{ matrix.layer }}' --output-dir 'reports/${{ matrix.layer }}'
+      - name: Run JSON-RPC example and standalone feature check
+        if: matrix.layer == 'jsonrpc'
+        run: |
+          cargo run -p rydantic --example jsonrpc --no-default-features --features derive,jsonrpc --locked
+          cargo check -p rydantic --lib --no-default-features --features jsonrpc --locked
       - name: Preserve exact-source manifest and failure logs
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
