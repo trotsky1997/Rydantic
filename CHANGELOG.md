@@ -1,19 +1,27 @@
-# Rydantic 0.8.0 · Stable candidate (not published)
+# Rydantic 0.8.0 · Stable
 
-This candidate promotes the verified 0.8.0-beta.2 core runtime contract with no
-new runtime behavior. Only paired versions, metadata and documentation change;
-`rydantic` pins `rydantic-derive` to exactly `=0.8.0`. Public stable/default remains
-0.7.0 until the 0.8.0 publication and fresh registry acceptance are verified.
+Published on 2026-10-25 as stable: [runtime](https://crates.io/crates/rydantic/0.8.0)
+and [derive](https://crates.io/crates/rydantic-derive/0.8.0). Runtime pins derive to
+exactly `=0.8.0`. This promotion preserves the verified beta.2 runtime contract;
+only paired versions, metadata and documentation changed.
 
-The breaking 0.7.x migration and data/deployment boundaries documented below still
-apply, including loss of context unwind auto-traits, explicit per-operation context,
-shared side effects and no automatic/lossless persisted-data migration. Review and
-back up your own data and deployment; no compatibility layer is added.
+The [publication workflow](https://github.com/trotsky1997/Rydantic/actions/runs/40203697840) succeeded for exact
+source commit `337c8b05798fa4d02eb75359ba9c9980901949df`. API/index/download/local package checksum
+comparison and fresh registry-only acceptance are recorded in the
+[stable registry receipt](acceptance/core-0.8/STABLE-REGISTRY.md):
+author and independent reviewer each passed three application tests plus one OpenAPI test, repeated all four with `--locked`, and passed four migration probes on Linux.
 
-Beta.2 package and concrete first-party application evidence is recorded in
-[the registry receipt](acceptance/core-0.8/BETA2-REGISTRY.md). Exact stable-candidate
-CI, package comparison, paired pins, publication checksums and fresh registry-only
-consumers remain release gates; beta evidence is not a stable publication receipt.
+**Breaking upgrade from 0.7.x:** Context loses `UnwindSafe`/`RefUnwindSafe`, even
+without business data. Construct and consume it inside a suitable `catch_unwind`
+closure; do not add blind `AssertUnwindSafe` compatibility wrappers. Context must
+be owned and `Send + Sync`, and supplied explicitly for each context-aware
+operation. Failed branches can retain shared effects. Pipelines are fail-fast,
+not rollback boundaries or proof of model validity.
+
+Transformations and checks can change accepted/emitted data. This release does
+not perform automatic or lossless persisted-data/deployment migration. Review
+wire/schema and validation behavior, back up your data, and migrate explicitly.
+Synthetic first-party acceptance is not outside adoption or production data use.
 AI, CLI distribution, frozen Skills/evals and provider campaigns remain separate.
 
 # Rydantic 0.8.0-beta.2 · Published prerelease

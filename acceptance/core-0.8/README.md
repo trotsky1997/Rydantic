@@ -68,7 +68,7 @@ python3 select-dependency.py registry 0.8.0-beta.1
 cargo test
 python3 select-dependency.py source /absolute/path/to/crates/rydantic
 cargo test --features openapi-acceptance
-# After those actual registry releases exist:
+# Published beta.2 and stable 0.8.0 (see the receipts below):
 python3 select-dependency.py registry 0.8.0-beta.2
 cargo test --features openapi-acceptance
 python3 select-dependency.py registry 0.8.0
@@ -76,7 +76,8 @@ cargo test --features openapi-acceptance
 ```
 
 Do not enable `openapi-acceptance` against beta.1: its core feature does not exist.
-The future version commands are **planned**, not receipts. Cargo.lock should be
+Commands alone are not receipts; see the published beta.2 and stable receipts
+below for actual completed acceptance. Cargo.lock should be
 saved with each recorded resolution. Switching source/registry changes the lock;
 run the shown unlocked resolution once and then use `--locked` for repeat checks.
 Do not pair the old registry lock with the source manifest. In each resolution, the exact core/derive registry versions and
@@ -120,5 +121,12 @@ compile checks are migration evidence, not application adoption.
 
 The [beta.2 registry receipt](BETA2-REGISTRY.md) records actual published-package
 application/OpenAPI acceptance, independent repeats and archive verification.
-Earlier beta.1/source records above remain historical; stable 0.8.0 commands are
-still planned until their own publication and acceptance receipts exist.
+Earlier beta.1/source records above remain historical.
+
+## Published stable 0.8.0 follow-up
+
+The [stable registry receipt](STABLE-REGISTRY.md) records the actual 0.8.0
+publication, archive verification, author and independent registry-only
+application/OpenAPI checks, locked repeats and migration probes. The commands
+above now reproduce published versions; they do not themselves establish a
+successful run or turn first-party synthetic inputs into outside adoption.

@@ -22,7 +22,7 @@ Schemas can describe API documentation and tool arguments. Use model parsing at 
 The optional `dynamic` feature uses `jsonschema` to compile and reuse schemas at runtime. Network and file resolution are disabled in the default dependency configuration; local `$ref` references are supported.
 
 ```toml
-rydantic = { version = "=0.7.0", features = ["dynamic"] }
+rydantic = { version = "=0.8.0", features = ["dynamic"] }
 ```
 
 ```rust
@@ -49,11 +49,11 @@ This is not an OpenAPI/Protobuf generator or a drop-in replacement for `datamode
 
 ## OpenAPI 3.1 model components (0.8 contract)
 
-The optional `openapi` feature provides model-component assembly. It is published
-in core 0.8.0-beta.2 and retained in the unpublished 0.8.0 stable candidate; it is
-not included in stable 0.7.0 or core beta.1. For the verified prerelease, use
-`rydantic = { version = "=0.8.0-beta.2", features = ["openapi"] }`.
-See [release status](/reference/releases) before selecting a stable candidate pin.
+The optional `openapi` feature provides model-component assembly. It was first published
+in core 0.8.0-beta.2 and included in stable 0.8.0; it is
+not included in stable 0.7.0 or core beta.1. For stable 0.8.0, use
+`rydantic = { version = "=0.8.0", features = ["openapi"] }`.
+See [release status](/reference/releases) for verification and migration guidance.
 
 ```rust
 use rydantic::{schema::openapi::OpenApiComponents, Model, SchemaMode};

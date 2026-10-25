@@ -49,14 +49,14 @@ Integrations are opt-in Cargo features. The default `derive` feature covers the 
 
 ## Start with a validated model
 
-Installation snapshot prepared on **2026-10-25 before 0.8.0 publication**: this
-example selects the then-current **0.7.0 stable release**. Consult the
-[live release record](https://rydantic.mintlify.site/reference/releases) for the
-current stable version and verify registry availability before installation:
+The default installation selects **0.8.0 stable**. Consult the
+[live release record](https://rydantic.mintlify.site/reference/releases) and
+[stable registry receipt](https://github.com/trotsky1997/Rydantic/blob/main/acceptance/core-0.8/STABLE-REGISTRY.md)
+for publication and independent verification before installation:
 
 ```toml
 [dependencies]
-rydantic = "=0.7.0"
+rydantic = "=0.8.0"
 ```
 
 ```rust
@@ -97,8 +97,8 @@ The development source adds [PDF document inputs](https://rydantic.mintlify.site
 Enable features on the version you selected:
 
 ```toml
-# 0.7.0 HTTP + PostgreSQL installation snapshot (see live release status)
-rydantic = { version = "=0.7.0", features = ["axum", "postgres"] }
+# 0.8.0 HTTP + PostgreSQL (see live release status)
+rydantic = { version = "=0.8.0", features = ["axum", "postgres"] }
 ```
 
 | Build with | Features | Guide |

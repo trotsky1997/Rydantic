@@ -28,7 +28,7 @@
       },
       {
         "label": "Rust API",
-        "href": "https://docs.rs/rydantic/0.7.0/rydantic/"
+        "href": "https://docs.rs/rydantic/0.8.0/rydantic/"
       }
     ],
     "primary": {

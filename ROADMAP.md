@@ -9,9 +9,9 @@ what users can install.
 
 ## Baseline, not future work
 
-- **Core 0.7.0 stable** remains the default and Latest release. Runtime and derive
+- **Core 0.8.0 stable** is now the default and Latest release. Runtime and derive
   are published together with an exact derive dependency. See the
-  [stable release](https://github.com/trotsky1997/Rydantic/releases/tag/v0.7.0).
+  [stable release](https://github.com/trotsky1997/Rydantic/releases/tag/v0.8.0).
 - **Core 0.8.0-beta.2** is a published, verified opt-in prerelease, not a stable
   promotion. Ordered callback lists, per-call context and typed pipelines are
   implemented, not a future feature wishlist. See [#72](https://github.com/trotsky1997/Rydantic/issues/72),
@@ -25,17 +25,18 @@ what users can install.
 - **RydanticAI 0.6.0** is independently published. PDF inputs and the refreshed
   tutorials merged in [#75](https://github.com/trotsky1997/Rydantic/pull/75), but
   the PDF API is not in the published 0.6.0 package. The workspace AI source now
-  depends on candidate core `=0.8.0`; this does not republish or change the old package.
+  depends on core `=0.8.0`; this does not republish or change the old package.
 - CLI and codegen remain unpublished source tools. Agent evaluation infrastructure
   exists, but no measured agent-performance improvement is established.
 - An open issue is not proof of an unimplemented defect. Existing repair and
   verification links must be checked before scheduling duplicate work. This
   roadmap does not close issues or resolve review threads.
 
-## Now: P0 — stabilize the core 0.8 contract
+## Completed: P0 — stabilize the core 0.8 contract
 
-**Outcome:** determine whether the published beta is ready for a stable promotion
-without enlarging its scope merely to fill a version milestone.
+**Outcome:** core 0.8.0 is published and independently verified without enlarging
+the beta.2 runtime contract. Stable receipt: [stable registry acceptance](acceptance/core-0.8/STABLE-REGISTRY.md).
+Exact source: `337c8b05798fa4d02eb75359ba9c9980901949df`; publication: https://github.com/trotsky1997/Rydantic/actions/runs/40203697840.
 
 Acceptance evidence:
 
@@ -68,19 +69,19 @@ actual OpenAPI request/response components and migration probes. The
 [record](acceptance/core-0.8/VALIDATION.md) separates source from published beta.1,
 independent reruns from author results, and synthetic input from outside adoption.
 This is a bounded first-party interpretation of the concrete-integration gate,
-not an external-adopter claim or a substitute for the remaining platform/package gates.
+not an external-adopter claim or a substitute for the platform/package gates
+recorded separately in the final stable receipt: [stable registry acceptance](acceptance/core-0.8/STABLE-REGISTRY.md).
 No library contract failure was confirmed by this bounded integration.
 
-The current source is prepared as an equivalent **0.8.0 stable candidate**, not
-a published stable release. Beta.2 was published and independently verified with
-fresh registry-only application and migration checks; see the
-[receipt](acceptance/core-0.8/BETA2-REGISTRY.md). Promotion changes only paired
-versions, metadata and documentation, not runtime behavior. Stable remains 0.7.0
-until 0.8.0 publication and fresh registry acceptance are actually verified. Compatibility, breaking migration notes, paired pins, exact-main CI and
-package/registry receipts remain mandatory, tracked in
-[#105](https://github.com/trotsky1997/Rydantic/issues/105).
+Core **0.8.0 stable** follows the independently verified beta.2 with paired-version,
+metadata and documentation changes only, not new runtime behavior. Compatibility,
+breaking migration notes, paired pins, exact-source CI and package/registry receipts
+are recorded in [the stable receipt](acceptance/core-0.8/STABLE-REGISTRY.md) and
+[#105](https://github.com/trotsky1997/Rydantic/issues/105). The synthetic first-party
+integration evidence remains bounded, not external adoption.
 
-**Dependencies:** beta usage evidence and the layered verification below.
+**Acceptance basis:** beta usage evidence and the layered verification below,
+with final stable evidence recorded at [stable registry acceptance](acceptance/core-0.8/STABLE-REGISTRY.md).
 The existing package and synthetic-test receipts are a starting point, not a
 substitute for the usage-feedback gate. See the
 [context guide](docs/models/validation-context.mdx) and
