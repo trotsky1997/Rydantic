@@ -1,4 +1,4 @@
-use crate::{diagnostic, fail, input, Args, Report, Result, KNOWLEDGE, LIMIT};
+use crate::{diagnostic, fail, input, Args, Report, Result, LIMIT};
 use serde_json::{json, Value};
 use std::path::Path;
 
@@ -50,11 +50,11 @@ pub fn run(a: &Args) -> Result<Report> {
     if codes.len() > 100 {
         return Err(limit());
     }
-    let known = version == "0.6.0";
-    let knowledge: Value = serde_json::from_str(KNOWLEDGE).expect("bundled knowledge is valid");
+    let knowledge = crate::knowledge(version);
+    let known = knowledge.is_some();
     let mut explanations = vec![];
     for code in codes {
-        if known {
+        if let Some(knowledge) = &knowledge {
             if let Some(e) = knowledge["explanations"].get(&code) {
                 explanations.push(json!({"code":code,"known":true,"message":e["message"],"next_action":e["next_action"]}));
                 continue;
@@ -64,7 +64,7 @@ pub fn run(a: &Args) -> Result<Report> {
         explanations.push(json!({"code":"unknown","known":false,"message":"No verified Rydantic explanation is available. Original diagnostic content is not echoed."}));
     }
     let mut report = Report::new(
-        json!({"core_version":if known{json!(version)}else{Value::Null},"knowledge_version":if known{json!(1)}else{Value::Null},"explanations":explanations,"project_code_executed":false}),
+        json!({"core_version":if known{json!(version)}else{Value::Null},"knowledge_version":knowledge.as_ref().map(|k| k["knowledge_version"].clone()).unwrap_or(Value::Null),"explanations":explanations,"project_code_executed":false}),
     );
     if !known {
         report.exit = 3;

@@ -63,7 +63,8 @@ the desired alternative and preserve final typed validation where it is required
 Select [stable 0.7.0](stable-0.7.0.md) only for that exact core/derive pair.
 It additionally provides `settings`, `partial-json`, `phone`, `country` and
 `currency`; the 0.6.0 absences above must not be applied to 0.7.0. The optional
-CLI still supports only 0.6.0 knowledge. Track-specific manifests, locks and
+CLI supports exact 0.6.0 and 0.7.0 knowledge; check capabilities for older builds.
+Track-specific manifests, locks and
 feature lists are recorded in [compatibility data](../compatibility.json).
 Do not replace frozen evaluation cohorts when adding a newer supported track.
 
