@@ -6,6 +6,7 @@
   async/context integration, authentication or transport resource limits.
 - This is source-only, **not available in published 0.8.0**. No existing API or
   stored-data migration is changed; no new version is published by this change.
+- Optional `grpc` custom tonic codec carries existing unpacked Cap’n Proto models over unary gRPC. Adds finite message/traversal/nesting limits, explicit request preflight, redacted validation statuses and a loopback example. Not native Cap’n Proto RPC or protobuf interoperability. This is not included in the immutable 0.8.0 registry packages; no new release is claimed. See [the protocol and security boundaries](docs/integrations/grpc-capnp.mdx).
 
 # Rydantic 0.8.0 · Stable
 

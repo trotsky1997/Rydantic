@@ -139,7 +139,8 @@
             "group": "Binary protocols",
             "pages": [
               "integrations/capnp",
-              "integrations/existing-capnp"
+              "integrations/existing-capnp",
+              "integrations/grpc-capnp"
             ]
           }
         ]

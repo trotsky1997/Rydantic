@@ -28,6 +28,7 @@ phone = ["dep:phonenumber"]
 country = ["dep:rust_iso3166"]
 currency = ["dep:iso_currency"]
 capnp = ["dep:capnp", "rydantic-derive?/capnp"]
+grpc = ["capnp", "dep:tonic", "dep:bytes"]
 axum = ["dep:axum"]
 sqlx = ["dep:sqlx", "dep:sha2"]
 sqlite = ["sqlx", "sqlx/sqlite-bundled"]
@@ -54,7 +55,11 @@ axum = { version = "0.8.9", default-features = false, features = ["json", "tokio
 sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio"], optional = true }
 sha2 = { version = "0.10", optional = true }
 
+tonic = { version = "0.14.6", default-features = false, features = ["codegen", "transport", "router"], optional = true }
+bytes = { version = "1", optional = true }
+
 [dev-dependencies]
+tokio-stream = { version = "0.1", features = ["net"] }
 jsonschema.workspace = true
 trybuild = "1"
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "time", "net", "io-util"] }
@@ -90,3 +95,7 @@ required-features = ["derive", "openapi"]
 [[example]]
 name = "jsonrpc"
 required-features = ["derive", "jsonrpc"]
+
+[[example]]
+name = "grpc_capnp"
+required-features = ["derive", "grpc"]
