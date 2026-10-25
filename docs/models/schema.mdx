@@ -47,11 +47,13 @@ The workspace also contains [`rydantic-codegen`](https://github.com/trotsky1997/
 
 This is not an OpenAPI/Protobuf generator or a drop-in replacement for `datamodel-code-generator`. Unsupported keywords and references are rejected rather than silently ignored; generated models still require ordinary Rydantic validation. The [tool guide](https://github.com/trotsky1997/Rydantic/blob/main/crates/rydantic-codegen/README.md) documents accepted inputs and safe output handling, including writing to a new temporary file so a failed command does not truncate an existing destination.
 
-## OpenAPI 3.1 model components (unreleased)
+## OpenAPI 3.1 model components (0.8 contract)
 
-The repository's optional `openapi` feature provides model-component assembly.
-It is not included in published stable 0.7.0 or core 0.8.0-beta.1. Use a reviewed
-repository checkout; no new package version is implied by this documentation.
+The optional `openapi` feature provides model-component assembly. It is published
+in core 0.8.0-beta.2 and retained in the unpublished 0.8.0 stable candidate; it is
+not included in stable 0.7.0 or core beta.1. For the verified prerelease, use
+`rydantic = { version = "=0.8.0-beta.2", features = ["openapi"] }`.
+See [release status](/reference/releases) before selecting a stable candidate pin.
 
 ```rust
 use rydantic::{schema::openapi::OpenApiComponents, Model, SchemaMode};

@@ -6,10 +6,22 @@ icon: "tag"
 
 For planned work and acceptance gates, see the canonical [project roadmap](https://github.com/trotsky1997/Rydantic/blob/main/ROADMAP.md). Published records describe delivered versions; entries explicitly marked source candidate are not publication receipts or roadmap commitments.
 
-## 0.8.0-beta.2 · Source candidate, not a publication receipt
+## 0.8.0 · Stable candidate, not published
+
+This candidate preserves the independently verified beta.2 runtime contract;
+only paired versions, metadata and documentation change. Runtime and derive must
+match exactly `0.8.0`. Do not install that pin until both packages are published
+and independently verified. Public stable/default remains **0.7.0**.
+
+The breaking 0.7.x migration warning below still applies. Exact-candidate CI,
+package comparison and fresh stable registry acceptance remain required. The
+[beta.2 receipt](https://github.com/trotsky1997/Rydantic/blob/main/acceptance/core-0.8/BETA2-REGISTRY.md)
+is supporting evidence, not a stable publication receipt.
+
+## 0.8.0-beta.2 · Published prerelease
 
 Core 0.8 remains on the prerelease channel; default/stable stays **0.7.0**.
-This source candidate retains callback/context/pipeline contracts and adds the
+Published on 2026-10-25, beta.2 retains callback/context/pipeline contracts and adds the
 existing optional OpenAPI component feature to the package scope. It is not route
 inference, full document validation, or portable execution of arbitrary callbacks.
 
@@ -17,8 +29,12 @@ A [first-party application](https://github.com/trotsky1997/Rydantic/tree/main/ac
 now exercises real loopback HTTP, explicit request policy, model parse/revalidation/dump,
 fail-fast pipelines and isolated SQLite commit/rollback. Its synthetic inputs and
 maintainer-operated checks are not outside adoption. Exact source and published
-beta.1 results are recorded separately; beta.2 registry verification is still a
-required step before stable promotion. See [release readiness #105](https://github.com/trotsky1997/Rydantic/issues/105).
+beta.1 results are recorded separately. Beta.2 publication and registry acceptance
+were independently verified: three common application tests plus one OpenAPI test
+in normal and locked modes, and four migration probes. See the
+[publication workflow](https://github.com/trotsky1997/Rydantic/actions/runs/40199734576),
+[release](https://github.com/trotsky1997/Rydantic/releases/tag/v0.8.0-beta.2) and
+[detailed receipt](https://github.com/trotsky1997/Rydantic/blob/main/acceptance/core-0.8/BETA2-REGISTRY.md). See [release readiness #105](https://github.com/trotsky1997/Rydantic/issues/105).
 
 **Breaking upgrade from 0.7.x:** `Context` loses `UnwindSafe`/`RefUnwindSafe`, even
 without data. Construct/use it inside a suitable `catch_unwind` closure instead of
@@ -29,7 +45,7 @@ provide rollback or prove model validity. Transforms/checks can change accepted
 or emitted data. Review behavior and back up your own data/deployment; no automatic
 or lossless persisted-data migration is promised.
 
-The candidate version and links do not prove registry availability. Only core and
+Publication and independent registry checks are distinct from source metadata. Only core and
 derive are in this release scope; AI publication, CLI distribution and provider
 Agent trials remain independent. Existing published notes below remain historical.
 

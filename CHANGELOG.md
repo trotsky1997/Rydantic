@@ -1,9 +1,27 @@
-# Rydantic 0.8.0-beta.2 · Candidate (not published)
+# Rydantic 0.8.0 · Stable candidate (not published)
 
-This is a planned breaking prerelease of core `rydantic` and `rydantic-derive`.
+This candidate promotes the verified 0.8.0-beta.2 core runtime contract with no
+new runtime behavior. Only paired versions, metadata and documentation change;
+`rydantic` pins `rydantic-derive` to exactly `=0.8.0`. Public stable/default remains
+0.7.0 until the 0.8.0 publication and fresh registry acceptance are verified.
+
+The breaking 0.7.x migration and data/deployment boundaries documented below still
+apply, including loss of context unwind auto-traits, explicit per-operation context,
+shared side effects and no automatic/lossless persisted-data migration. Review and
+back up your own data and deployment; no compatibility layer is added.
+
+Beta.2 package and concrete first-party application evidence is recorded in
+[the registry receipt](acceptance/core-0.8/BETA2-REGISTRY.md). Exact stable-candidate
+CI, package comparison, paired pins, publication checksums and fresh registry-only
+consumers remain release gates; beta evidence is not a stable publication receipt.
+AI, CLI distribution, frozen Skills/evals and provider campaigns remain separate.
+
+# Rydantic 0.8.0-beta.2 · Published prerelease
+
+Published on 2026-10-25 as a breaking prerelease of core `rydantic` and `rydantic-derive`.
 Stable/default remains 0.7.0 until the distinct 0.8.0 registry promotion is verified.
 Runtime and derive must use matching 0.8.0-beta.2 versions and an exact derive pin.
-Do not interpret this candidate note as a publication or registry-acceptance receipt.
+The [publication workflow](https://github.com/trotsky1997/Rydantic/actions/runs/40199734576) succeeded for the exact source tagged `v0.8.0-beta.2` ([source tag](https://github.com/trotsky1997/Rydantic/tree/v0.8.0-beta.2), commit prefix `0a84`). See the [beta.2 release](https://github.com/trotsky1997/Rydantic/releases/tag/v0.8.0-beta.2) and [beta.2 registry acceptance](acceptance/core-0.8/BETA2-REGISTRY.md).
 
 ## Since published beta.1
 
@@ -43,10 +61,13 @@ explicitly. The project acceptance harness never operates production data.
 The [application acceptance record](acceptance/core-0.8/VALIDATION.md) records
 first-party source and published beta.1 integration checks plus independent
 reruns. This is a bounded engineering interpretation of concrete-application
-feedback, not a claim of outside adoption. Final beta.2 source CI, package contents,
-matching pins, publication checksums and fresh registry-only acceptance remain
-separate required receipts; the preparation PR does not pre-claim them.
-Beta.2 registry application acceptance is a prerequisite to an equivalent stable
+feedback, not a claim of outside adoption. Beta.2 publication, API/index/download/local package checksums, paired pins,
+fresh registry-only application checks (three common tests plus one OpenAPI test,
+normal and locked) and four migration probes were verified by the author and an
+independent reviewer. These are first-party synthetic application results, not
+outside adoption. Detailed receipts are linked above.
+Completed beta.2 registry application acceptance supports, but does not replace
+the final source/package/registry gates for, an equivalent stable
 0.8.0 promotion. AI, CLI distribution and provider-based Agent campaigns remain
 separate tracks, not implicit achievements of this core release.
 

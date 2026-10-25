@@ -17,7 +17,7 @@ default = ["http"]
 http = ["dep:reqwest", "dep:axum", "dep:futures-util", "dep:tokio-stream", "dep:tracing-subscriber", "dep:sha2"]
 
 [dependencies]
-rydantic = { version = "=0.8.0-beta.2", path = "../rydantic", features = ["partial-json"] }
+rydantic = { version = "=0.8.0", path = "../rydantic", features = ["partial-json"] }
 serde.workspace = true
 serde_json.workspace = true
 base64 = "0.22"
