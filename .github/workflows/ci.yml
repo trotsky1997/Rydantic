@@ -42,6 +42,7 @@ jobs:
           persist-credentials: false
       - run: rustup toolchain install 1.98.1 --profile minimal
       - run: python3 -m unittest discover -s scripts -p 'test_release*.py' -v
+      - run: python3 -m unittest discover -s scripts -p 'test_source_checkout.py' -v
       - name: Check agent toolkit packaging and evaluation harness
         run: |
           python3 -m unittest discover -s scripts -p 'test_agent_toolkit.py' -v
@@ -57,9 +58,23 @@ jobs:
     env:
       RUSTUP_TOOLCHAIN: 1.98.1
       CARGO_TERM_COLOR: always
+      # Retain assertions/coverage; omit bulky debug and incremental artifacts.
+      CARGO_INCREMENTAL: "0"
+      CARGO_PROFILE_DEV_DEBUG: "0"
+      CARGO_PROFILE_TEST_DEBUG: "0"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
+      # Trusted CI only: this full-history checkout is not an Agent-trial sandbox.
+      # Credentials stay within checkout; Cargo fetches verified local Git objects.
+      - name: Check out the pinned source track
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: trotsky1997/Rydantic
+          ref: 60067205276e314653f46a75c213ec1756c7ad7c
+          path: .ci-source-6006720
+          fetch-depth: 0
           persist-credentials: false
       - name: Install the tested Rust toolchain
         run: rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy
@@ -71,6 +86,8 @@ jobs:
       - name: Install Cap'n Proto compiler (macOS)
         if: runner.os == 'macOS'
         run: brew install capnp
+      - name: Observe available disk before builds
+        run: df -h .
       - name: Check formatting
         run: cargo fmt --all -- --check
       - name: Test models, schema parity, compile diagnostics and documentation
@@ -86,10 +103,12 @@ jobs:
           cargo test --manifest-path skills/rydantic/assets/stable-0.6.0/Cargo.toml --locked
           cargo test --manifest-path skills/rydantic/assets/stable-0.7.0/Cargo.toml --locked
       - name: Verify exact-source agent Skill consumer
-        run: cargo test --manifest-path skills/rydantic/assets/source-6006720/Cargo.toml --locked
+        run: |
+          python3 scripts/with_source_checkout.py .ci-source-6006720 -- cargo fetch --manifest-path skills/rydantic/assets/source-6006720/Cargo.toml --locked
+          cargo test --manifest-path skills/rydantic/assets/source-6006720/Cargo.toml --locked --offline
       - name: Verify exact-source evaluation harness controls
         run: |
-          cargo fetch --manifest-path evals/rydantic-agent/packs/source-60067205276e314653f46a75c213ec1756c7ad7c/tasks/source-context-policy/Cargo.toml --locked
+          python3 scripts/with_source_checkout.py .ci-source-6006720 -- cargo fetch --manifest-path evals/rydantic-agent/packs/source-60067205276e314653f46a75c213ec1756c7ad7c/tasks/source-context-policy/Cargo.toml --locked
           python3 evals/rydantic-agent/tests/smoke_source_context.py --cargo "$(rustup which --toolchain 1.98.1 cargo)" --rustc "$(rustup which --toolchain 1.98.1 rustc)"
       - name: Clippy
         run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
@@ -160,6 +179,14 @@ jobs:
           cargo run --locked --quiet -p rydantic --example sqlite_api --features axum,sqlite -- --smoke
           cargo run --locked --quiet -p rydantic --example database_api --features axum,sqlite -- --smoke
           cargo run --locked --quiet -p rydantic --example automatic_migrations --features sqlite
+
+      - name: Observe final build footprint
+        if: always()
+        run: |
+          df -h .
+          for directory in target .ci-source-6006720; do
+            if [ -d "$directory" ]; then du -sh "$directory"; fi
+          done
 
   compiler-paths-windows:
     name: Compiler paths / Windows
