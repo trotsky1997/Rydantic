@@ -26,7 +26,7 @@ clarity, but all commands are always offline. It is not an OS sandbox.
   explicit workspace member manifests and DIR/Cargo.lock. Schema paths are
   relative to the current working directory, not DIR. Only local-rule annotation
   presence is inspected; neither schema validity nor portability is established.
-- `explain CODE --core-version VERSION`: consults bundled exact 0.6.0 knowledge.
+- `explain CODE --core-version VERSION`: consults bundled exact 0.6.0 or 0.7.0 knowledge.
 - `explain --diagnostics FILE --input-format envelope|validation-errors|cargo
   --core-version VERSION`: explicitly reads CLI v1 envelopes, Rydantic error
   arrays, or Cargo NDJSON. Cargo compiler diagnostics are unknown rather than
@@ -58,13 +58,21 @@ transitive packages, feature activation, target selection or actual Rust APIs.
 `resolution`, `build`, `tests` remain `unknown`; resolved/verified feature sets are
 null. `project_code_executed` is false.
 
-The bundled feature set is grounded in the published 0.6.0 package. An exact
-`=0.6.0` registry declaration can be checked against that release's feature set
+The bundled feature sets are grounded in the published 0.6.0 and 0.7.0 packages.
+An exact `=0.6.0` or `=0.7.0` registry declaration is checked against its own release's feature set
 (unless a patch/replace/alternative registry or observed Cargo config makes that inference unknown).
 A range such as `0.6` is not upgraded to exact knowledge merely because a possibly
-stale lockfile contains 0.6.0. Path/git dependencies, unknown versions and patched
+stale lockfile contains a supported version. Each dependency declaration selects its own
+knowledge; mixed-version workspaces do not share one feature set. Path/git dependencies, unknown versions and patched
 sources receive unknown knowledge. Requested invalid stable features fail with 3.
 This check describes the declared release, not proof of the code Cargo would load.
+0.7.0 includes `settings`, `partial-json`, `phone`, `country` and `currency`;
+0.6.0 does not. Neither published version includes the later `openapi` feature.
+An exact source revision or beta version does not select stable knowledge merely
+because its version looks similar. `supported_lock_candidate` indicates only a
+recorded candidate version with bundled knowledge, never verified provenance.
+The common diagnostic explanations are version-selected, not a complete catalog
+of every error code in either release. Unknown codes remain redacted/unknown.
 
 Full workspace discovery remains incomplete in P0; `explicit_manifest_reads_complete` only describes the explicit reads. Workspace globs and external/parent member paths (including escaping symlinks) are not expanded. Exclusions
 are not evaluated, and their presence marks discovery incomplete; explicit
