@@ -1,0 +1,1086 @@
+[
+  {
+    "source": "three_fix",
+    "case": "flat_valid",
+    "alloc": "alloc_count=20 alloc_bytes=1529\n",
+    "accepted": true,
+    "output": {
+      "active": true,
+      "id": 42,
+      "name": "Ada"
+    },
+    "errors": []
+  },
+  {
+    "source": "four_fix",
+    "case": "flat_valid",
+    "alloc": "alloc_count=18 alloc_bytes=905\n",
+    "accepted": true,
+    "output": {
+      "active": true,
+      "id": 42,
+      "name": "Ada"
+    },
+    "errors": []
+  },
+  {
+    "source": "three_fix",
+    "case": "nested_valid",
+    "alloc": "alloc_count=34 alloc_bytes=3005\n",
+    "accepted": true,
+    "output": {
+      "tags": [
+        "rust",
+        "python",
+        "validation"
+      ],
+      "user": {
+        "active": true,
+        "id": 42,
+        "name": "Ada"
+      }
+    },
+    "errors": []
+  },
+  {
+    "source": "four_fix",
+    "case": "nested_valid",
+    "alloc": "alloc_count=30 alloc_bytes=1813\n",
+    "accepted": true,
+    "output": {
+      "tags": [
+        "rust",
+        "python",
+        "validation"
+      ],
+      "user": {
+        "active": true,
+        "id": 42,
+        "name": "Ada"
+      }
+    },
+    "errors": []
+  },
+  {
+    "source": "three_fix",
+    "case": "collection_100",
+    "alloc": "alloc_count=1421 alloc_bytes=144385\n",
+    "accepted": true,
+    "output": {
+      "items": [
+        {
+          "active": true,
+          "id": 0,
+          "name": "person-0"
+        },
+        {
+          "active": true,
+          "id": 1,
+          "name": "person-1"
+        },
+        {
+          "active": true,
+          "id": 2,
+          "name": "person-2"
+        },
+        {
+          "active": true,
+          "id": 3,
+          "name": "person-3"
+        },
+        {
+          "active": true,
+          "id": 4,
+          "name": "person-4"
+        },
+        {
+          "active": true,
+          "id": 5,
+          "name": "person-5"
+        },
+        {
+          "active": true,
+          "id": 6,
+          "name": "person-6"
+        },
+        {
+          "active": true,
+          "id": 7,
+          "name": "person-7"
+        },
+        {
+          "active": true,
+          "id": 8,
+          "name": "person-8"
+        },
+        {
+          "active": true,
+          "id": 9,
+          "name": "person-9"
+        },
+        {
+          "active": true,
+          "id": 10,
+          "name": "person-10"
+        },
+        {
+          "active": true,
+          "id": 11,
+          "name": "person-11"
+        },
+        {
+          "active": true,
+          "id": 12,
+          "name": "person-12"
+        },
+        {
+          "active": true,
+          "id": 13,
+          "name": "person-13"
+        },
+        {
+          "active": true,
+          "id": 14,
+          "name": "person-14"
+        },
+        {
+          "active": true,
+          "id": 15,
+          "name": "person-15"
+        },
+        {
+          "active": true,
+          "id": 16,
+          "name": "person-16"
+        },
+        {
+          "active": true,
+          "id": 17,
+          "name": "person-17"
+        },
+        {
+          "active": true,
+          "id": 18,
+          "name": "person-18"
+        },
+        {
+          "active": true,
+          "id": 19,
+          "name": "person-19"
+        },
+        {
+          "active": true,
+          "id": 20,
+          "name": "person-20"
+        },
+        {
+          "active": true,
+          "id": 21,
+          "name": "person-21"
+        },
+        {
+          "active": true,
+          "id": 22,
+          "name": "person-22"
+        },
+        {
+          "active": true,
+          "id": 23,
+          "name": "person-23"
+        },
+        {
+          "active": true,
+          "id": 24,
+          "name": "person-24"
+        },
+        {
+          "active": true,
+          "id": 25,
+          "name": "person-25"
+        },
+        {
+          "active": true,
+          "id": 26,
+          "name": "person-26"
+        },
+        {
+          "active": true,
+          "id": 27,
+          "name": "person-27"
+        },
+        {
+          "active": true,
+          "id": 28,
+          "name": "person-28"
+        },
+        {
+          "active": true,
+          "id": 29,
+          "name": "person-29"
+        },
+        {
+          "active": true,
+          "id": 30,
+          "name": "person-30"
+        },
+        {
+          "active": true,
+          "id": 31,
+          "name": "person-31"
+        },
+        {
+          "active": true,
+          "id": 32,
+          "name": "person-32"
+        },
+        {
+          "active": true,
+          "id": 33,
+          "name": "person-33"
+        },
+        {
+          "active": true,
+          "id": 34,
+          "name": "person-34"
+        },
+        {
+          "active": true,
+          "id": 35,
+          "name": "person-35"
+        },
+        {
+          "active": true,
+          "id": 36,
+          "name": "person-36"
+        },
+        {
+          "active": true,
+          "id": 37,
+          "name": "person-37"
+        },
+        {
+          "active": true,
+          "id": 38,
+          "name": "person-38"
+        },
+        {
+          "active": true,
+          "id": 39,
+          "name": "person-39"
+        },
+        {
+          "active": true,
+          "id": 40,
+          "name": "person-40"
+        },
+        {
+          "active": true,
+          "id": 41,
+          "name": "person-41"
+        },
+        {
+          "active": true,
+          "id": 42,
+          "name": "person-42"
+        },
+        {
+          "active": true,
+          "id": 43,
+          "name": "person-43"
+        },
+        {
+          "active": true,
+          "id": 44,
+          "name": "person-44"
+        },
+        {
+          "active": true,
+          "id": 45,
+          "name": "person-45"
+        },
+        {
+          "active": true,
+          "id": 46,
+          "name": "person-46"
+        },
+        {
+          "active": true,
+          "id": 47,
+          "name": "person-47"
+        },
+        {
+          "active": true,
+          "id": 48,
+          "name": "person-48"
+        },
+        {
+          "active": true,
+          "id": 49,
+          "name": "person-49"
+        },
+        {
+          "active": true,
+          "id": 50,
+          "name": "person-50"
+        },
+        {
+          "active": true,
+          "id": 51,
+          "name": "person-51"
+        },
+        {
+          "active": true,
+          "id": 52,
+          "name": "person-52"
+        },
+        {
+          "active": true,
+          "id": 53,
+          "name": "person-53"
+        },
+        {
+          "active": true,
+          "id": 54,
+          "name": "person-54"
+        },
+        {
+          "active": true,
+          "id": 55,
+          "name": "person-55"
+        },
+        {
+          "active": true,
+          "id": 56,
+          "name": "person-56"
+        },
+        {
+          "active": true,
+          "id": 57,
+          "name": "person-57"
+        },
+        {
+          "active": true,
+          "id": 58,
+          "name": "person-58"
+        },
+        {
+          "active": true,
+          "id": 59,
+          "name": "person-59"
+        },
+        {
+          "active": true,
+          "id": 60,
+          "name": "person-60"
+        },
+        {
+          "active": true,
+          "id": 61,
+          "name": "person-61"
+        },
+        {
+          "active": true,
+          "id": 62,
+          "name": "person-62"
+        },
+        {
+          "active": true,
+          "id": 63,
+          "name": "person-63"
+        },
+        {
+          "active": true,
+          "id": 64,
+          "name": "person-64"
+        },
+        {
+          "active": true,
+          "id": 65,
+          "name": "person-65"
+        },
+        {
+          "active": true,
+          "id": 66,
+          "name": "person-66"
+        },
+        {
+          "active": true,
+          "id": 67,
+          "name": "person-67"
+        },
+        {
+          "active": true,
+          "id": 68,
+          "name": "person-68"
+        },
+        {
+          "active": true,
+          "id": 69,
+          "name": "person-69"
+        },
+        {
+          "active": true,
+          "id": 70,
+          "name": "person-70"
+        },
+        {
+          "active": true,
+          "id": 71,
+          "name": "person-71"
+        },
+        {
+          "active": true,
+          "id": 72,
+          "name": "person-72"
+        },
+        {
+          "active": true,
+          "id": 73,
+          "name": "person-73"
+        },
+        {
+          "active": true,
+          "id": 74,
+          "name": "person-74"
+        },
+        {
+          "active": true,
+          "id": 75,
+          "name": "person-75"
+        },
+        {
+          "active": true,
+          "id": 76,
+          "name": "person-76"
+        },
+        {
+          "active": true,
+          "id": 77,
+          "name": "person-77"
+        },
+        {
+          "active": true,
+          "id": 78,
+          "name": "person-78"
+        },
+        {
+          "active": true,
+          "id": 79,
+          "name": "person-79"
+        },
+        {
+          "active": true,
+          "id": 80,
+          "name": "person-80"
+        },
+        {
+          "active": true,
+          "id": 81,
+          "name": "person-81"
+        },
+        {
+          "active": true,
+          "id": 82,
+          "name": "person-82"
+        },
+        {
+          "active": true,
+          "id": 83,
+          "name": "person-83"
+        },
+        {
+          "active": true,
+          "id": 84,
+          "name": "person-84"
+        },
+        {
+          "active": true,
+          "id": 85,
+          "name": "person-85"
+        },
+        {
+          "active": true,
+          "id": 86,
+          "name": "person-86"
+        },
+        {
+          "active": true,
+          "id": 87,
+          "name": "person-87"
+        },
+        {
+          "active": true,
+          "id": 88,
+          "name": "person-88"
+        },
+        {
+          "active": true,
+          "id": 89,
+          "name": "person-89"
+        },
+        {
+          "active": true,
+          "id": 90,
+          "name": "person-90"
+        },
+        {
+          "active": true,
+          "id": 91,
+          "name": "person-91"
+        },
+        {
+          "active": true,
+          "id": 92,
+          "name": "person-92"
+        },
+        {
+          "active": true,
+          "id": 93,
+          "name": "person-93"
+        },
+        {
+          "active": true,
+          "id": 94,
+          "name": "person-94"
+        },
+        {
+          "active": true,
+          "id": 95,
+          "name": "person-95"
+        },
+        {
+          "active": true,
+          "id": 96,
+          "name": "person-96"
+        },
+        {
+          "active": true,
+          "id": 97,
+          "name": "person-97"
+        },
+        {
+          "active": true,
+          "id": 98,
+          "name": "person-98"
+        },
+        {
+          "active": true,
+          "id": 99,
+          "name": "person-99"
+        }
+      ]
+    },
+    "errors": []
+  },
+  {
+    "source": "four_fix",
+    "case": "collection_100",
+    "alloc": "alloc_count=1219 alloc_bytes=81473\n",
+    "accepted": true,
+    "output": {
+      "items": [
+        {
+          "active": true,
+          "id": 0,
+          "name": "person-0"
+        },
+        {
+          "active": true,
+          "id": 1,
+          "name": "person-1"
+        },
+        {
+          "active": true,
+          "id": 2,
+          "name": "person-2"
+        },
+        {
+          "active": true,
+          "id": 3,
+          "name": "person-3"
+        },
+        {
+          "active": true,
+          "id": 4,
+          "name": "person-4"
+        },
+        {
+          "active": true,
+          "id": 5,
+          "name": "person-5"
+        },
+        {
+          "active": true,
+          "id": 6,
+          "name": "person-6"
+        },
+        {
+          "active": true,
+          "id": 7,
+          "name": "person-7"
+        },
+        {
+          "active": true,
+          "id": 8,
+          "name": "person-8"
+        },
+        {
+          "active": true,
+          "id": 9,
+          "name": "person-9"
+        },
+        {
+          "active": true,
+          "id": 10,
+          "name": "person-10"
+        },
+        {
+          "active": true,
+          "id": 11,
+          "name": "person-11"
+        },
+        {
+          "active": true,
+          "id": 12,
+          "name": "person-12"
+        },
+        {
+          "active": true,
+          "id": 13,
+          "name": "person-13"
+        },
+        {
+          "active": true,
+          "id": 14,
+          "name": "person-14"
+        },
+        {
+          "active": true,
+          "id": 15,
+          "name": "person-15"
+        },
+        {
+          "active": true,
+          "id": 16,
+          "name": "person-16"
+        },
+        {
+          "active": true,
+          "id": 17,
+          "name": "person-17"
+        },
+        {
+          "active": true,
+          "id": 18,
+          "name": "person-18"
+        },
+        {
+          "active": true,
+          "id": 19,
+          "name": "person-19"
+        },
+        {
+          "active": true,
+          "id": 20,
+          "name": "person-20"
+        },
+        {
+          "active": true,
+          "id": 21,
+          "name": "person-21"
+        },
+        {
+          "active": true,
+          "id": 22,
+          "name": "person-22"
+        },
+        {
+          "active": true,
+          "id": 23,
+          "name": "person-23"
+        },
+        {
+          "active": true,
+          "id": 24,
+          "name": "person-24"
+        },
+        {
+          "active": true,
+          "id": 25,
+          "name": "person-25"
+        },
+        {
+          "active": true,
+          "id": 26,
+          "name": "person-26"
+        },
+        {
+          "active": true,
+          "id": 27,
+          "name": "person-27"
+        },
+        {
+          "active": true,
+          "id": 28,
+          "name": "person-28"
+        },
+        {
+          "active": true,
+          "id": 29,
+          "name": "person-29"
+        },
+        {
+          "active": true,
+          "id": 30,
+          "name": "person-30"
+        },
+        {
+          "active": true,
+          "id": 31,
+          "name": "person-31"
+        },
+        {
+          "active": true,
+          "id": 32,
+          "name": "person-32"
+        },
+        {
+          "active": true,
+          "id": 33,
+          "name": "person-33"
+        },
+        {
+          "active": true,
+          "id": 34,
+          "name": "person-34"
+        },
+        {
+          "active": true,
+          "id": 35,
+          "name": "person-35"
+        },
+        {
+          "active": true,
+          "id": 36,
+          "name": "person-36"
+        },
+        {
+          "active": true,
+          "id": 37,
+          "name": "person-37"
+        },
+        {
+          "active": true,
+          "id": 38,
+          "name": "person-38"
+        },
+        {
+          "active": true,
+          "id": 39,
+          "name": "person-39"
+        },
+        {
+          "active": true,
+          "id": 40,
+          "name": "person-40"
+        },
+        {
+          "active": true,
+          "id": 41,
+          "name": "person-41"
+        },
+        {
+          "active": true,
+          "id": 42,
+          "name": "person-42"
+        },
+        {
+          "active": true,
+          "id": 43,
+          "name": "person-43"
+        },
+        {
+          "active": true,
+          "id": 44,
+          "name": "person-44"
+        },
+        {
+          "active": true,
+          "id": 45,
+          "name": "person-45"
+        },
+        {
+          "active": true,
+          "id": 46,
+          "name": "person-46"
+        },
+        {
+          "active": true,
+          "id": 47,
+          "name": "person-47"
+        },
+        {
+          "active": true,
+          "id": 48,
+          "name": "person-48"
+        },
+        {
+          "active": true,
+          "id": 49,
+          "name": "person-49"
+        },
+        {
+          "active": true,
+          "id": 50,
+          "name": "person-50"
+        },
+        {
+          "active": true,
+          "id": 51,
+          "name": "person-51"
+        },
+        {
+          "active": true,
+          "id": 52,
+          "name": "person-52"
+        },
+        {
+          "active": true,
+          "id": 53,
+          "name": "person-53"
+        },
+        {
+          "active": true,
+          "id": 54,
+          "name": "person-54"
+        },
+        {
+          "active": true,
+          "id": 55,
+          "name": "person-55"
+        },
+        {
+          "active": true,
+          "id": 56,
+          "name": "person-56"
+        },
+        {
+          "active": true,
+          "id": 57,
+          "name": "person-57"
+        },
+        {
+          "active": true,
+          "id": 58,
+          "name": "person-58"
+        },
+        {
+          "active": true,
+          "id": 59,
+          "name": "person-59"
+        },
+        {
+          "active": true,
+          "id": 60,
+          "name": "person-60"
+        },
+        {
+          "active": true,
+          "id": 61,
+          "name": "person-61"
+        },
+        {
+          "active": true,
+          "id": 62,
+          "name": "person-62"
+        },
+        {
+          "active": true,
+          "id": 63,
+          "name": "person-63"
+        },
+        {
+          "active": true,
+          "id": 64,
+          "name": "person-64"
+        },
+        {
+          "active": true,
+          "id": 65,
+          "name": "person-65"
+        },
+        {
+          "active": true,
+          "id": 66,
+          "name": "person-66"
+        },
+        {
+          "active": true,
+          "id": 67,
+          "name": "person-67"
+        },
+        {
+          "active": true,
+          "id": 68,
+          "name": "person-68"
+        },
+        {
+          "active": true,
+          "id": 69,
+          "name": "person-69"
+        },
+        {
+          "active": true,
+          "id": 70,
+          "name": "person-70"
+        },
+        {
+          "active": true,
+          "id": 71,
+          "name": "person-71"
+        },
+        {
+          "active": true,
+          "id": 72,
+          "name": "person-72"
+        },
+        {
+          "active": true,
+          "id": 73,
+          "name": "person-73"
+        },
+        {
+          "active": true,
+          "id": 74,
+          "name": "person-74"
+        },
+        {
+          "active": true,
+          "id": 75,
+          "name": "person-75"
+        },
+        {
+          "active": true,
+          "id": 76,
+          "name": "person-76"
+        },
+        {
+          "active": true,
+          "id": 77,
+          "name": "person-77"
+        },
+        {
+          "active": true,
+          "id": 78,
+          "name": "person-78"
+        },
+        {
+          "active": true,
+          "id": 79,
+          "name": "person-79"
+        },
+        {
+          "active": true,
+          "id": 80,
+          "name": "person-80"
+        },
+        {
+          "active": true,
+          "id": 81,
+          "name": "person-81"
+        },
+        {
+          "active": true,
+          "id": 82,
+          "name": "person-82"
+        },
+        {
+          "active": true,
+          "id": 83,
+          "name": "person-83"
+        },
+        {
+          "active": true,
+          "id": 84,
+          "name": "person-84"
+        },
+        {
+          "active": true,
+          "id": 85,
+          "name": "person-85"
+        },
+        {
+          "active": true,
+          "id": 86,
+          "name": "person-86"
+        },
+        {
+          "active": true,
+          "id": 87,
+          "name": "person-87"
+        },
+        {
+          "active": true,
+          "id": 88,
+          "name": "person-88"
+        },
+        {
+          "active": true,
+          "id": 89,
+          "name": "person-89"
+        },
+        {
+          "active": true,
+          "id": 90,
+          "name": "person-90"
+        },
+        {
+          "active": true,
+          "id": 91,
+          "name": "person-91"
+        },
+        {
+          "active": true,
+          "id": 92,
+          "name": "person-92"
+        },
+        {
+          "active": true,
+          "id": 93,
+          "name": "person-93"
+        },
+        {
+          "active": true,
+          "id": 94,
+          "name": "person-94"
+        },
+        {
+          "active": true,
+          "id": 95,
+          "name": "person-95"
+        },
+        {
+          "active": true,
+          "id": 96,
+          "name": "person-96"
+        },
+        {
+          "active": true,
+          "id": 97,
+          "name": "person-97"
+        },
+        {
+          "active": true,
+          "id": 98,
+          "name": "person-98"
+        },
+        {
+          "active": true,
+          "id": 99,
+          "name": "person-99"
+        }
+      ]
+    },
+    "errors": []
+  }
+]
