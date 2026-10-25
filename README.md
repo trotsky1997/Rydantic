@@ -168,3 +168,11 @@ Found a bug? [Open an issue](https://github.com/trotsky1997/Rydantic/issues) wit
 ---
 
 [MIT license](https://github.com/trotsky1997/Rydantic/blob/main/LICENSE)
+
+## Performance comparisons
+
+The [Rydantic / Pydantic benchmark suite](benchmarks/pydantic/README.md) checks
+shared fixture semantics before measuring JSON parse + validation, and reports
+predecoded copy + validation separately. It records raw samples and provenance;
+CI checks correctness, not speed. Known semantic differences are explicit and
+excluded from comparative timings. No universal performance ranking is implied.
