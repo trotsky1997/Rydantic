@@ -1,0 +1,1 @@
+PASS: all 49 rows manually recomputed; 294 oracle results; 205 source hashes match committed candidate; binary hashes and separate optimized non-fresh build artifacts match; original source snapshot checked against862907a2; corpus/lockfile/worker identical; gzip lossless.
