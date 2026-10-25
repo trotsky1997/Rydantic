@@ -1,0 +1,5 @@
+42 vs 0: Greater, alloc_count=0, alloc_bytes=0, as_i128=Some(42)/Some(0)
+42 vs 1000000000: Less, alloc_count=0, alloc_bytes=0, as_i128=Some(42)/Some(1000000000)
+42.0 vs 0: Greater, alloc_count=3, alloc_bytes=24, as_i128=None/Some(0)
+-0 vs 0: Equal, alloc_count=0, alloc_bytes=0, as_i128=Some(0)/Some(0)
+170141183460469231731687303715884105728 vs 42: Greater, alloc_count=7, alloc_bytes=175, as_i128=None/Some(42)

@@ -1,0 +1,20 @@
+use std::alloc::{GlobalAlloc, Layout, System};
+use std::sync::atomic::{AtomicUsize,Ordering};
+struct Counter;
+static COUNT: AtomicUsize=AtomicUsize::new(0);
+static BYTES: AtomicUsize=AtomicUsize::new(0);
+unsafe impl GlobalAlloc for Counter {
+ unsafe fn alloc(&self,l:Layout)->*mut u8 {COUNT.fetch_add(1,Ordering::Relaxed);BYTES.fetch_add(l.size(),Ordering::Relaxed);System.alloc(l)}
+ unsafe fn dealloc(&self,p:*mut u8,l:Layout){System.dealloc(p,l)}
+ unsafe fn realloc(&self,p:*mut u8,l:Layout,n:usize)->*mut u8 {COUNT.fetch_add(1,Ordering::Relaxed);BYTES.fetch_add(n,Ordering::Relaxed);System.realloc(p,l,n)}
+}
+#[global_allocator] static ALLOC:Counter=Counter;
+fn main() {
+ for (a,b) in [("42","0"),("42","1000000000"),("42.0","0"),("-0","0"),("170141183460469231731687303715884105728","42")] {
+ let a:serde_json::Number=a.parse().unwrap(); let b:serde_json::Number=b.parse().unwrap();
+ let c=COUNT.load(Ordering::Relaxed); let bytes=BYTES.load(Ordering::Relaxed);
+ let result=std::hint::black_box(rydantic::rules::compare_numbers(std::hint::black_box(&a),std::hint::black_box(&b)));
+ let count=COUNT.load(Ordering::Relaxed)-c;let bytes=BYTES.load(Ordering::Relaxed)-bytes;
+ println!("{a} vs {b}: {result:?}, alloc_count={count}, alloc_bytes={bytes}, as_i128={:?}/{:?}",a.as_i128(),b.as_i128());
+ }
+}
