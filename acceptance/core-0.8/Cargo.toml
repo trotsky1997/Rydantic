@@ -1,0 +1,16 @@
+[package]
+name = "rydantic-core-080-acceptance"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[features]
+# Enabled only for candidates that actually contain OpenAPI support.
+openapi-acceptance = ["rydantic/openapi"]
+
+[dependencies]
+rydantic = { path = "../../crates/rydantic", features = ["axum", "sqlite"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "io-util", "time"] }
+serde_json = "1"
