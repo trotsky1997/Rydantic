@@ -1,0 +1,24 @@
+use std::alloc::{GlobalAlloc, Layout, System};
+use std::sync::atomic::{AtomicUsize,Ordering};
+struct Counter;
+static COUNT: AtomicUsize=AtomicUsize::new(0);
+static BYTES: AtomicUsize=AtomicUsize::new(0);
+unsafe impl GlobalAlloc for Counter {
+ unsafe fn alloc(&self,l:Layout)->*mut u8 {COUNT.fetch_add(1,Ordering::Relaxed);BYTES.fetch_add(l.size(),Ordering::Relaxed);System.alloc(l)}
+ unsafe fn dealloc(&self,p:*mut u8,l:Layout){System.dealloc(p,l)}
+ unsafe fn realloc(&self,p:*mut u8,l:Layout,n:usize)->*mut u8 {COUNT.fetch_add(1,Ordering::Relaxed);BYTES.fetch_add(n,Ordering::Relaxed);System.realloc(p,l,n)}
+}
+#[global_allocator] static ALLOC:Counter=Counter;
+
+use rydantic::{JsonType,Context,Value};
+fn main(){
+ for text in ["42","-0","42.0","4.2e1","9223372036854775808","340282366920938463463374607431768211455","0e999999999999999999999999"] {
+  for kind in ["i64","u128"] {
+   let value:Value=serde_json::from_str(text).unwrap();let mut ctx=Context::new();
+   let c=COUNT.load(Ordering::Relaxed);let b=BYTES.load(Ordering::Relaxed);
+   let accepted=if kind=="i64" { std::hint::black_box(i64::decode(std::hint::black_box(value),&mut ctx,false)).is_some() }else{std::hint::black_box(u128::decode(std::hint::black_box(value),&mut ctx,false)).is_some()};
+   let count=COUNT.load(Ordering::Relaxed)-c;let bytes=BYTES.load(Ordering::Relaxed)-b;
+   println!("{kind}({text}): accepted={accepted}, {count} calls / {bytes} bytes");
+  }
+ }
+}
