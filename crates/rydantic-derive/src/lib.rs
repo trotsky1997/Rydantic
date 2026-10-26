@@ -347,6 +347,7 @@ fn parse_shape(
     container: &attrs::Container,
     mode: &Mode,
     tag: ::core::option::Option<&str>,
+    fixed_slots: bool,
 ) -> Tokens {
     let rd = mode.rd;
     let tr = mode.tr();
@@ -363,7 +364,9 @@ fn parse_shape(
         let ty = &field.ty;
         let input = &field.input;
         let has_default = field.attr.has_default();
-        let raw = if shape == Shape::Named {
+        let raw = if fixed_slots {
+            quote!(match __rydantic_fields.as_mut(){Some(fields)=>fields.values[#i].take().map(#rd::Input::Borrowed),None=>__rydantic_object.remove(#input)})
+        } else if shape == Shape::Named {
             if field.attr.flatten || field.attr.extra {
                 quote! {{let names=<#ty as #rd::ObjectType>::field_names(#rd::SchemaMode::Input,&mut ::std::collections::HashSet::new());
                     let capture=<#ty as #rd::ObjectType>::captures_extra(&mut ::std::collections::HashSet::new());
@@ -395,8 +398,30 @@ fn parse_shape(
     }
     let first = parses.iter().map(|(_, a, _)| a);
     let last = parses.iter().map(|(_, _, b)| b);
-    let unknown=(!container.ignore_extra&&shape==Shape::Named).then(||quote!{for (key,_) in __rydantic_object{__rydantic_ctx.at(key,|ctx|ctx.push(#rd::ValidationError::new("extra_forbidden","unknown field").with_stage(#rd::Stage::Parse)));}});
+    let unknown_keys = if fixed_slots {
+        quote!(__rydantic_fields
+            .into_iter()
+            .flat_map(|fields| fields.unknown)
+            .chain(__rydantic_object.into_keys()))
+    } else {
+        quote!(__rydantic_object.into_keys())
+    };
+    let unknown=(!container.ignore_extra&&shape==Shape::Named).then(||quote!{for key in #unknown_keys{__rydantic_ctx.at(key,|ctx|ctx.push(#rd::ValidationError::new("extra_forbidden","unknown field").with_stage(#rd::Stage::Parse)));}});
     let setup = match shape {
+        Shape::Named if fixed_slots => {
+            let indices = fields.iter().enumerate().map(|(i, field)| {
+                let name = &field.input;
+                quote!(#name => Some(#i),)
+            });
+            let ignore = container.ignore_extra;
+            quote! {
+                let mut __rydantic_object=::std::collections::BTreeMap::new();
+                let mut __rydantic_fields=match __rydantic_raw{
+                    #rd::Input::Borrowed(raw)=>Some(#rd::__private::borrowed_fields(raw,__rydantic_ctx,#count,|key|match key{#(#indices)* _=>None},#ignore)?),
+                    raw=>{__rydantic_object=raw.object(__rydantic_ctx)?;None}
+                };
+            }
+        }
         Shape::Named => {
             let check = layout_check(fields, rd, tag);
             quote! {let mut __rydantic_object=__rydantic_raw.object(__rydantic_ctx)?;#check}
@@ -661,7 +686,13 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
             let fields = fields(&data.fields, None, &container)?;
             let shape = shape(&data.fields);
             let ctor = constructor(&fields, shape, quote!(Self));
-            let decode = parse_shape(&fields, shape, ctor, &container, &mode, None);
+            // Keep one field-validation body (including its rule caches) for both
+            // inputs. Only fixed named structs can replace borrowed maps with slots.
+            let fixed_slots = shape == Shape::Named
+                && !fields
+                    .iter()
+                    .any(|field| field.attr.flatten || field.attr.extra);
+            let decode = parse_shape(&fields, shape, ctor, &container, &mode, None, fixed_slots);
             let values = fields
                 .iter()
                 .map(|f| {
@@ -785,7 +816,7 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
                 asyncs.push(quote!(#pat=>{#checks}));
                 schemas.push(schema);
                 if container.untagged {
-                    let body = parse_shape(fields, *shape, ctor, &container, &mode, None);
+                    let body = parse_shape(fields, *shape, ctor, &container, &mode, None, false);
                     decodes.push(quote!{
                         {let mut trial=__rydantic_ctx.trial();let result={let __rydantic_ctx=&mut trial;let __rydantic_raw=__rydantic_raw.clone();(||{#body})()};
                         match trial.finish(result){Ok(value)=>return Some(value),Err(errors)=>__rydantic_branches.push(#rd::__private::serde_json::json!({"variant":#wire,"errors":errors.to_json()}))}}
@@ -798,6 +829,7 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
                         &container,
                         &mode,
                         container.tag.as_deref(),
+                        false,
                     );
                     decodes.push(quote!(#wire=>{let __rydantic_raw=#rd::Input::Object(__rydantic_object);#body}));
                 } else {
@@ -1040,6 +1072,66 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
 #[cfg(test)]
 mod static_layout_tests {
     use super::*;
+
+    #[test]
+    fn fixed_named_slots_stage_raw_values_and_keep_the_map_body() {
+        let inputs: [DeriveInput; 4] = [
+            parse_quote!(
+                struct Plain {
+                    id: i64,
+                    name: String,
+                }
+            ),
+            parse_quote!(
+                struct Empty {}
+            ),
+            parse_quote!(
+                struct Generic<'a, T> {
+                    name: &'a str,
+                    value: T,
+                }
+            ),
+            parse_quote!(
+                #[model(extra = "ignore")]
+                struct Ignore {
+                    id: i64,
+                }
+            ),
+        ];
+        for input in inputs {
+            let container = attrs::container(&input.attrs).unwrap();
+            let fields = parsed(input, None).unwrap();
+            let rd = quote!(rydantic);
+            let mode = Mode {
+                rd: &rd,
+                borrow: false,
+            };
+            let slots = parse_shape(
+                &fields,
+                Shape::Named,
+                quote!(Self),
+                &container,
+                &mode,
+                None,
+                true,
+            )
+            .to_string();
+            assert!(slots.contains("borrowed_fields"), "{slots}");
+            assert!(slots.contains("object (__rydantic_ctx)"), "{slots}");
+            let map = parse_shape(
+                &fields,
+                Shape::Named,
+                quote!(Self),
+                &container,
+                &mode,
+                None,
+                false,
+            )
+            .to_string();
+            assert!(map.contains("object (__rydantic_ctx)"), "{map}");
+            assert!(!map.contains("borrowed_fields"), "{map}");
+        }
+    }
 
     fn parsed(input: DeriveInput, tag: Option<&str>) -> syn::Result<Vec<Field>> {
         let Data::Struct(data) = &input.data else {
