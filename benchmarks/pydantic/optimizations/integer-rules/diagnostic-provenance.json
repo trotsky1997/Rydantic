@@ -1,0 +1,1886 @@
+{
+  "format_version": 1,
+  "purpose": "build-attested final-source diagnostic evidence",
+  "started": "2026-10-26T04:19:09.635141+00:00",
+  "finished": "2026-10-26T04:19:13.220638+00:00",
+  "intervals": {
+    "rule_allocations_start": "2026-10-26T04:19:09.635160+00:00",
+    "rule_allocations_finish": "2026-10-26T04:19:09.638493+00:00",
+    "parse_allocations_start": "2026-10-26T04:19:09.648289+00:00",
+    "parse_allocations_finish": "2026-10-26T04:19:09.858931+00:00",
+    "rule_timing_start": "2026-10-26T04:19:09.858951+00:00",
+    "rule_timing_finish": "2026-10-26T04:19:13.170575+00:00"
+  },
+  "builds": {
+    "baseline": {
+      "format_version": 1,
+      "purpose": "diagnostic probe build attestation",
+      "root": "artifact:baseline-root",
+      "manifest": "artifact:baseline-manifest",
+      "target_dir": "artifact:baseline-target_dir",
+      "source_snapshot": {
+        "Cargo.lock": "dd7537cef1d5234dc2593fce4049f357d96d4b5eb706dd2bd79f4bcd3e46ef78",
+        "Cargo.toml": "0934ca294e9ba6d37405ca1cfcab0772ca0ed3cab00a95f9d2bf5844c46d07c8",
+        "benchmarks/pydantic/fixtures.json": "496714c89278e70533708e2df18bfbad40b2841c9382f06398ae00b3637d8436",
+        "benchmarks/pydantic/python_worker.py": "238a4d0bd347c9cc07f88b6ae64fbf11dcdeec64b6a4597c6871cc00a6ea0052",
+        "benchmarks/pydantic/requirements.txt": "be5ed0699785ea00935aa814ab740e4e01c9decdd8a4dea4d468358ae52382ce",
+        "benchmarks/pydantic/run.py": "24100b90278408edddb777a9b5a1ae69e6972703dca94e50385012ff057570cd",
+        "benchmarks/pydantic/test_harness.py": "d97ec586990a73b373fec0c324443028783d7d2c88a994acc9eccb5b89b3bf75",
+        "crates/rydantic/Cargo.toml": "870a568a1b303ce02cecd48ba545d29c2e4f1cecd1540a0d68cb6ae5ee41660f",
+        "crates/rydantic/examples/asynchronous.rs": "fe2d366a84d9d693b0f931c86359656198f6c14318c3bf708ab1e4879d9f87aa",
+        "crates/rydantic/examples/auto_capnp.rs": "1d05411039fdfd7eb03e7aca02b777e0d31771aace501ae41b94f9dae2d822a9",
+        "crates/rydantic/examples/automatic_migrations.rs": "85af5012399d281bd7405ecceba01e6c981af54896ed90eb85ed5561fe09ed3f",
+        "crates/rydantic/examples/borrowed.rs": "28e6349ca491e11d1abece7d791ad048aa880109588fa56c68d3bb73af375fd9",
+        "crates/rydantic/examples/data_contract.rs": "e4c296d2f0d1ed4ccd6f0fccdc2903ca8283624fee784fbf7db63c7db52cf70f",
+        "crates/rydantic/examples/database_api.rs": "be09dc8e6ecf3936704be7da66a601a0e2bbe7908afe7f7ca9c679c4a7e80f85",
+        "crates/rydantic/examples/dates_decimal.rs": "bb03cafa856e2f24d8dccf2335a36a99ff5d3f9134c79aa8a02100a13e4fa00c",
+        "crates/rydantic/examples/grpc_capnp.rs": "0bed137ace5c07537273370650deccaf7f3edba996b3bc849793d7366e5b19c0",
+        "crates/rydantic/examples/jsonrpc.rs": "d581badca3d8a339d962cc5ba799274045283b3899a17d772bcbcb07bf72f17d",
+        "crates/rydantic/examples/openapi_components.rs": "0e6b4f1a1b4859c5d5962f9d8b8f1fc75d8ff6d9523aaaf5209eb52d76d5b8a7",
+        "crates/rydantic/examples/pydantic_benchmark.rs": "2feadcbdf0565871ed1b79b5f8dc1426c97790fd0b1ab5415a61f1388eb4c771",
+        "crates/rydantic/examples/sqlite_api.rs": "67319411fb763fbe7fe9557891959224550c8df75e9e829bd4c32e6a14bd339e",
+        "crates/rydantic/examples/streaming.rs": "9bd7875404892e5c0a7065059553bea76f745fcc24c0274d2a34565c134c0891",
+        "crates/rydantic/examples/tool_call.rs": "82a37536d9c02ea0423a1964d49c5d4303532bf7cdfe166872049eb75e9ef1f8",
+        "crates/rydantic/examples/user.rs": "a568649ce0fddcb94583e90e719ae19dc4cdf5a53b8efba32878d49715e32f7d",
+        "crates/rydantic/src/asynchronous.rs": "2c1e54fa0036db54203e5f768eba2792c667d76bdc9ac783c79769d9b87e1320",
+        "crates/rydantic/src/axum.rs": "b2ed732d7f790b5529897b66959e25035e31187498784ca58ad866ba5cd95d1d",
+        "crates/rydantic/src/borrowed.rs": "5647b41dbd043498ddf6d0ed915be5495f35d87ed3edde419ba76b0e1a18b4d2",
+        "crates/rydantic/src/capnp_support.rs": "a8394e5b3668836a09c21aea9100cbe0328a16f52db6be975c0e40434ca094a3",
+        "crates/rydantic/src/dates.rs": "965bc53fbbabba06d763b7a58d3419bb5ba724509bcb8c53a11104ae06f0639b",
+        "crates/rydantic/src/decimal.rs": "ab9df6809ae8f3b3d3e7c8d60e94fe2b458d4861203a66ef123badc345cf08cb",
+        "crates/rydantic/src/direct.rs": "9c4b26df1ee937bba78fc3f96c57ffc5993c87d114b4edb1874fe75ce10e1af1",
+        "crates/rydantic/src/domain.rs": "0ba2b9db949d06a9bd0f15328deccca4fe51a7ceb52947d28d023a529a898522",
+        "crates/rydantic/src/dynamic.rs": "7028c16cabe017b2c79ba198ed0e54ef857e15fb1fd5a162af5d665ea92b2bbb",
+        "crates/rydantic/src/error.rs": "d5ac8b14a90711d5aebe6a8947e8f2e9ab24b07dc3998c1def221e7e589a4266",
+        "crates/rydantic/src/grpc.rs": "81b089991bc64821cb0f515d74bf08bb6ecc6b62df9d97c2e95f58f66c8dc4a5",
+        "crates/rydantic/src/jsonrpc.rs": "2dd8a4350fadad2ae448fee7a6b83ddcb60554b3d44fac8eb1860a0bb8b760ec",
+        "crates/rydantic/src/lib.rs": "e84ebba633fdf70d37cda9465303c10acc4fb7b7d6251476e2c21015e6e1d88b",
+        "crates/rydantic/src/object.rs": "734bdc09e84dc29a12b958e79aa7974adcc7e6685d50898f18f961c9d8490899",
+        "crates/rydantic/src/partial_json.rs": "d1d05bbc6d1acb2c1a1e12d4a3d16312c749da6ef2c07582ca5655af936269d0",
+        "crates/rydantic/src/pipeline.rs": "14e175618e7f9ce7e6d317c9146177939c8f8b64561d2810b9050b593407862d",
+        "crates/rydantic/src/rules.rs": "13a1510a8ba64088ab7a8e39aeeaf31f4c323093667f644477d852a559079047",
+        "crates/rydantic/src/schema/mod.rs": "9eb774fda2d7fbb753d5d19a4f5fbf97ed5b29cb28d8769945f864b7b083a34f",
+        "crates/rydantic/src/schema/openapi.rs": "151c42f5d24a723ade8f74ebc5994d2ad7be34068f03e9ae46aedcd6ef9be77c",
+        "crates/rydantic/src/settings.rs": "8c218d0d948e1be362acbd564403055f3fb446af407e5d176169c1e9e9f44bd5",
+        "crates/rydantic/src/sql/backend.rs": "cd4a07e27d2fbd4abac09934e8a33baefc157a3d26851c8413b10f96377cf0cf",
+        "crates/rydantic/src/sql/ddl.rs": "9d9caa21cfee8aa40fa4b136491a9ec79c080682b7358e1035c889edecd53f3b",
+        "crates/rydantic/src/sql/migration/catalog.rs": "390210647eb847f3133204d765a5109a64c04a76e610328a3a779f208d7f6e8f",
+        "crates/rydantic/src/sql/migration/mod.rs": "658bbc05e07016882365ef07f591883ca3d45a7d93de22016c95497095cd2921",
+        "crates/rydantic/src/sql/migration/plan.rs": "726e4c001ece66a0bdc5102c74abcb2041ca2e950451cab4b2429d91fcc3899c",
+        "crates/rydantic/src/sql/mod.rs": "9b20833a68627429df6e2310e6e82989a63bd6fbcd34b72ce983e422202abcbe",
+        "crates/rydantic/src/sql/parameter.rs": "4e9456efaca0cfbcd2909065396d1c58530423e9f7c095fdb55972032227b7f9",
+        "crates/rydantic/src/sql/query.rs": "8dc3139e2d0bf27e8e83ecc85e09fd0b39e5239234ee54c29c9c5b48b00a046d",
+        "crates/rydantic/src/sql/table.rs": "19df1d3df8986710a1633f89b9290103211d18c5ae4b4f73990eb8abee14b007",
+        "crates/rydantic/src/stream.rs": "67ce559562d9b103694825540d2125d1d6b10f69796aac8b6e91b11396a64246",
+        "crates/rydantic/src/types.rs": "33abaf434bb2af91b03e31aa7e00ef387978eb9227a3358f49161a068812913e",
+        "crates/rydantic/tests/async_stream.rs": "c9b9923a7796c2116ce8b9ca9b6c20d6346a9e371eac979791c938fcf8d5361a",
+        "crates/rydantic/tests/axum.rs": "93e19434fe480c8541ba7fb3f758bd2dfdc163ed50b1c211fa98e6e64657564e",
+        "crates/rydantic/tests/borrowed_contracts.rs": "5eefd6520fccaac89ac6db50c6b9a6c3c9b3c65e7c1030460b6f4625c2d24f90",
+        "crates/rydantic/tests/call_context.rs": "3ccd03590d470d21310ba1ffd71e24c84c6867c76079a063c6ded0fea9c10175",
+        "crates/rydantic/tests/callback_context_derive.rs": "2c8a8140842756315920bd2ff8ceb3cabe642613743461d0f24998ef72dd3359",
+        "crates/rydantic/tests/callback_hygiene.rs": "cc24e7031bfa4f008503f5b0a74cfdb7441c2d8f6402bcb65d2bc0b5cf786770",
+        "crates/rydantic/tests/callback_lists.rs": "2795418d41be7ead008fc42ea02572e47cba82c2b7162a21233691fbfab8361e",
+        "crates/rydantic/tests/collection_contracts.rs": "07407aac794cf882f7970ed02d0dbadac9275656eeb70203003cfac3753c51d3",
+        "crates/rydantic/tests/compile.rs": "59076e9802f2e23c6cb60fe74bd3df6271248780de347ade33dd8919dfeac808",
+        "crates/rydantic/tests/core_contracts.rs": "755e578e2cb15863b9c9305168f9d6050603126cb0ef1357d2769e47c1b0b091",
+        "crates/rydantic/tests/dates_decimal.rs": "54a706bf1dc4806b74e92eced98b77918a581f56bd4c68bfd79b36ebd9520e60",
+        "crates/rydantic/tests/domain.rs": "f5d988c3e246d13dc51d7d8a23a8933d1c3d8f355674be89426b7004b80349b8",
+        "crates/rydantic/tests/dynamic.rs": "313372c181e2888f2a06bd527030f38c60fa921f660c550666d86d9d8799daae",
+        "crates/rydantic/tests/features.rs": "7a5fceba3a97481e8c0b78ab6222564047da6b0e49f7c35f8dd2744a0f7b80ed",
+        "crates/rydantic/tests/grpc.rs": "60ec2ce81c0fc0ba09e6bf0f2d22b06207207edb61fe483055cba8ae2b85dca9",
+        "crates/rydantic/tests/http_sql.rs": "09bda9c2388f61f440cbae33de039320e647ca611570b92276fbcca29732edf6",
+        "crates/rydantic/tests/integer_decode.rs": "00d88d636f7e6ba3dbba7d298af9ad691d1c54f0db573185f7a2bfc9fbf262d3",
+        "crates/rydantic/tests/integer_exponents.rs": "43cbfcfa4e1550fd1ae053551a23b9f8a067a9681ff796fbb7893b4a4e13df99",
+        "crates/rydantic/tests/jsonrpc.rs": "bd9f1abc82e6baa48397e4375988a7b61f2d336e4d019f29e7dcaa1e4dfef767",
+        "crates/rydantic/tests/migration_safety.rs": "8b84ab012e655791e03d977b481d4d1977ea53130322f682253bbb6c3d1aae4c",
+        "crates/rydantic/tests/migrations.rs": "a18b676ea291a3a3afd894cbfec0cb6e1b19a71463d0b0ba95f7ed7a7db88c63",
+        "crates/rydantic/tests/models.rs": "ab14db82a7558fd944332a7074da05ee95db59a89ba5e58308562e4326f2db29",
+        "crates/rydantic/tests/number_comparison.rs": "aabc761e0591518068214d9e7045502ba296d15c4042115534b775bcc6121a80",
+        "crates/rydantic/tests/object_materialization.rs": "c2debd83b5e1fc127490b8c5c2a040bf58a854928fda754e3c7930b890f2a45d",
+        "crates/rydantic/tests/openapi.rs": "6822c8267967f0f17a3a25ed584b67c8c1091714acaca88d03e8e519251fccaf",
+        "crates/rydantic/tests/partial_json.rs": "db83e64b5dc8a2560bb088f323da12da9d2a80da50adeba2641479831abcac5e",
+        "crates/rydantic/tests/raw_input.rs": "3638fff96de2f8c4adb688481a564ba67ba57df63e26e6347f0526e5d3c88fdf",
+        "crates/rydantic/tests/schema.rs": "45eb77653e7ae80cabcce6fcc7977a5a34f98f41f0348c84dc4c5a73e182857f",
+        "crates/rydantic/tests/schema_paths.rs": "adf7a2abb216dd9c4458ad0309326a7d2145a0347fb723780ee214a26cf5a930",
+        "crates/rydantic/tests/server_databases.rs": "23974afaecb91563dbb80bfa8d490e0d7e689fdb6493ebb522209c302b35417e",
+        "crates/rydantic/tests/settings.rs": "472c4bb3f236ec0e0af3b6b681ec23f790c692e41fdf82aff2687946e70d5da5",
+        "crates/rydantic/tests/sql_regressions.rs": "10c426d5c1ebb754e2b8f36d3da0fbf563ef3398fbbbf1c19af38f475929b2fc",
+        "crates/rydantic/tests/sqlite.rs": "4951a4462837b3ad30859cc0124a1cc14bab80689d7868265d230910106c1070",
+        "crates/rydantic/tests/static_layout.rs": "ea3210d23362cd0d949d1c54207e01f9543319f7b4250d3d24dbf29682f1ba9e",
+        "crates/rydantic/tests/stream_failures.rs": "1cccf7a3692b869be4e320ac2607b1397ec8d62df8d7605c41853d6fdd626b93",
+        "crates/rydantic/tests/typed_pipeline.rs": "7dd45a6648a26bd7ad2102e7bed89989a6b8fd6b1e8720cb4e989997aeb40c07",
+        "crates/rydantic/tests/ui/borrow_escapes.rs": "88a5c2192475fe2940b8f732ab1da0a1d1765e815446a8225cd2859025286efd",
+        "crates/rydantic/tests/ui/callback_lists.rs": "e196c1c6dbb0f34c275f811a708c03932d389707bb83e28a58c587edf7a767af",
+        "crates/rydantic/tests/ui/contradictory_length.rs": "19dcbc6d0422ad4543e722a0a91ddfaecc8ec562ea99543ef6a901ce1eb8008b",
+        "crates/rydantic/tests/ui/duplicate_alias.rs": "2c38ffe59603a7b8dd9ca464da8eb950615b64160aa2cf38741b27ba2502b6dd",
+        "crates/rydantic/tests/ui/extra_storage.rs": "e42c7a93f62ce32d784ffe094418aa0f14682f5fa7b079d5217dd53fa52bdc6d",
+        "crates/rydantic/tests/ui/extra_type.rs": "de96505d3017d8eb136e29fe46be9b364087a986208c3b95b0c4112c355f6622",
+        "crates/rydantic/tests/ui/invalid_regex.rs": "33df1095082e464df6500af3524e8b45707cd387b01a07cc6a35e3486f1d7aef",
+        "crates/rydantic/tests/ui/readonly.rs": "596f0047640d467540bda1c5030d37768fb855e3a9c8283d36ec6c847ef7e7d1",
+        "crates/rydantic/tests/ui/tag_untagged.rs": "b2ff761c4739e9c98e35e8eec2112f2baaaf0744838dadb49dd3b8062304ebfe",
+        "crates/rydantic/tests/ui/tuple_excluded.rs": "8d264b822c1a02414ccc01631d8075285cae7bce063e4cc25e781194f9ba4629",
+        "crates/rydantic/tests/ui/unknown_attribute.rs": "6107d6f8581ae92dbf5baa9e1af232e64be8657919dfb10f68b477db2fb1e635",
+        "crates/rydantic/tests/ui/wrong_type.rs": "4a67aca9a101e6a1a0c3ecc8ccd88381b644c81fd97d6218cdc0b945af63d735",
+        "crates/rydantic/tests/ui-capnp/cfg_active_generic.rs": "c02ab7d4a607a00e3705f704c19bdb22fbaa6968a36be1a6d789a5e0f8787bdc",
+        "crates/rydantic/tests/ui-capnp/duplicate_field.rs": "48756e0d35e1352499f166c1c6815bc89196f9d7c35d6449f8d1724c77e66cfa",
+        "crates/rydantic/tests/ui-capnp/duplicate_ordinal.rs": "ac9c2a331e262a0a4f8e3dd51db85f7dfab5705c278db9ef30d4438339d56660",
+        "crates/rydantic/tests/ui-capnp/external_module.rs": "98f2ded7ed914689046b96e7b6d9f11a23179761f597c11eb1ad320a1d1cbe2e",
+        "crates/rydantic/tests/ui-capnp/gap_ordinal.rs": "9cceff70d6b6cf551fb1b28a5b8c67165aba2e7f36d6779ca5ad1964baad95a4",
+        "crates/rydantic/tests/ui-capnp/generic_model.rs": "778e79e13a6eddf1fd89a0f41a66a013dad8d59583a6d72bc49b44c8aa3fb4e4",
+        "crates/rydantic/tests/ui-capnp/low_schema_id.rs": "49a5823e482735bac11f9e9041955e2af3e7246dfb498704fdec8f7fca4e4f4b",
+        "crates/rydantic/tests/ui-capnp/map_key.rs": "4e6500e260efba15e60f98c9474900140227b07271f77967e24407626fc22ce3",
+        "crates/rydantic/tests/ui-capnp/missing_model_derive.rs": "9452d63d18fcc7bc6001b294f219526fd7926cf543c5ef1c6165a633656d0e3f",
+        "crates/rydantic/tests/ui-capnp/unknown_type.rs": "26cbccba94be095793f6311010a28c4b2dcfbee4e740d22a876d83c94d8d4fa1",
+        "crates/rydantic/tests/ui-capnp/unrelated_model_derive.rs": "9a8eadd06557b148dd232fe854a11cbd69bd1573abacd3c2386180b1bf925c4b",
+        "crates/rydantic/tests/ui-pass/callback_names.rs": "e13f83ee753769e353100a102f8029df753f4496da105dc9239a292cd4f5e8dc",
+        "crates/rydantic/tests/ui-sql/auto_without_primary.rs": "f086616e2ce7bcc9e9cf1ac87746f36f783be577b24123d279b5fa9e56f95eef",
+        "crates/rydantic/tests/ui-sql/default_expression.rs": "8b2f86f9ee51c8a96f9852f227d7472016623aba791c9c8c7b429bdc385b05d8",
+        "crates/rydantic/tests/ui-sql/default_type.rs": "ac7361876f5cca585e112edf4db043b17c11b753e11b18e63e3997b955e79117",
+        "crates/rydantic/tests/ui-sql/duplicate_column.rs": "d799c78f458b33e6d2b4be35a02573cf9ca4df6b91c335ea922be8ba94cf3838",
+        "crates/rydantic/tests/ui-sql/duplicate_primary_key.rs": "e0fdea75a998e77915029d370628db4bea58d73a8e360dcd5d62bc5fafbdcbf0",
+        "crates/rydantic/tests/ui-sql/generic_table.rs": "dbd3302d39ca0ad95357f83f1562ef4e5d8a1c489468728891a21568e3bc6fa0",
+        "crates/rydantic/tests/ui-sql/invalid_identifier.rs": "429ec5266dc74b4b174b96c01a599cb3225bd638c271968a17e9224cd9a5c2a0",
+        "crates/rydantic/tests/ui-sql/length_numeric.rs": "d360352ee5a6fd57986a8724ddb9a20bc88fe5508709ac05a3e3faaac935b6b2",
+        "crates/rydantic/tests/ui-sql/no_primary_key.rs": "e05ad850a0ba03fa59c16f703e9891be9a70272fbec79e4a7230398c526eb980",
+        "crates/rydantic/tests/ui-sql/rename_from_identifier.rs": "f403b6301e115e1560609c8f00a9667ff8110a01dab1c8437997f321ed82fe45",
+        "crates/rydantic/tests/ui-sql/set_null_nonnullable.rs": "09f6ebb86cfb0bc2e767cfe68d64a0cdef30b6dd105a7122d11223ef9d8c483b",
+        "crates/rydantic/tests/ui-sql/set_null_primary_key.rs": "4cf5b3e008db6116576f619ce2b8d91a94a5b668311939ffe92da870cfc7ee95",
+        "crates/rydantic/tests/ui-sql/unsupported_auto_key.rs": "a67eb04c30a6d8a185827e35363d124a52d216e0414ef2a6852c1da8118e5ec4",
+        "crates/rydantic/tests/ui-sql/zero_length.rs": "5fbaae54c33d85cdc102f0fb66709069d14f5fdbf7cb0570c96081c4698b0310",
+        "crates/rydantic/tests/untagged_context.rs": "e0a5dcec177984d10cbb9bdcbfdd3d65569da14568ef340dbec6788c83aa40b5",
+        "crates/rydantic/tests/validator_execution.rs": "b96cf6e7f1a6d99cbac6ed961d6889cf60a3879feef46b23d851ab3f943f062f",
+        "crates/rydantic-ai/Cargo.toml": "a87e6915ad333e41c18f991c24342623901797f5dfdecb173b2f0747c3f080ff",
+        "crates/rydantic-ai/examples/graph.rs": "41b6f74c9a86301202600a2899a261aacf8d8bda609ea0c53f3e78e89d94dd82",
+        "crates/rydantic-ai/examples/jev.rs": "88d1bb076221a0884eae49362c1ca9bf7550f50667100d755eb3cc2576b41d43",
+        "crates/rydantic-ai/examples/pdf.rs": "f6bea4d109285bd1077f5ba0c404c0254ce64632c7f16af0c845c90f9a81ed4c",
+        "crates/rydantic-ai/examples/provider.rs": "6ec308cb560d5e247346645d5dd68610ac90c4da8b0b6b2a52e465a5b81ae907",
+        "crates/rydantic-ai/examples/structured.rs": "0e31a679334a8b07950d0c05dc1184733122d8e36fb6892e3b0bfb7a75e63860",
+        "crates/rydantic-ai/examples/typed_agent.rs": "bad8cc25afe2d0f3a41962aaa76c001f886c8a3feef7aaf1f106b6dd66752973",
+        "crates/rydantic-ai/examples/vision.rs": "05411d8f35860fb24fad5fc0547a3240bc74b9ccb3ddc1201d9d424eabf9e9f7",
+        "crates/rydantic-ai/src/agent.rs": "7121834fb36c42a1bba6b389d00e548f1c5ab33b74681192dc2a6b11ec2d1ab4",
+        "crates/rydantic-ai/src/bin/gateway.rs": "61be52a936ee6ed1b38d1f96e2104ff5c2d31147ef9f2f814e1eea8373c9e795",
+        "crates/rydantic-ai/src/content/pdf.rs": "3424f106b6906698754d3a7cc462d1893aa26e45ff88bc5cf8dc6ef145b9ebe7",
+        "crates/rydantic-ai/src/content.rs": "1c41f5076e0d173012277b73f7eb43199e8e8d00f9c802f82b1ad8abe7b8200e",
+        "crates/rydantic-ai/src/context.rs": "3a06b2fff606ab040b98977fa1c21c473743470321c6e22640ad00395b29f1d5",
+        "crates/rydantic-ai/src/error.rs": "635f0e0a7aa489e59ee6aa5fe5462ae24ce3168b86ef207deeaf00bad8fbd427",
+        "crates/rydantic-ai/src/gateway/egress.rs": "4fbd3a281cfdd28206ebee4db735e22a9eeaf32b209a5f25ac9ea5a6a557f65f",
+        "crates/rydantic-ai/src/gateway/ingress.rs": "618f251e8ac14f941f282d1467dd5b95ff0db4250363182f64eb1343d5e14d37",
+        "crates/rydantic-ai/src/gateway/replay.rs": "4e215cc1c32e58f3795bc9d022515035cbad0ac5976d4e8b3ed0a89457020c67",
+        "crates/rydantic-ai/src/gateway/server.rs": "aab04095cf374086acd08620fcbbdaa9dcb43a0e64be8e8a050d63add143fc1c",
+        "crates/rydantic-ai/src/gateway/stream.rs": "eaf76e87e8b51add3a5f6c77bda32823fd1da25445e6c8e73326cd02136f9f1d",
+        "crates/rydantic-ai/src/gateway.rs": "b7cbc9007d5505deab7c866b5857756be63faeaf79fd87e21690fb322b19c0d0",
+        "crates/rydantic-ai/src/graph.rs": "fa2aa2485efdead25a9edf2462fe4e46278f730d5b3fce87290c85024eec49e3",
+        "crates/rydantic-ai/src/http/chat.rs": "0eb1dcc6f2a90b2d6ff27b6ff8c3815f28cceb90b585ae8cac6470d3289b8f7a",
+        "crates/rydantic-ai/src/http/history.rs": "e28f352b32ab49700c70a33b02c7e17f3591643d0a5ef0f889125f4ccf800ef8",
+        "crates/rydantic-ai/src/http/messages.rs": "a31b6def824019b0e70752a4df930a9137d917489bbd35189bd30535540d476a",
+        "crates/rydantic-ai/src/http/mod.rs": "8d4115e11540c0c332bc2c8ab5fe80c12f74cafa515373c239d78ff88fdb7f9e",
+        "crates/rydantic-ai/src/http/sse.rs": "76c084bc199ac39fda8cfc68b9ff4ae57a21b21405f5a090a635731a5766fb3a",
+        "crates/rydantic-ai/src/jev/client.rs": "31a57c22358016f470172eb7e03b501608534102137a24848057644d38568e19",
+        "crates/rydantic-ai/src/jev/content.rs": "4a59e57764215d30466b3bbe7e657bab57fdc421feb73d531153d25f0f310b1a",
+        "crates/rydantic-ai/src/jev/mod.rs": "7db1619728fc19d19f820b8b091398f8a954bbfb35e3cc612ea7f7eb15bcdeac",
+        "crates/rydantic-ai/src/lib.rs": "8484d3afbd0eb5f1f941c49d570a67a59181468794c7bf23bf40e7b0e98f9a91",
+        "crates/rydantic-ai/src/protocol.rs": "b1aeca63d9abe5fbf73a5d63c7e4da177028ebbb3e643f0d00aeae8b79775c50",
+        "crates/rydantic-ai/src/schema.rs": "c5017f44998db15b865341342368abc145027066df02d6c8e56fbc91cfaa97ab",
+        "crates/rydantic-ai/src/structured.rs": "09b1a0a0a1fc8499a1c6f51a75ca3233c51a898b74cebb6406c4d6d83dc32232",
+        "crates/rydantic-ai/src/tool.rs": "3213e69fe934b63fc4c1810c98ae07a2449cace9623f9aadcd0efde3b176f964",
+        "crates/rydantic-ai/tests/agent.rs": "2bd416940ac89fde85a3e3a5eff3b0bc8eab5a2b3f4b92c95fbc0d5a249ea114",
+        "crates/rydantic-ai/tests/agent_context.rs": "c4ef051eaf09a6cc931980a893859092fca2d2eb6262e799a4666d393600cfc8",
+        "crates/rydantic-ai/tests/common/mod.rs": "d11493b3b443f1f7dea02f1a93aa6dc20d86c635559edd0077598304ab938944",
+        "crates/rydantic-ai/tests/common/wire.rs": "4fbf2ad649050df65edae2a5e015d0dba0cda5bca5c36f685329d46e1f69152f",
+        "crates/rydantic-ai/tests/gateway.rs": "14e6c265442bf23d7e8922ced9d127d88f16eece7dca62b10819329c5e8225bd",
+        "crates/rydantic-ai/tests/gateway_protocols.rs": "261f5e4a775dc3f198265578cabe48d43dc55e65e755fd79bea3207c3541c847",
+        "crates/rydantic-ai/tests/graph.rs": "d5538131f891ceb224a5922bb0bce3cd6d26869887777c25273f46b4b0200e40",
+        "crates/rydantic-ai/tests/http.rs": "8bb801380838c32763d03d53e3427bd3d364b3c710bc58b0d5ae33ca61b757c8",
+        "crates/rydantic-ai/tests/image_input.rs": "88740857c97b43df47ee549172a09dffdca0688c55c5923a52d4aa13645473be",
+        "crates/rydantic-ai/tests/image_live.rs": "facae9646bc6ef29f735a13e20891b6482c14406159dad20951b098e9581e43f",
+        "crates/rydantic-ai/tests/jev.rs": "e630dc5e703dad260b9f924b0a9612d3a468530e2a257eb15a167da79dd7ff34",
+        "crates/rydantic-ai/tests/jev_http.rs": "84a8d3af3eeb6880bb2a8f0859d98604065a5ddc50b37f735d84606901252c21",
+        "crates/rydantic-ai/tests/jev_live.rs": "f01c8413c9db1339f4d69afe42040b1b254811e50b6dd489eb9696ad44a3a755",
+        "crates/rydantic-ai/tests/live.rs": "29b15edfa2d1046132f7a9a773d8ea7e75ac3ed15d24d1df87ee7cb29e41ccd1",
+        "crates/rydantic-ai/tests/multimodal_http.rs": "9d3a491047b893ccee1ad3fc522686a5e456221dfd496cade77b55f5eb54d89c",
+        "crates/rydantic-ai/tests/native_http.rs": "f775b485a15df6bbee719e5f10a87a6799a3f5329ce19817171ec8d267e8af6c",
+        "crates/rydantic-ai/tests/pdf_http.rs": "69e85b6d1660f5338df1c7bdd95b38557679095303f2cd532943dced5aa7c5dd",
+        "crates/rydantic-ai/tests/pdf_input.rs": "3aa0cc2d2bf4bb3dce946ea93ca724b6027bf7d5c00738b157fc778204b4ce4f",
+        "crates/rydantic-ai/tests/structured.rs": "28f28c67ee00f791dd34473e4232268331a79aef7e538b7e7ba4f966e8dd09c0",
+        "crates/rydantic-ai/tests/structured_live.rs": "c8300c89ca230452c570e8a4b5b6d9f97447518b863d97a1bb056deeb7cf9a54",
+        "crates/rydantic-ai/tests/tool_pipeline_context.rs": "b4ad4cd1cee13657adbf2ff23240b29bcca2bf833ef44630b3e44b64b7a2bf41",
+        "crates/rydantic-cli/Cargo.toml": "4e563661576d6bb9d19862c65470f7d92ba28a65b398dee9dfdab35b538911a9",
+        "crates/rydantic-cli/src/doctor.rs": "d82e8233b1c625e7c7ba5d4232baa35ef57712934acabd65d709bc161cb8fbee",
+        "crates/rydantic-cli/src/explain.rs": "ae62f67eab4ea45bdd3d267f0d02240b503a307ca0235287c9e9b649c69303ef",
+        "crates/rydantic-cli/src/input.rs": "1db55be265e0eee1072716e27af4d856629ed700376157e859e153114fca47c9",
+        "crates/rydantic-cli/src/main.rs": "6c494261198e6033f2f6c972f98ad8e71e0b66205c75fee2574cf8e1b98da165",
+        "crates/rydantic-cli/tests/contract.rs": "0248b79e5d2589c76f73f5895b2006d732573fea75ceb8ee55a7e88a68f6abd6",
+        "crates/rydantic-codegen/Cargo.toml": "6a2717d90d4bf1914b2df3080871b6e89c82090e451c85c451c26513605baa6a",
+        "crates/rydantic-codegen/src/lib.rs": "4a6ed7ff4f49ca96aa23a928a049594a53adcf2d2be29ef246c0005d1132be32",
+        "crates/rydantic-codegen/src/main.rs": "640945efb17eab047c4f3d1a235e3be7eecb034c71acfd882e0fde1538f40a08",
+        "crates/rydantic-codegen/tests/cli.rs": "d0ff5dc951bbc44986bae48ab8ab882fff3bffef7b8259996949126274fba2cb",
+        "crates/rydantic-codegen/tests/enum_boundary.rs": "1463682531dbaa3d1f4dc831f3a9f09f4f253d50ff832d9cad14c5e090273926",
+        "crates/rydantic-codegen/tests/numeric.rs": "9abd932770bf85ef3fe2da7e8488e863984043c447cfa5ff20dd9399bd711b2f",
+        "crates/rydantic-codegen/tests/parity.rs": "2981cc1255e739f042bef3e65869ca819f02edd459a8e6c4b14dc968c17d59ca",
+        "crates/rydantic-codegen/tests/reject.rs": "6c855a3ed74d3f34eae5743d5467d47b596377da7ebd41374a20b272401de28a",
+        "crates/rydantic-derive/Cargo.toml": "13275cd2089ef51b656b323f6388c214b1ef737738c65cf462ca1bd0c44c2bcd",
+        "crates/rydantic-derive/src/attrs.rs": "86f2195b725422a4ca28180959b985cfe72fce32b709328772a2bbd5157fbec9",
+        "crates/rydantic-derive/src/auto_protocol/mod.rs": "7dd0aa48f4d5cafc14f268c1c2afc01d9ef3f6ddb3d42a64b95281f40ce44f77",
+        "crates/rydantic-derive/src/auto_protocol/protocol.rs": "f61a0b5cd3e731a456320c06a3b7a2eca479f588206637df1cc4e6a57c413717",
+        "crates/rydantic-derive/src/auto_protocol/types.rs": "61a879a588642b73d420bbd6e5cb440ba3a150a1f6d4f0f623c2557f9c629335",
+        "crates/rydantic-derive/src/lib.rs": "2b630882dbc87add22309b0536e461ef5ef499a4ddad432cd9faf77c38a1d286",
+        "crates/rydantic-derive/src/native.rs": "efdcef0e9c2f73a1331023c97fc9552ebec61ade73e5a4cc032009f4eda2969c",
+        "crates/rydantic-derive/src/sql_model.rs": "e1e46827078f119a69c43ec3b3b7b0fc0f5d93dddce110a8b0dda2071e6483b7"
+      },
+      "probe_snapshot": {
+        "Cargo.lock": "172ddac5355f7b1a2962cbe71addf20b3bc6db4d1ad0e018be114bbf6a5a5815",
+        "Cargo.toml": "080fcf5c86a76626c6acdab4797aa19382b38d41110b853a9c78065f9384f030",
+        "src/bin/parse_allocations.rs": "70b047fbe868b3a9e309e9efb3f23cfa447173bce7adca3dfd4ff2ee02f678d9",
+        "src/bin/rule_allocations.rs": "4903a75c0002fce1c97ea621b0c9d165b12a7b1e815c275bb178bdf6e9a52e7a",
+        "src/bin/rule_timing.rs": "d33c6c2703616730dcdc39a1d5cfaaa8c24f95346d44cb3e5a6abac0d08a337e"
+      },
+      "normalized_manifest": {
+        "package": {
+          "name": "rydantic-integer-rule-probes",
+          "version": "0.0.0",
+          "edition": "2021"
+        },
+        "dependencies": {
+          "rydantic": {
+            "path": "artifact:runtime-source"
+          },
+          "serde": {
+            "version": "1",
+            "features": [
+              "derive"
+            ]
+          },
+          "serde_json": "1"
+        },
+        "workspace": {}
+      },
+      "normalized_manifest_sha256": "04aa9b006c53a66a289af59eda223c3445c1e6670241e8f23603ebb1304cfe8d",
+      "artifacts": {
+        "parse_allocations": {
+          "executable": "artifact:baseline-parse_allocations",
+          "executable_sha256": "077b7e35ff06d168f918b69f85df0761660716d2580893887ec3c65e2cfe5e71",
+          "profile": {
+            "opt_level": "3",
+            "debuginfo": 0,
+            "debug_assertions": false,
+            "overflow_checks": false,
+            "test": false
+          },
+          "features": [],
+          "fresh": false
+        }
+      },
+      "command": [
+        "cargo",
+        "build",
+        "--manifest-path",
+        "artifact:baseline-manifest",
+        "--locked",
+        "--offline",
+        "--release",
+        "--message-format=json",
+        "--bin",
+        "parse_allocations"
+      ],
+      "started": "2026-10-26T04:13:16.197913+00:00",
+      "finished": "2026-10-26T04:13:47.033372+00:00",
+      "receipt": "artifact:baseline-receipt",
+      "receipt_sha256": "0caa0cea605c6acc14e243763facf30abe1d588bc56fa4b7fce33f07b42d8eab",
+      "log": "artifact:baseline-log",
+      "log_sha256": "9781099e9e638d2e1302008fb8bc476d2c161771e5663a89fafee7e7e770ed09",
+      "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)\nbinary: rustc\ncommit-hash: 48a229ceaefd4985c50990b14116b6d856af0985\ncommit-date: 2026-09-01\nhost: x86_64-unknown-linux-gnu\nrelease: 1.98.1\nLLVM version: 22.1.8\n",
+      "cargo": "cargo 1.98.1 (797e8a9bc 2026-08-05)\n",
+      "environment": {
+        "RUSTFLAGS": null,
+        "CARGO_ENCODED_RUSTFLAGS": null,
+        "CARGO_BUILD_TARGET": null,
+        "CARGO_PROFILE_RELEASE_OPT_LEVEL": null,
+        "CARGO_PROFILE_RELEASE_CODEGEN_UNITS": null,
+        "CARGO_PROFILE_RELEASE_LTO": null,
+        "CARGO_PROFILE_RELEASE_DEBUG": null,
+        "CARGO_PROFILE_RELEASE_DEBUG_ASSERTIONS": null,
+        "CARGO_PROFILE_RELEASE_OVERFLOW_CHECKS": null,
+        "CARGO_PROFILE_RELEASE_PANIC": null
+      },
+      "revision": "2ce66b92b281ff5f0e391844bf1ce8cce8cde728",
+      "git_status": ""
+    },
+    "candidate": {
+      "format_version": 1,
+      "purpose": "diagnostic probe build attestation",
+      "root": "artifact:candidate-root",
+      "manifest": "artifact:candidate-manifest",
+      "target_dir": "artifact:candidate-target_dir",
+      "source_snapshot": {
+        "Cargo.lock": "dd7537cef1d5234dc2593fce4049f357d96d4b5eb706dd2bd79f4bcd3e46ef78",
+        "Cargo.toml": "0934ca294e9ba6d37405ca1cfcab0772ca0ed3cab00a95f9d2bf5844c46d07c8",
+        "benchmarks/pydantic/fixtures.json": "496714c89278e70533708e2df18bfbad40b2841c9382f06398ae00b3637d8436",
+        "benchmarks/pydantic/python_worker.py": "238a4d0bd347c9cc07f88b6ae64fbf11dcdeec64b6a4597c6871cc00a6ea0052",
+        "benchmarks/pydantic/requirements.txt": "be5ed0699785ea00935aa814ab740e4e01c9decdd8a4dea4d468358ae52382ce",
+        "benchmarks/pydantic/run.py": "24100b90278408edddb777a9b5a1ae69e6972703dca94e50385012ff057570cd",
+        "benchmarks/pydantic/test_harness.py": "d97ec586990a73b373fec0c324443028783d7d2c88a994acc9eccb5b89b3bf75",
+        "crates/rydantic/Cargo.toml": "870a568a1b303ce02cecd48ba545d29c2e4f1cecd1540a0d68cb6ae5ee41660f",
+        "crates/rydantic/examples/asynchronous.rs": "fe2d366a84d9d693b0f931c86359656198f6c14318c3bf708ab1e4879d9f87aa",
+        "crates/rydantic/examples/auto_capnp.rs": "1d05411039fdfd7eb03e7aca02b777e0d31771aace501ae41b94f9dae2d822a9",
+        "crates/rydantic/examples/automatic_migrations.rs": "85af5012399d281bd7405ecceba01e6c981af54896ed90eb85ed5561fe09ed3f",
+        "crates/rydantic/examples/borrowed.rs": "28e6349ca491e11d1abece7d791ad048aa880109588fa56c68d3bb73af375fd9",
+        "crates/rydantic/examples/data_contract.rs": "e4c296d2f0d1ed4ccd6f0fccdc2903ca8283624fee784fbf7db63c7db52cf70f",
+        "crates/rydantic/examples/database_api.rs": "be09dc8e6ecf3936704be7da66a601a0e2bbe7908afe7f7ca9c679c4a7e80f85",
+        "crates/rydantic/examples/dates_decimal.rs": "bb03cafa856e2f24d8dccf2335a36a99ff5d3f9134c79aa8a02100a13e4fa00c",
+        "crates/rydantic/examples/grpc_capnp.rs": "0bed137ace5c07537273370650deccaf7f3edba996b3bc849793d7366e5b19c0",
+        "crates/rydantic/examples/jsonrpc.rs": "d581badca3d8a339d962cc5ba799274045283b3899a17d772bcbcb07bf72f17d",
+        "crates/rydantic/examples/openapi_components.rs": "0e6b4f1a1b4859c5d5962f9d8b8f1fc75d8ff6d9523aaaf5209eb52d76d5b8a7",
+        "crates/rydantic/examples/pydantic_benchmark.rs": "2feadcbdf0565871ed1b79b5f8dc1426c97790fd0b1ab5415a61f1388eb4c771",
+        "crates/rydantic/examples/sqlite_api.rs": "67319411fb763fbe7fe9557891959224550c8df75e9e829bd4c32e6a14bd339e",
+        "crates/rydantic/examples/streaming.rs": "9bd7875404892e5c0a7065059553bea76f745fcc24c0274d2a34565c134c0891",
+        "crates/rydantic/examples/tool_call.rs": "82a37536d9c02ea0423a1964d49c5d4303532bf7cdfe166872049eb75e9ef1f8",
+        "crates/rydantic/examples/user.rs": "a568649ce0fddcb94583e90e719ae19dc4cdf5a53b8efba32878d49715e32f7d",
+        "crates/rydantic/src/asynchronous.rs": "2c1e54fa0036db54203e5f768eba2792c667d76bdc9ac783c79769d9b87e1320",
+        "crates/rydantic/src/axum.rs": "b2ed732d7f790b5529897b66959e25035e31187498784ca58ad866ba5cd95d1d",
+        "crates/rydantic/src/borrowed.rs": "5647b41dbd043498ddf6d0ed915be5495f35d87ed3edde419ba76b0e1a18b4d2",
+        "crates/rydantic/src/capnp_support.rs": "a8394e5b3668836a09c21aea9100cbe0328a16f52db6be975c0e40434ca094a3",
+        "crates/rydantic/src/dates.rs": "965bc53fbbabba06d763b7a58d3419bb5ba724509bcb8c53a11104ae06f0639b",
+        "crates/rydantic/src/decimal.rs": "ab9df6809ae8f3b3d3e7c8d60e94fe2b458d4861203a66ef123badc345cf08cb",
+        "crates/rydantic/src/direct.rs": "9c4b26df1ee937bba78fc3f96c57ffc5993c87d114b4edb1874fe75ce10e1af1",
+        "crates/rydantic/src/domain.rs": "0ba2b9db949d06a9bd0f15328deccca4fe51a7ceb52947d28d023a529a898522",
+        "crates/rydantic/src/dynamic.rs": "7028c16cabe017b2c79ba198ed0e54ef857e15fb1fd5a162af5d665ea92b2bbb",
+        "crates/rydantic/src/error.rs": "d5ac8b14a90711d5aebe6a8947e8f2e9ab24b07dc3998c1def221e7e589a4266",
+        "crates/rydantic/src/grpc.rs": "81b089991bc64821cb0f515d74bf08bb6ecc6b62df9d97c2e95f58f66c8dc4a5",
+        "crates/rydantic/src/jsonrpc.rs": "2dd8a4350fadad2ae448fee7a6b83ddcb60554b3d44fac8eb1860a0bb8b760ec",
+        "crates/rydantic/src/lib.rs": "e84ebba633fdf70d37cda9465303c10acc4fb7b7d6251476e2c21015e6e1d88b",
+        "crates/rydantic/src/object.rs": "734bdc09e84dc29a12b958e79aa7974adcc7e6685d50898f18f961c9d8490899",
+        "crates/rydantic/src/partial_json.rs": "d1d05bbc6d1acb2c1a1e12d4a3d16312c749da6ef2c07582ca5655af936269d0",
+        "crates/rydantic/src/pipeline.rs": "14e175618e7f9ce7e6d317c9146177939c8f8b64561d2810b9050b593407862d",
+        "crates/rydantic/src/rules.rs": "0073b6d0879bf55eedcb024110f17dc99b03755b5e31b60e62a49b5e7ff99c82",
+        "crates/rydantic/src/schema/mod.rs": "9eb774fda2d7fbb753d5d19a4f5fbf97ed5b29cb28d8769945f864b7b083a34f",
+        "crates/rydantic/src/schema/openapi.rs": "151c42f5d24a723ade8f74ebc5994d2ad7be34068f03e9ae46aedcd6ef9be77c",
+        "crates/rydantic/src/settings.rs": "8c218d0d948e1be362acbd564403055f3fb446af407e5d176169c1e9e9f44bd5",
+        "crates/rydantic/src/sql/backend.rs": "cd4a07e27d2fbd4abac09934e8a33baefc157a3d26851c8413b10f96377cf0cf",
+        "crates/rydantic/src/sql/ddl.rs": "9d9caa21cfee8aa40fa4b136491a9ec79c080682b7358e1035c889edecd53f3b",
+        "crates/rydantic/src/sql/migration/catalog.rs": "390210647eb847f3133204d765a5109a64c04a76e610328a3a779f208d7f6e8f",
+        "crates/rydantic/src/sql/migration/mod.rs": "658bbc05e07016882365ef07f591883ca3d45a7d93de22016c95497095cd2921",
+        "crates/rydantic/src/sql/migration/plan.rs": "726e4c001ece66a0bdc5102c74abcb2041ca2e950451cab4b2429d91fcc3899c",
+        "crates/rydantic/src/sql/mod.rs": "9b20833a68627429df6e2310e6e82989a63bd6fbcd34b72ce983e422202abcbe",
+        "crates/rydantic/src/sql/parameter.rs": "4e9456efaca0cfbcd2909065396d1c58530423e9f7c095fdb55972032227b7f9",
+        "crates/rydantic/src/sql/query.rs": "8dc3139e2d0bf27e8e83ecc85e09fd0b39e5239234ee54c29c9c5b48b00a046d",
+        "crates/rydantic/src/sql/table.rs": "19df1d3df8986710a1633f89b9290103211d18c5ae4b4f73990eb8abee14b007",
+        "crates/rydantic/src/stream.rs": "67ce559562d9b103694825540d2125d1d6b10f69796aac8b6e91b11396a64246",
+        "crates/rydantic/src/types.rs": "c4435dacd2d9b82936198c8125e45d6ebd30846e36e58b57be6c901585558e36",
+        "crates/rydantic/tests/async_stream.rs": "c9b9923a7796c2116ce8b9ca9b6c20d6346a9e371eac979791c938fcf8d5361a",
+        "crates/rydantic/tests/axum.rs": "93e19434fe480c8541ba7fb3f758bd2dfdc163ed50b1c211fa98e6e64657564e",
+        "crates/rydantic/tests/borrowed_contracts.rs": "5eefd6520fccaac89ac6db50c6b9a6c3c9b3c65e7c1030460b6f4625c2d24f90",
+        "crates/rydantic/tests/call_context.rs": "3ccd03590d470d21310ba1ffd71e24c84c6867c76079a063c6ded0fea9c10175",
+        "crates/rydantic/tests/callback_context_derive.rs": "2c8a8140842756315920bd2ff8ceb3cabe642613743461d0f24998ef72dd3359",
+        "crates/rydantic/tests/callback_hygiene.rs": "cc24e7031bfa4f008503f5b0a74cfdb7441c2d8f6402bcb65d2bc0b5cf786770",
+        "crates/rydantic/tests/callback_lists.rs": "2795418d41be7ead008fc42ea02572e47cba82c2b7162a21233691fbfab8361e",
+        "crates/rydantic/tests/collection_contracts.rs": "07407aac794cf882f7970ed02d0dbadac9275656eeb70203003cfac3753c51d3",
+        "crates/rydantic/tests/compile.rs": "59076e9802f2e23c6cb60fe74bd3df6271248780de347ade33dd8919dfeac808",
+        "crates/rydantic/tests/core_contracts.rs": "755e578e2cb15863b9c9305168f9d6050603126cb0ef1357d2769e47c1b0b091",
+        "crates/rydantic/tests/dates_decimal.rs": "54a706bf1dc4806b74e92eced98b77918a581f56bd4c68bfd79b36ebd9520e60",
+        "crates/rydantic/tests/domain.rs": "f5d988c3e246d13dc51d7d8a23a8933d1c3d8f355674be89426b7004b80349b8",
+        "crates/rydantic/tests/dynamic.rs": "313372c181e2888f2a06bd527030f38c60fa921f660c550666d86d9d8799daae",
+        "crates/rydantic/tests/features.rs": "7a5fceba3a97481e8c0b78ab6222564047da6b0e49f7c35f8dd2744a0f7b80ed",
+        "crates/rydantic/tests/grpc.rs": "60ec2ce81c0fc0ba09e6bf0f2d22b06207207edb61fe483055cba8ae2b85dca9",
+        "crates/rydantic/tests/http_sql.rs": "09bda9c2388f61f440cbae33de039320e647ca611570b92276fbcca29732edf6",
+        "crates/rydantic/tests/integer_decode.rs": "00d88d636f7e6ba3dbba7d298af9ad691d1c54f0db573185f7a2bfc9fbf262d3",
+        "crates/rydantic/tests/integer_exponents.rs": "43cbfcfa4e1550fd1ae053551a23b9f8a067a9681ff796fbb7893b4a4e13df99",
+        "crates/rydantic/tests/integer_rules.rs": "52efd70cc32d46fcb6051b2a63323f270d108bd3317d707c1036b61df229072e",
+        "crates/rydantic/tests/jsonrpc.rs": "bd9f1abc82e6baa48397e4375988a7b61f2d336e4d019f29e7dcaa1e4dfef767",
+        "crates/rydantic/tests/migration_safety.rs": "8b84ab012e655791e03d977b481d4d1977ea53130322f682253bbb6c3d1aae4c",
+        "crates/rydantic/tests/migrations.rs": "a18b676ea291a3a3afd894cbfec0cb6e1b19a71463d0b0ba95f7ed7a7db88c63",
+        "crates/rydantic/tests/models.rs": "ab14db82a7558fd944332a7074da05ee95db59a89ba5e58308562e4326f2db29",
+        "crates/rydantic/tests/number_comparison.rs": "aabc761e0591518068214d9e7045502ba296d15c4042115534b775bcc6121a80",
+        "crates/rydantic/tests/object_materialization.rs": "c2debd83b5e1fc127490b8c5c2a040bf58a854928fda754e3c7930b890f2a45d",
+        "crates/rydantic/tests/openapi.rs": "6822c8267967f0f17a3a25ed584b67c8c1091714acaca88d03e8e519251fccaf",
+        "crates/rydantic/tests/partial_json.rs": "db83e64b5dc8a2560bb088f323da12da9d2a80da50adeba2641479831abcac5e",
+        "crates/rydantic/tests/raw_input.rs": "3638fff96de2f8c4adb688481a564ba67ba57df63e26e6347f0526e5d3c88fdf",
+        "crates/rydantic/tests/schema.rs": "45eb77653e7ae80cabcce6fcc7977a5a34f98f41f0348c84dc4c5a73e182857f",
+        "crates/rydantic/tests/schema_paths.rs": "adf7a2abb216dd9c4458ad0309326a7d2145a0347fb723780ee214a26cf5a930",
+        "crates/rydantic/tests/server_databases.rs": "23974afaecb91563dbb80bfa8d490e0d7e689fdb6493ebb522209c302b35417e",
+        "crates/rydantic/tests/settings.rs": "472c4bb3f236ec0e0af3b6b681ec23f790c692e41fdf82aff2687946e70d5da5",
+        "crates/rydantic/tests/sql_regressions.rs": "10c426d5c1ebb754e2b8f36d3da0fbf563ef3398fbbbf1c19af38f475929b2fc",
+        "crates/rydantic/tests/sqlite.rs": "4951a4462837b3ad30859cc0124a1cc14bab80689d7868265d230910106c1070",
+        "crates/rydantic/tests/static_layout.rs": "ea3210d23362cd0d949d1c54207e01f9543319f7b4250d3d24dbf29682f1ba9e",
+        "crates/rydantic/tests/stream_failures.rs": "1cccf7a3692b869be4e320ac2607b1397ec8d62df8d7605c41853d6fdd626b93",
+        "crates/rydantic/tests/typed_pipeline.rs": "7dd45a6648a26bd7ad2102e7bed89989a6b8fd6b1e8720cb4e989997aeb40c07",
+        "crates/rydantic/tests/ui/borrow_escapes.rs": "88a5c2192475fe2940b8f732ab1da0a1d1765e815446a8225cd2859025286efd",
+        "crates/rydantic/tests/ui/callback_lists.rs": "e196c1c6dbb0f34c275f811a708c03932d389707bb83e28a58c587edf7a767af",
+        "crates/rydantic/tests/ui/contradictory_length.rs": "19dcbc6d0422ad4543e722a0a91ddfaecc8ec562ea99543ef6a901ce1eb8008b",
+        "crates/rydantic/tests/ui/duplicate_alias.rs": "2c38ffe59603a7b8dd9ca464da8eb950615b64160aa2cf38741b27ba2502b6dd",
+        "crates/rydantic/tests/ui/extra_storage.rs": "e42c7a93f62ce32d784ffe094418aa0f14682f5fa7b079d5217dd53fa52bdc6d",
+        "crates/rydantic/tests/ui/extra_type.rs": "de96505d3017d8eb136e29fe46be9b364087a986208c3b95b0c4112c355f6622",
+        "crates/rydantic/tests/ui/invalid_regex.rs": "33df1095082e464df6500af3524e8b45707cd387b01a07cc6a35e3486f1d7aef",
+        "crates/rydantic/tests/ui/readonly.rs": "596f0047640d467540bda1c5030d37768fb855e3a9c8283d36ec6c847ef7e7d1",
+        "crates/rydantic/tests/ui/tag_untagged.rs": "b2ff761c4739e9c98e35e8eec2112f2baaaf0744838dadb49dd3b8062304ebfe",
+        "crates/rydantic/tests/ui/tuple_excluded.rs": "8d264b822c1a02414ccc01631d8075285cae7bce063e4cc25e781194f9ba4629",
+        "crates/rydantic/tests/ui/unknown_attribute.rs": "6107d6f8581ae92dbf5baa9e1af232e64be8657919dfb10f68b477db2fb1e635",
+        "crates/rydantic/tests/ui/wrong_type.rs": "4a67aca9a101e6a1a0c3ecc8ccd88381b644c81fd97d6218cdc0b945af63d735",
+        "crates/rydantic/tests/ui-capnp/cfg_active_generic.rs": "c02ab7d4a607a00e3705f704c19bdb22fbaa6968a36be1a6d789a5e0f8787bdc",
+        "crates/rydantic/tests/ui-capnp/duplicate_field.rs": "48756e0d35e1352499f166c1c6815bc89196f9d7c35d6449f8d1724c77e66cfa",
+        "crates/rydantic/tests/ui-capnp/duplicate_ordinal.rs": "ac9c2a331e262a0a4f8e3dd51db85f7dfab5705c278db9ef30d4438339d56660",
+        "crates/rydantic/tests/ui-capnp/external_module.rs": "98f2ded7ed914689046b96e7b6d9f11a23179761f597c11eb1ad320a1d1cbe2e",
+        "crates/rydantic/tests/ui-capnp/gap_ordinal.rs": "9cceff70d6b6cf551fb1b28a5b8c67165aba2e7f36d6779ca5ad1964baad95a4",
+        "crates/rydantic/tests/ui-capnp/generic_model.rs": "778e79e13a6eddf1fd89a0f41a66a013dad8d59583a6d72bc49b44c8aa3fb4e4",
+        "crates/rydantic/tests/ui-capnp/low_schema_id.rs": "49a5823e482735bac11f9e9041955e2af3e7246dfb498704fdec8f7fca4e4f4b",
+        "crates/rydantic/tests/ui-capnp/map_key.rs": "4e6500e260efba15e60f98c9474900140227b07271f77967e24407626fc22ce3",
+        "crates/rydantic/tests/ui-capnp/missing_model_derive.rs": "9452d63d18fcc7bc6001b294f219526fd7926cf543c5ef1c6165a633656d0e3f",
+        "crates/rydantic/tests/ui-capnp/unknown_type.rs": "26cbccba94be095793f6311010a28c4b2dcfbee4e740d22a876d83c94d8d4fa1",
+        "crates/rydantic/tests/ui-capnp/unrelated_model_derive.rs": "9a8eadd06557b148dd232fe854a11cbd69bd1573abacd3c2386180b1bf925c4b",
+        "crates/rydantic/tests/ui-pass/callback_names.rs": "e13f83ee753769e353100a102f8029df753f4496da105dc9239a292cd4f5e8dc",
+        "crates/rydantic/tests/ui-sql/auto_without_primary.rs": "f086616e2ce7bcc9e9cf1ac87746f36f783be577b24123d279b5fa9e56f95eef",
+        "crates/rydantic/tests/ui-sql/default_expression.rs": "8b2f86f9ee51c8a96f9852f227d7472016623aba791c9c8c7b429bdc385b05d8",
+        "crates/rydantic/tests/ui-sql/default_type.rs": "ac7361876f5cca585e112edf4db043b17c11b753e11b18e63e3997b955e79117",
+        "crates/rydantic/tests/ui-sql/duplicate_column.rs": "d799c78f458b33e6d2b4be35a02573cf9ca4df6b91c335ea922be8ba94cf3838",
+        "crates/rydantic/tests/ui-sql/duplicate_primary_key.rs": "e0fdea75a998e77915029d370628db4bea58d73a8e360dcd5d62bc5fafbdcbf0",
+        "crates/rydantic/tests/ui-sql/generic_table.rs": "dbd3302d39ca0ad95357f83f1562ef4e5d8a1c489468728891a21568e3bc6fa0",
+        "crates/rydantic/tests/ui-sql/invalid_identifier.rs": "429ec5266dc74b4b174b96c01a599cb3225bd638c271968a17e9224cd9a5c2a0",
+        "crates/rydantic/tests/ui-sql/length_numeric.rs": "d360352ee5a6fd57986a8724ddb9a20bc88fe5508709ac05a3e3faaac935b6b2",
+        "crates/rydantic/tests/ui-sql/no_primary_key.rs": "e05ad850a0ba03fa59c16f703e9891be9a70272fbec79e4a7230398c526eb980",
+        "crates/rydantic/tests/ui-sql/rename_from_identifier.rs": "f403b6301e115e1560609c8f00a9667ff8110a01dab1c8437997f321ed82fe45",
+        "crates/rydantic/tests/ui-sql/set_null_nonnullable.rs": "09f6ebb86cfb0bc2e767cfe68d64a0cdef30b6dd105a7122d11223ef9d8c483b",
+        "crates/rydantic/tests/ui-sql/set_null_primary_key.rs": "4cf5b3e008db6116576f619ce2b8d91a94a5b668311939ffe92da870cfc7ee95",
+        "crates/rydantic/tests/ui-sql/unsupported_auto_key.rs": "a67eb04c30a6d8a185827e35363d124a52d216e0414ef2a6852c1da8118e5ec4",
+        "crates/rydantic/tests/ui-sql/zero_length.rs": "5fbaae54c33d85cdc102f0fb66709069d14f5fdbf7cb0570c96081c4698b0310",
+        "crates/rydantic/tests/untagged_context.rs": "e0a5dcec177984d10cbb9bdcbfdd3d65569da14568ef340dbec6788c83aa40b5",
+        "crates/rydantic/tests/validator_execution.rs": "b96cf6e7f1a6d99cbac6ed961d6889cf60a3879feef46b23d851ab3f943f062f",
+        "crates/rydantic-ai/Cargo.toml": "a87e6915ad333e41c18f991c24342623901797f5dfdecb173b2f0747c3f080ff",
+        "crates/rydantic-ai/examples/graph.rs": "41b6f74c9a86301202600a2899a261aacf8d8bda609ea0c53f3e78e89d94dd82",
+        "crates/rydantic-ai/examples/jev.rs": "88d1bb076221a0884eae49362c1ca9bf7550f50667100d755eb3cc2576b41d43",
+        "crates/rydantic-ai/examples/pdf.rs": "f6bea4d109285bd1077f5ba0c404c0254ce64632c7f16af0c845c90f9a81ed4c",
+        "crates/rydantic-ai/examples/provider.rs": "6ec308cb560d5e247346645d5dd68610ac90c4da8b0b6b2a52e465a5b81ae907",
+        "crates/rydantic-ai/examples/structured.rs": "0e31a679334a8b07950d0c05dc1184733122d8e36fb6892e3b0bfb7a75e63860",
+        "crates/rydantic-ai/examples/typed_agent.rs": "bad8cc25afe2d0f3a41962aaa76c001f886c8a3feef7aaf1f106b6dd66752973",
+        "crates/rydantic-ai/examples/vision.rs": "05411d8f35860fb24fad5fc0547a3240bc74b9ccb3ddc1201d9d424eabf9e9f7",
+        "crates/rydantic-ai/src/agent.rs": "7121834fb36c42a1bba6b389d00e548f1c5ab33b74681192dc2a6b11ec2d1ab4",
+        "crates/rydantic-ai/src/bin/gateway.rs": "61be52a936ee6ed1b38d1f96e2104ff5c2d31147ef9f2f814e1eea8373c9e795",
+        "crates/rydantic-ai/src/content/pdf.rs": "3424f106b6906698754d3a7cc462d1893aa26e45ff88bc5cf8dc6ef145b9ebe7",
+        "crates/rydantic-ai/src/content.rs": "1c41f5076e0d173012277b73f7eb43199e8e8d00f9c802f82b1ad8abe7b8200e",
+        "crates/rydantic-ai/src/context.rs": "3a06b2fff606ab040b98977fa1c21c473743470321c6e22640ad00395b29f1d5",
+        "crates/rydantic-ai/src/error.rs": "635f0e0a7aa489e59ee6aa5fe5462ae24ce3168b86ef207deeaf00bad8fbd427",
+        "crates/rydantic-ai/src/gateway/egress.rs": "4fbd3a281cfdd28206ebee4db735e22a9eeaf32b209a5f25ac9ea5a6a557f65f",
+        "crates/rydantic-ai/src/gateway/ingress.rs": "618f251e8ac14f941f282d1467dd5b95ff0db4250363182f64eb1343d5e14d37",
+        "crates/rydantic-ai/src/gateway/replay.rs": "4e215cc1c32e58f3795bc9d022515035cbad0ac5976d4e8b3ed0a89457020c67",
+        "crates/rydantic-ai/src/gateway/server.rs": "aab04095cf374086acd08620fcbbdaa9dcb43a0e64be8e8a050d63add143fc1c",
+        "crates/rydantic-ai/src/gateway/stream.rs": "eaf76e87e8b51add3a5f6c77bda32823fd1da25445e6c8e73326cd02136f9f1d",
+        "crates/rydantic-ai/src/gateway.rs": "b7cbc9007d5505deab7c866b5857756be63faeaf79fd87e21690fb322b19c0d0",
+        "crates/rydantic-ai/src/graph.rs": "fa2aa2485efdead25a9edf2462fe4e46278f730d5b3fce87290c85024eec49e3",
+        "crates/rydantic-ai/src/http/chat.rs": "0eb1dcc6f2a90b2d6ff27b6ff8c3815f28cceb90b585ae8cac6470d3289b8f7a",
+        "crates/rydantic-ai/src/http/history.rs": "e28f352b32ab49700c70a33b02c7e17f3591643d0a5ef0f889125f4ccf800ef8",
+        "crates/rydantic-ai/src/http/messages.rs": "a31b6def824019b0e70752a4df930a9137d917489bbd35189bd30535540d476a",
+        "crates/rydantic-ai/src/http/mod.rs": "8d4115e11540c0c332bc2c8ab5fe80c12f74cafa515373c239d78ff88fdb7f9e",
+        "crates/rydantic-ai/src/http/sse.rs": "76c084bc199ac39fda8cfc68b9ff4ae57a21b21405f5a090a635731a5766fb3a",
+        "crates/rydantic-ai/src/jev/client.rs": "31a57c22358016f470172eb7e03b501608534102137a24848057644d38568e19",
+        "crates/rydantic-ai/src/jev/content.rs": "4a59e57764215d30466b3bbe7e657bab57fdc421feb73d531153d25f0f310b1a",
+        "crates/rydantic-ai/src/jev/mod.rs": "7db1619728fc19d19f820b8b091398f8a954bbfb35e3cc612ea7f7eb15bcdeac",
+        "crates/rydantic-ai/src/lib.rs": "8484d3afbd0eb5f1f941c49d570a67a59181468794c7bf23bf40e7b0e98f9a91",
+        "crates/rydantic-ai/src/protocol.rs": "b1aeca63d9abe5fbf73a5d63c7e4da177028ebbb3e643f0d00aeae8b79775c50",
+        "crates/rydantic-ai/src/schema.rs": "c5017f44998db15b865341342368abc145027066df02d6c8e56fbc91cfaa97ab",
+        "crates/rydantic-ai/src/structured.rs": "09b1a0a0a1fc8499a1c6f51a75ca3233c51a898b74cebb6406c4d6d83dc32232",
+        "crates/rydantic-ai/src/tool.rs": "3213e69fe934b63fc4c1810c98ae07a2449cace9623f9aadcd0efde3b176f964",
+        "crates/rydantic-ai/tests/agent.rs": "2bd416940ac89fde85a3e3a5eff3b0bc8eab5a2b3f4b92c95fbc0d5a249ea114",
+        "crates/rydantic-ai/tests/agent_context.rs": "c4ef051eaf09a6cc931980a893859092fca2d2eb6262e799a4666d393600cfc8",
+        "crates/rydantic-ai/tests/common/mod.rs": "d11493b3b443f1f7dea02f1a93aa6dc20d86c635559edd0077598304ab938944",
+        "crates/rydantic-ai/tests/common/wire.rs": "4fbf2ad649050df65edae2a5e015d0dba0cda5bca5c36f685329d46e1f69152f",
+        "crates/rydantic-ai/tests/gateway.rs": "14e6c265442bf23d7e8922ced9d127d88f16eece7dca62b10819329c5e8225bd",
+        "crates/rydantic-ai/tests/gateway_protocols.rs": "261f5e4a775dc3f198265578cabe48d43dc55e65e755fd79bea3207c3541c847",
+        "crates/rydantic-ai/tests/graph.rs": "d5538131f891ceb224a5922bb0bce3cd6d26869887777c25273f46b4b0200e40",
+        "crates/rydantic-ai/tests/http.rs": "8bb801380838c32763d03d53e3427bd3d364b3c710bc58b0d5ae33ca61b757c8",
+        "crates/rydantic-ai/tests/image_input.rs": "88740857c97b43df47ee549172a09dffdca0688c55c5923a52d4aa13645473be",
+        "crates/rydantic-ai/tests/image_live.rs": "facae9646bc6ef29f735a13e20891b6482c14406159dad20951b098e9581e43f",
+        "crates/rydantic-ai/tests/jev.rs": "e630dc5e703dad260b9f924b0a9612d3a468530e2a257eb15a167da79dd7ff34",
+        "crates/rydantic-ai/tests/jev_http.rs": "84a8d3af3eeb6880bb2a8f0859d98604065a5ddc50b37f735d84606901252c21",
+        "crates/rydantic-ai/tests/jev_live.rs": "f01c8413c9db1339f4d69afe42040b1b254811e50b6dd489eb9696ad44a3a755",
+        "crates/rydantic-ai/tests/live.rs": "29b15edfa2d1046132f7a9a773d8ea7e75ac3ed15d24d1df87ee7cb29e41ccd1",
+        "crates/rydantic-ai/tests/multimodal_http.rs": "9d3a491047b893ccee1ad3fc522686a5e456221dfd496cade77b55f5eb54d89c",
+        "crates/rydantic-ai/tests/native_http.rs": "f775b485a15df6bbee719e5f10a87a6799a3f5329ce19817171ec8d267e8af6c",
+        "crates/rydantic-ai/tests/pdf_http.rs": "69e85b6d1660f5338df1c7bdd95b38557679095303f2cd532943dced5aa7c5dd",
+        "crates/rydantic-ai/tests/pdf_input.rs": "3aa0cc2d2bf4bb3dce946ea93ca724b6027bf7d5c00738b157fc778204b4ce4f",
+        "crates/rydantic-ai/tests/structured.rs": "28f28c67ee00f791dd34473e4232268331a79aef7e538b7e7ba4f966e8dd09c0",
+        "crates/rydantic-ai/tests/structured_live.rs": "c8300c89ca230452c570e8a4b5b6d9f97447518b863d97a1bb056deeb7cf9a54",
+        "crates/rydantic-ai/tests/tool_pipeline_context.rs": "b4ad4cd1cee13657adbf2ff23240b29bcca2bf833ef44630b3e44b64b7a2bf41",
+        "crates/rydantic-cli/Cargo.toml": "4e563661576d6bb9d19862c65470f7d92ba28a65b398dee9dfdab35b538911a9",
+        "crates/rydantic-cli/src/doctor.rs": "d82e8233b1c625e7c7ba5d4232baa35ef57712934acabd65d709bc161cb8fbee",
+        "crates/rydantic-cli/src/explain.rs": "ae62f67eab4ea45bdd3d267f0d02240b503a307ca0235287c9e9b649c69303ef",
+        "crates/rydantic-cli/src/input.rs": "1db55be265e0eee1072716e27af4d856629ed700376157e859e153114fca47c9",
+        "crates/rydantic-cli/src/main.rs": "6c494261198e6033f2f6c972f98ad8e71e0b66205c75fee2574cf8e1b98da165",
+        "crates/rydantic-cli/tests/contract.rs": "0248b79e5d2589c76f73f5895b2006d732573fea75ceb8ee55a7e88a68f6abd6",
+        "crates/rydantic-codegen/Cargo.toml": "6a2717d90d4bf1914b2df3080871b6e89c82090e451c85c451c26513605baa6a",
+        "crates/rydantic-codegen/src/lib.rs": "4a6ed7ff4f49ca96aa23a928a049594a53adcf2d2be29ef246c0005d1132be32",
+        "crates/rydantic-codegen/src/main.rs": "640945efb17eab047c4f3d1a235e3be7eecb034c71acfd882e0fde1538f40a08",
+        "crates/rydantic-codegen/tests/cli.rs": "d0ff5dc951bbc44986bae48ab8ab882fff3bffef7b8259996949126274fba2cb",
+        "crates/rydantic-codegen/tests/enum_boundary.rs": "1463682531dbaa3d1f4dc831f3a9f09f4f253d50ff832d9cad14c5e090273926",
+        "crates/rydantic-codegen/tests/numeric.rs": "9abd932770bf85ef3fe2da7e8488e863984043c447cfa5ff20dd9399bd711b2f",
+        "crates/rydantic-codegen/tests/parity.rs": "2981cc1255e739f042bef3e65869ca819f02edd459a8e6c4b14dc968c17d59ca",
+        "crates/rydantic-codegen/tests/reject.rs": "6c855a3ed74d3f34eae5743d5467d47b596377da7ebd41374a20b272401de28a",
+        "crates/rydantic-derive/Cargo.toml": "13275cd2089ef51b656b323f6388c214b1ef737738c65cf462ca1bd0c44c2bcd",
+        "crates/rydantic-derive/src/attrs.rs": "86f2195b725422a4ca28180959b985cfe72fce32b709328772a2bbd5157fbec9",
+        "crates/rydantic-derive/src/auto_protocol/mod.rs": "7dd0aa48f4d5cafc14f268c1c2afc01d9ef3f6ddb3d42a64b95281f40ce44f77",
+        "crates/rydantic-derive/src/auto_protocol/protocol.rs": "f61a0b5cd3e731a456320c06a3b7a2eca479f588206637df1cc4e6a57c413717",
+        "crates/rydantic-derive/src/auto_protocol/types.rs": "61a879a588642b73d420bbd6e5cb440ba3a150a1f6d4f0f623c2557f9c629335",
+        "crates/rydantic-derive/src/lib.rs": "2b630882dbc87add22309b0536e461ef5ef499a4ddad432cd9faf77c38a1d286",
+        "crates/rydantic-derive/src/native.rs": "efdcef0e9c2f73a1331023c97fc9552ebec61ade73e5a4cc032009f4eda2969c",
+        "crates/rydantic-derive/src/sql_model.rs": "e1e46827078f119a69c43ec3b3b7b0fc0f5d93dddce110a8b0dda2071e6483b7"
+      },
+      "probe_snapshot": {
+        "Cargo.lock": "172ddac5355f7b1a2962cbe71addf20b3bc6db4d1ad0e018be114bbf6a5a5815",
+        "Cargo.toml": "cd1e8ff4cc526a859f83d55695b49a3647d0e3ab70f1fd89886c82c716acf9db",
+        "src/bin/parse_allocations.rs": "70b047fbe868b3a9e309e9efb3f23cfa447173bce7adca3dfd4ff2ee02f678d9",
+        "src/bin/rule_allocations.rs": "4903a75c0002fce1c97ea621b0c9d165b12a7b1e815c275bb178bdf6e9a52e7a",
+        "src/bin/rule_timing.rs": "d33c6c2703616730dcdc39a1d5cfaaa8c24f95346d44cb3e5a6abac0d08a337e"
+      },
+      "normalized_manifest": {
+        "package": {
+          "name": "rydantic-integer-rule-probes",
+          "version": "0.0.0",
+          "edition": "2021"
+        },
+        "dependencies": {
+          "rydantic": {
+            "path": "artifact:runtime-source"
+          },
+          "serde": {
+            "version": "1",
+            "features": [
+              "derive"
+            ]
+          },
+          "serde_json": "1"
+        },
+        "workspace": {}
+      },
+      "normalized_manifest_sha256": "04aa9b006c53a66a289af59eda223c3445c1e6670241e8f23603ebb1304cfe8d",
+      "artifacts": {
+        "parse_allocations": {
+          "executable": "artifact:candidate-parse_allocations",
+          "executable_sha256": "0341acfbd09b73047ec7285a73d2e03a0081f4171e37e07b7bf2a940e8c2c927",
+          "profile": {
+            "opt_level": "3",
+            "debuginfo": 0,
+            "debug_assertions": false,
+            "overflow_checks": false,
+            "test": false
+          },
+          "features": [],
+          "fresh": false
+        },
+        "rule_allocations": {
+          "executable": "artifact:candidate-rule_allocations",
+          "executable_sha256": "c0158cf0e984788b433d406902a7985a3698a026e37296a491e912fc473a1c47",
+          "profile": {
+            "opt_level": "3",
+            "debuginfo": 0,
+            "debug_assertions": false,
+            "overflow_checks": false,
+            "test": false
+          },
+          "features": [],
+          "fresh": false
+        },
+        "rule_timing": {
+          "executable": "artifact:candidate-rule_timing",
+          "executable_sha256": "d1b4601ec18528e713d3d9fce36a324824f11ccc3772bfb38b37b59328d43144",
+          "profile": {
+            "opt_level": "3",
+            "debuginfo": 0,
+            "debug_assertions": false,
+            "overflow_checks": false,
+            "test": false
+          },
+          "features": [],
+          "fresh": false
+        }
+      },
+      "command": [
+        "cargo",
+        "build",
+        "--manifest-path",
+        "artifact:candidate-manifest",
+        "--locked",
+        "--offline",
+        "--release",
+        "--message-format=json",
+        "--bin",
+        "parse_allocations",
+        "--bin",
+        "rule_allocations",
+        "--bin",
+        "rule_timing"
+      ],
+      "started": "2026-10-26T04:13:18.082909+00:00",
+      "finished": "2026-10-26T04:13:48.022792+00:00",
+      "receipt": "artifact:candidate-receipt",
+      "receipt_sha256": "ff65b3add0d5fed6b0c9b0b335fbbde2ecb92c22172c1cea0d69164fe30aa5ae",
+      "log": "artifact:candidate-log",
+      "log_sha256": "45ecce24a55644aca5df2363b3a7f9d7d481d3b4e7f161d856dbb9ce639019df",
+      "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)\nbinary: rustc\ncommit-hash: 48a229ceaefd4985c50990b14116b6d856af0985\ncommit-date: 2026-09-01\nhost: x86_64-unknown-linux-gnu\nrelease: 1.98.1\nLLVM version: 22.1.8\n",
+      "cargo": "cargo 1.98.1 (797e8a9bc 2026-08-05)\n",
+      "environment": {
+        "RUSTFLAGS": null,
+        "CARGO_ENCODED_RUSTFLAGS": null,
+        "CARGO_BUILD_TARGET": null,
+        "CARGO_PROFILE_RELEASE_OPT_LEVEL": null,
+        "CARGO_PROFILE_RELEASE_CODEGEN_UNITS": null,
+        "CARGO_PROFILE_RELEASE_LTO": null,
+        "CARGO_PROFILE_RELEASE_DEBUG": null,
+        "CARGO_PROFILE_RELEASE_DEBUG_ASSERTIONS": null,
+        "CARGO_PROFILE_RELEASE_OVERFLOW_CHECKS": null,
+        "CARGO_PROFILE_RELEASE_PANIC": null
+      },
+      "revision": "13f1e11dcff9490294a935adc89cf8776605107f",
+      "git_status": "?? benchmarks/pydantic/optimizations/integer-rules/"
+    }
+  },
+  "private_build_manifest_sha256": {
+    "baseline": "3716ecca6d65a5f119dd5b58a73e70542a7ed1376702d13976e38a62b02e4802",
+    "candidate": "6933d3205d9a41ca952c06b716a2d6a909b3e70c720b41d008853f82608609cc"
+  },
+  "tool_sha256": {
+    "common.py": "7b6d9389afbd39e80926e097ce63c64e706e98d2a24c86de42bfbbd943cfe0cc",
+    "export_public.py": "abe5c60652b6542eb43e9f8a2ccb4816950ae19e0f8cd78c8ba9b6c40899269a",
+    "test_diagnostics.py": "d4399a9bd8572bde3cf5655654e51e19fda0fa333d6c2eb7403307b020a3cba7",
+    "compare.py": "c874fb2de3e0cd2ea6e28d8562b51f80d8b51b101b183a75985931fe3f069387",
+    "record_probes.py": "f5221925c7e45cdcc09844fe73f25612cb9b0806cf65de9fafb31f32be697bad",
+    "audit.py": "9cf0402d3d054f994deb70f6a7d9dd0c0077335ecb56b171a932931006cc1f4d",
+    "record_build.py": "c26c7fae8ab45f688442a8b98c073f4bd946481606ae03335e4603c9c04d8443",
+    "run_diagnostics.py": "26bf6eb775e117057fee619e5408c06d4465d64f705fbf540aa958317a4dc859",
+    "test_evidence.py": "f5b6eda6925c77d30d3a925e9086244f8cbaac75458d1027298b1a8fa21ca504",
+    "report_diagnostics.py": "d516fafc5baa4d70408de9c75d24bec2bf12cf0fa671aa6353b08468cf1389f2",
+    "report.py": "cc014eae4c11532fb9a4926ed57d4aaf9462b2f9b81e2201d50bd2a4424a33e4"
+  },
+  "log_artifacts": [
+    {
+      "artifact": "artifact:diagnostic-log-candidate-rule-allocations-stdout",
+      "sha256": "dcba0b7240ac3d1dd484ff748fc5e4882fa86753e81b365b85060b7f36bb5fd2"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-rule-allocations-stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_valid-json-stdout",
+      "sha256": "857103e5b6147593b2edc587f3070b8cf6b0add227abdb0460fb43ea7a0c8561"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_valid-json-stderr",
+      "sha256": "4660725703eab3c370f57f5af496e9932a0da4fd5be554ac88136f2cd0f6d033"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_valid-json-request",
+      "sha256": "7a07043dbeb4c42d9a4c4351ecf5ea749418bcae5ddbbc93d85650726cbe0e07"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_valid-json-stdout",
+      "sha256": "60b1e572a489ad8d7281dc2dc0736eff3f0fa04ceb328df02abb6de7ca6a969d"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_valid-json-stderr",
+      "sha256": "8dd8396214fc26b31c7731c5222427381f15f1f645ca8b8f90a29c9b6f281478"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_valid-json-request",
+      "sha256": "7a07043dbeb4c42d9a4c4351ecf5ea749418bcae5ddbbc93d85650726cbe0e07"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_valid-value_copy-stdout",
+      "sha256": "449b972ec86e53f3239c8cda446df50bac18c05a3fe343a6fecd6e97b0773aec"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_valid-value_copy-stderr",
+      "sha256": "1e141e4198c6d2dafda487f4fae7129976c55bfd8fd16231e5f407f770302622"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_valid-value_copy-request",
+      "sha256": "cddbb9193dff262b8153476389600a405f5953e87ab4ba420584c41a01fa8872"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_valid-value_copy-stdout",
+      "sha256": "9d70ec62ca5648aab13c62507c5de148ac2e7c41bdf040d6d3c7d5164ae7e507"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_valid-value_copy-stderr",
+      "sha256": "1c6a1faef6f9b8d4af46e192c5bc5ae37ef3b9ab5fac438d3aba6870e6e4b035"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_valid-value_copy-request",
+      "sha256": "cddbb9193dff262b8153476389600a405f5953e87ab4ba420584c41a01fa8872"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_unicode-json-stdout",
+      "sha256": "00ae41343c609f9183299d389b553cd84cc1dbcb3772b02065071e174705a2d1"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_unicode-json-stderr",
+      "sha256": "8b4587e1365865d9d592c74ff60bc4f1e1e5c0a50c9a835adb9769e80485e189"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_unicode-json-request",
+      "sha256": "42c4e5ef1922fbc596597cabf3fae47e276e12d24dcd81d08bb2ccc8f1dc1b42"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_unicode-json-stdout",
+      "sha256": "ecd6673d19177817825c3d85919f96389904b755b4af3122a13c7aec4ce02b7e"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_unicode-json-stderr",
+      "sha256": "c505cb3cec4001c0feb1acb993618d6aada7403cd45f227e9465841e4c248286"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_unicode-json-request",
+      "sha256": "42c4e5ef1922fbc596597cabf3fae47e276e12d24dcd81d08bb2ccc8f1dc1b42"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_unicode-value_copy-stdout",
+      "sha256": "c32176cc83d1ec273c027892999d3474aae6170f4a27e855210eed24f5f57514"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_unicode-value_copy-stderr",
+      "sha256": "bacdb4f3b177014292f55df542daae30cb707ebd0576f54ca5ccab6d4b78a4b0"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_unicode-value_copy-request",
+      "sha256": "3a1a3f63e972997ee202abc96d60035e9b8739c4d95aefe6d558e54005defdba"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_unicode-value_copy-stdout",
+      "sha256": "1532ccab217e2a53320ee4a4655f202446acdd537f49aa80551ca3ef99ed9e6b"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_unicode-value_copy-stderr",
+      "sha256": "fc21c9fd2bd8507cbe864a691ab8eecb6e5f3dbe5d3be9c5d5f7eaeb85769c39"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_unicode-value_copy-request",
+      "sha256": "3a1a3f63e972997ee202abc96d60035e9b8739c4d95aefe6d558e54005defdba"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-nested_valid-json-stdout",
+      "sha256": "a512adc8cb367ae118061a965eeeeaa77644a3b6bed2d46fb547d9d40587832d"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-nested_valid-json-stderr",
+      "sha256": "72e6fcfbd055b88420f1b3a7e0d96af03dea51471fad9d9d5a2b91be5345cc98"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-nested_valid-json-request",
+      "sha256": "99c4b6953c2ca4a5fb3fbf0a0a1750a9b525b00c362e23728494de74d4cb02de"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-nested_valid-json-stdout",
+      "sha256": "741094fd7522eda1a74104eb00b40003d543b5c23886265d3d141499de8bc384"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-nested_valid-json-stderr",
+      "sha256": "22e49974f518ccb1160c118725595f66607280fac051eba63c9e499a6ed0e752"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-nested_valid-json-request",
+      "sha256": "99c4b6953c2ca4a5fb3fbf0a0a1750a9b525b00c362e23728494de74d4cb02de"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-nested_valid-value_copy-stdout",
+      "sha256": "a9001f74566b5eb85d36df08e8df29a67bbb5304038ce4c4b665a62fa7c83f01"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-nested_valid-value_copy-stderr",
+      "sha256": "f993634f8cfbcc5b50068ea370465c4f102e47d73295276e08f344cc262bf7b4"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-nested_valid-value_copy-request",
+      "sha256": "4e341acfd73b005184851dfe894334e5de0ac04d3ba9e92aeea311016bf57882"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-nested_valid-value_copy-stdout",
+      "sha256": "125a318d1f12d10526070db6774fb482541ada3ba41ffa286cd81a37eaef0af7"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-nested_valid-value_copy-stderr",
+      "sha256": "72f7756ae11c6707aadf44a1e60b429a7c8f3b576575d75bd620158fee8bc904"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-nested_valid-value_copy-request",
+      "sha256": "4e341acfd73b005184851dfe894334e5de0ac04d3ba9e92aeea311016bf57882"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-collection_100-json-stdout",
+      "sha256": "159fc7fe55699fb8882737a15e24f9a7979c5f77d1b402b323da1492e90540cf"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-collection_100-json-stderr",
+      "sha256": "57ef41a649afd1768deedd2adad9c2381ad2da324bcda53c72818f97d94841b3"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-collection_100-json-request",
+      "sha256": "ecb5dbbeb4c989c85fda94f4803edd7f3d9f699d4e98bc5b295875747af6b7d0"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-collection_100-json-stdout",
+      "sha256": "789a7cde0f7ca68c2cbf4dd1342268a2b4144309e031a06c6e52c46f1652a19d"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-collection_100-json-stderr",
+      "sha256": "71974f391fcbec1b324ee76e00700674f63b41faffb3dd94751fecf4652bb90c"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-collection_100-json-request",
+      "sha256": "ecb5dbbeb4c989c85fda94f4803edd7f3d9f699d4e98bc5b295875747af6b7d0"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-collection_100-value_copy-stdout",
+      "sha256": "aa9a3c67ce2454b544371414a1327de43d4f32327b61ea3cec37457f66b13b4a"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-collection_100-value_copy-stderr",
+      "sha256": "fba52dca3e194da8397a8efc377716c938170726dc215c43235a81c5f9f473d4"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-collection_100-value_copy-request",
+      "sha256": "cecfe78a0b7f94c9dadeb0e1da750e15dd7e1860bd2f2c12aa955dd52a76fb6f"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-collection_100-value_copy-stdout",
+      "sha256": "6f3983a4d8e04ceadf60df0c5aa8851b23a65d26915e868405ec012d0d26989b"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-collection_100-value_copy-stderr",
+      "sha256": "ea791e1e18053d0d37e9bd05b465079ef1bd344593142bb021e0b617b93cb1ff"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-collection_100-value_copy-request",
+      "sha256": "cecfe78a0b7f94c9dadeb0e1da750e15dd7e1860bd2f2c12aa955dd52a76fb6f"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_wrong_type-json-stdout",
+      "sha256": "6cc8029daa51407170cb327f66a587d3dabf61275912acdec6130085ad4c2120"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_wrong_type-json-stderr",
+      "sha256": "c574fe09ecc5aa768d67305d115cb00ce84d614101003a5e6b587428160384e7"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_wrong_type-json-request",
+      "sha256": "184924bd0630bae7609328758fb2d7fc262f54c9314d7c1b9235e326440df2be"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_wrong_type-json-stdout",
+      "sha256": "a602ec1023ae61831517a31e5242bf8d77e09745c45e52c2603cdd99c2c9fb4c"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_wrong_type-json-stderr",
+      "sha256": "c574fe09ecc5aa768d67305d115cb00ce84d614101003a5e6b587428160384e7"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_wrong_type-json-request",
+      "sha256": "184924bd0630bae7609328758fb2d7fc262f54c9314d7c1b9235e326440df2be"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_wrong_type-value_copy-stdout",
+      "sha256": "6f60ddaa9c309a8cf48d0f399b09995702cb04c9b914be6a8fa349977af939ab"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_wrong_type-value_copy-stderr",
+      "sha256": "f73498b1fa42d365a29dbcc1f2a8393cf220530b09133b817c61bc09f949e93d"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_wrong_type-value_copy-request",
+      "sha256": "c5c51a460e1cd449f1bfddf38eaddd1759ba5136394a4de880329068642877ac"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_wrong_type-value_copy-stdout",
+      "sha256": "d507f5772e5589dd7500a5e658160dd34069072e24b84182db2688860cc45179"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_wrong_type-value_copy-stderr",
+      "sha256": "f73498b1fa42d365a29dbcc1f2a8393cf220530b09133b817c61bc09f949e93d"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_wrong_type-value_copy-request",
+      "sha256": "c5c51a460e1cd449f1bfddf38eaddd1759ba5136394a4de880329068642877ac"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_bool_as_int-json-stdout",
+      "sha256": "5d53855ab29786ece913a1d8782af4172b4231d65740d832b5be123332b8f1c3"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_bool_as_int-json-stderr",
+      "sha256": "be01e19572512f0b4a561897973efc4b38977ad87f85b401a79909a357721909"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_bool_as_int-json-request",
+      "sha256": "914421ac6da7feb247f6a8be19010ccbe2c83c41bbee0d9def149737a434e5ec"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_bool_as_int-json-stdout",
+      "sha256": "bd41a138d6994b2a51a1d696041865f5c1c5a35e739a3e65606465a76f38fce8"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_bool_as_int-json-stderr",
+      "sha256": "be01e19572512f0b4a561897973efc4b38977ad87f85b401a79909a357721909"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_bool_as_int-json-request",
+      "sha256": "914421ac6da7feb247f6a8be19010ccbe2c83c41bbee0d9def149737a434e5ec"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_bool_as_int-value_copy-stdout",
+      "sha256": "90968dc1bb3f53434e9c551b2d8ecd9590f7fea15f558be215dc05c68325e0a7"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_bool_as_int-value_copy-stderr",
+      "sha256": "45efb9e3e7346d121476ae417bf04b692b63488c30274a71b5b5b0e2f551a797"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_bool_as_int-value_copy-request",
+      "sha256": "b4d6ea7a9fdec0ee7f514c7e7c0251dfa877aeadfd61407817d18aaf46a43327"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_bool_as_int-value_copy-stdout",
+      "sha256": "352e342179957d86eb662b364bce8f0803ebd8fd2184c288f22521bf5504dd0b"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_bool_as_int-value_copy-stderr",
+      "sha256": "45efb9e3e7346d121476ae417bf04b692b63488c30274a71b5b5b0e2f551a797"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_bool_as_int-value_copy-request",
+      "sha256": "b4d6ea7a9fdec0ee7f514c7e7c0251dfa877aeadfd61407817d18aaf46a43327"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_negative-json-stdout",
+      "sha256": "f6cf2217c1009026e3696f36f47af7fc0ab9d635fcc8c727b0ba595b411af471"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_negative-json-stderr",
+      "sha256": "360ca32015a91b14bbc37c4431316c84b666955e16c8d8dbc6a1ae858efe3535"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_negative-json-request",
+      "sha256": "2f23a554868f6eaecb8b28f644dcf0063f5f29ce9629b4f0e6e5634801c815d3"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_negative-json-stdout",
+      "sha256": "a7d7eb83e99233a597f63381d94218d1c6db4224887b39b54748f15647283b34"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_negative-json-stderr",
+      "sha256": "7d54cf648a736e9dfe197e040b88613a85b3a97d149052da83a94a40514760a8"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_negative-json-request",
+      "sha256": "2f23a554868f6eaecb8b28f644dcf0063f5f29ce9629b4f0e6e5634801c815d3"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_negative-value_copy-stdout",
+      "sha256": "fb982115c506ca1cb58e70793995daac78e2f4a37e977f2043d657dce6267a19"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_negative-value_copy-stderr",
+      "sha256": "25a27895ae7d7aa99ef8a58fd921bc50b61cea7b562f16335fb367ec28ff72e0"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_negative-value_copy-request",
+      "sha256": "bdd760469c2e38b0c73c2ae6d923f7396cfffe9f35174144b47964c9cad20d9f"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_negative-value_copy-stdout",
+      "sha256": "94ea5ad35d46449a7666ea42687c3b7354bb565ae0acc3e4177d0f5e211f70cf"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_negative-value_copy-stderr",
+      "sha256": "1a2c3f4bd41d2afa6f0471f44e8803f1f2f0afac25bef3c200aac561b980f065"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_negative-value_copy-request",
+      "sha256": "bdd760469c2e38b0c73c2ae6d923f7396cfffe9f35174144b47964c9cad20d9f"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_upper_bound-json-stdout",
+      "sha256": "1997cf094fdeb97ef995032f7b79cf9855ee04d83e93c81575434038de6601e8"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_upper_bound-json-stderr",
+      "sha256": "8e217a4d74dd5091fc1d51cf4ec61b0dc80a3c9bf3c07e03eb9d697d8e62f311"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_upper_bound-json-request",
+      "sha256": "cbd20283a93374e581133c5181e3bfcddcaf5cdc01f4f97b6a3776834e7743b8"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_upper_bound-json-stdout",
+      "sha256": "5f1da7b2b204be26e4063c25dba11a1770ad3e568a22e3728bb174c9c9f2b79e"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_upper_bound-json-stderr",
+      "sha256": "98023c4ba7a9427961599572c26438a5264a1b32d46422cd1f073014db274878"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_upper_bound-json-request",
+      "sha256": "cbd20283a93374e581133c5181e3bfcddcaf5cdc01f4f97b6a3776834e7743b8"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_upper_bound-value_copy-stdout",
+      "sha256": "ea40186e5c7fb85c5682786a6ec49906bb47133f7c3c73e97524ad63081d5143"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_upper_bound-value_copy-stderr",
+      "sha256": "4295136d49a93c81fdcc8e9ea249c54034ce9ed4fcc1c781bf7bb0c0e1872a0a"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_upper_bound-value_copy-request",
+      "sha256": "3d46305aca8b95439c5c56c735154b6d3b6e8be5b0766ea5fe9dc7eb397208dd"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_upper_bound-value_copy-stdout",
+      "sha256": "4d3266ec8a32f5e110baf186e59e622db9b667cb7b81d568a7765a0b7f24fd56"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_upper_bound-value_copy-stderr",
+      "sha256": "a4ba416160c79b621bcdee5ec46252e36a13c6ab0a7ce1dfa3bb25ba17d02a2a"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_upper_bound-value_copy-request",
+      "sha256": "3d46305aca8b95439c5c56c735154b6d3b6e8be5b0766ea5fe9dc7eb397208dd"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_empty_name-json-stdout",
+      "sha256": "66aa89504c10f8b8d49b53b30d6d0ac3e2fa9143873540982a4569c2c17bd206"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_empty_name-json-stderr",
+      "sha256": "e36aa9eee283abae81bf7ed7b1a2b74c55d9bf7bee4eacd0345607134366c583"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_empty_name-json-request",
+      "sha256": "2ae5977b74c7ac2ff00c936bb96128793dcee8693886d2cb187b2039b469e7d0"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_empty_name-json-stdout",
+      "sha256": "905e28dc22ecd5684ce734142eb041d9e51e19e044a9dd4278022822612f1481"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_empty_name-json-stderr",
+      "sha256": "dc1ab03215d32a6a688e98793547aae897d23a2aae23d31e2845273d1ef7503e"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_empty_name-json-request",
+      "sha256": "2ae5977b74c7ac2ff00c936bb96128793dcee8693886d2cb187b2039b469e7d0"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_empty_name-value_copy-stdout",
+      "sha256": "9b33fefec2d4febb0f65c47d7b440be4829662fe25645fe743a627874542ebd5"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_empty_name-value_copy-stderr",
+      "sha256": "17720979d2017e7b58e5910ef5ab266ed905ff17b805ffb3c365c0be9585dbb0"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_empty_name-value_copy-request",
+      "sha256": "bf4c6cc95b35da45d254b90424de492720532c9f6d0a806416e23acc9222ea40"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_empty_name-value_copy-stdout",
+      "sha256": "ce02c326729010e491bed685cbcdc78e9b3c930d20afce252e457414c3e5cc30"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_empty_name-value_copy-stderr",
+      "sha256": "83dd61f8b5b6e6b48d4b8889f3d3e3444d975eeb1d5eb4488a436108be6942c7"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_empty_name-value_copy-request",
+      "sha256": "bf4c6cc95b35da45d254b90424de492720532c9f6d0a806416e23acc9222ea40"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_long_name-json-stdout",
+      "sha256": "e2f9389f2053115de56b93660803aaff66e2c00611e58fca61819f9837e8429e"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_long_name-json-stderr",
+      "sha256": "cd3458dc23c70ce52beaa1b611852e72e5e5f85ac12690a7ea60ad44633b1803"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_long_name-json-request",
+      "sha256": "bd74f6712bed2c0a94d408b0bde3c223df988271ad3f49589cf856c0e4f8869d"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_long_name-json-stdout",
+      "sha256": "a4f2a65934f2ba056b38ac946719348be17871764b6b0d5d3a2191c80ac7d2d1"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_long_name-json-stderr",
+      "sha256": "83270914c34987352c0410a8d0498f724a8fdf4d93efb11a81d4edf8569480ff"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_long_name-json-request",
+      "sha256": "bd74f6712bed2c0a94d408b0bde3c223df988271ad3f49589cf856c0e4f8869d"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_long_name-value_copy-stdout",
+      "sha256": "6301acdf216dabe670c21d42751e99afb9b49884d6ad69a6cd48e25ba23e3fad"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_long_name-value_copy-stderr",
+      "sha256": "78abb5e10a43d1c3d2015ef0818dfb7f69c341fdbcf0a2b9963c94020257662f"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_long_name-value_copy-request",
+      "sha256": "9c0df59431f9de2b2e828d27fed55fbdf5fcc898c6418cd74aa8ce2f63043749"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_long_name-value_copy-stdout",
+      "sha256": "f4bd95d8541fa64b7cdba1167e5afcd56cd8fe3b82274f6d6c699f3d930c2dc9"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_long_name-value_copy-stderr",
+      "sha256": "b20712b901faa9762d4ddf7c835050adf79f0a573c00d946756671385d51832c"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_long_name-value_copy-request",
+      "sha256": "9c0df59431f9de2b2e828d27fed55fbdf5fcc898c6418cd74aa8ce2f63043749"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_missing-json-stdout",
+      "sha256": "36a55f9aa27a3fdfd3793ac2d6350fb104d597c48ebb5bb676b1018045155fa7"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_missing-json-stderr",
+      "sha256": "fbff651bbe9dfd9871b3a5c09990fcffd268221ea4d82ee7a4be96c9dc9a8971"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_missing-json-request",
+      "sha256": "9bdb1b5214090a0da9b6e3cc2c04672094eb2c469d37a0e4511abacd01eb6094"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_missing-json-stdout",
+      "sha256": "9e6eda8d14ad22149602a973f5e395f592d5811ebb99d475b19ad6399a57be25"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_missing-json-stderr",
+      "sha256": "2ea603d83dd9ffd738bdcbd88f2a0445bd0b1dba785b9dfdabc6277f55a5637e"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_missing-json-request",
+      "sha256": "9bdb1b5214090a0da9b6e3cc2c04672094eb2c469d37a0e4511abacd01eb6094"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_missing-value_copy-stdout",
+      "sha256": "e27f77706bdf46971fa71fb1a0d53f37b1a23d9c0882fd642c83853983207641"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_missing-value_copy-stderr",
+      "sha256": "160825693487ebe81c285eca917488ed6eb97532b964329164a9120134a08d3c"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_missing-value_copy-request",
+      "sha256": "4f5063ddf854dc8709235e5be8ea9471d09083fb3194023a4e590b329f5c1c43"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_missing-value_copy-stdout",
+      "sha256": "1ba4560738be7144939e86a8b67a17df04f4ea4d047cd713a8679df2c6dfca73"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_missing-value_copy-stderr",
+      "sha256": "742f5bec25131f169cb3f6f60c6c27edf7ac9b5d09e25f1d3cf6af7516a91aad"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_missing-value_copy-request",
+      "sha256": "4f5063ddf854dc8709235e5be8ea9471d09083fb3194023a4e590b329f5c1c43"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_null-json-stdout",
+      "sha256": "2d552cc1d62f826ac0ffa5236bc855912409487cbd9818db297e7086edbc3086"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_null-json-stderr",
+      "sha256": "c5d6621139952a79ff8908e98eea756e0986ee465bb47ef076b92b58c6ac1038"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_null-json-request",
+      "sha256": "45d2f4ebd85703af9428284e2adca7616b87f233ef8f3dada11fddb926dd7859"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_null-json-stdout",
+      "sha256": "0b6e47d82781dc129f72b9b72e0faed482b29c1208014e38cfc322c1197348c0"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_null-json-stderr",
+      "sha256": "6c87f95ad229ccc04e52b0281aec5938178c7f3cd5dec075ec8218fe0f1e8a80"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_null-json-request",
+      "sha256": "45d2f4ebd85703af9428284e2adca7616b87f233ef8f3dada11fddb926dd7859"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_null-value_copy-stdout",
+      "sha256": "0410ae51edfc6b339a29a40cc7b0053542f20a458ee4655a0405faa0175052f0"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_null-value_copy-stderr",
+      "sha256": "a9736415daaecbb976c1decaee8d0be4dd1cfe9bcc47e333f8bed7c1bc513507"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_null-value_copy-request",
+      "sha256": "702e5aaa0b4f2c669a257d420f307ec599e8d7f58e180ebc53114a11dd8c91ea"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_null-value_copy-stdout",
+      "sha256": "6a93d95f70c599a5cf8ad1a7f15439e6df229fdecc2501aa7edbcd331bed919a"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_null-value_copy-stderr",
+      "sha256": "b86fb7fb85ab2fefe466c48348a37316234d4d23764ad38f9b5e29fce3a87c24"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_null-value_copy-request",
+      "sha256": "702e5aaa0b4f2c669a257d420f307ec599e8d7f58e180ebc53114a11dd8c91ea"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_extra-json-stdout",
+      "sha256": "c01c4209113247d11bd824b4f7b05a0446885787be57af5b451b5e3c019d9bad"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_extra-json-stderr",
+      "sha256": "9907f9cf9605f2a3beec40ba2e69a3476fb494574f940dd064ed052bbf380b45"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_extra-json-request",
+      "sha256": "c5110670721cfaba884b06a41bc9219fcb34bb527ca791613837e43885c77db1"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_extra-json-stdout",
+      "sha256": "1e88520a1aca41f4e0d011ace2f7dfe77bdeb152350713e8f8633c4b62284301"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_extra-json-stderr",
+      "sha256": "8046c2345ea30e4c693cee8728a8d046c0bfe4e1a15505eda90a4b1a3cd48352"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_extra-json-request",
+      "sha256": "c5110670721cfaba884b06a41bc9219fcb34bb527ca791613837e43885c77db1"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_extra-value_copy-stdout",
+      "sha256": "763988da77e705c3045b8e44451215d587cd76c03302b0d0e58cace2d81b39c8"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_extra-value_copy-stderr",
+      "sha256": "5bd9556575b3ef843d06b1899b1eaed28dc82bab9d9568822e63dba26bca783b"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_extra-value_copy-request",
+      "sha256": "3283a69c37b9e8eedcc9933148cd2479b6a45b224793a7acf725d2977820e01d"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_extra-value_copy-stdout",
+      "sha256": "49a6a3882f0201b68d3983c0b58051fb549951714a5e3622150010325ee9c459"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_extra-value_copy-stderr",
+      "sha256": "d13bda7a12010602863e47f602a4e05343a1e6ac38839be39f18fee4a62c8d00"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_extra-value_copy-request",
+      "sha256": "3283a69c37b9e8eedcc9933148cd2479b6a45b224793a7acf725d2977820e01d"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_multiple-json-stdout",
+      "sha256": "3ff01fd31ed3f2158b6d78f301929d4a44583d7ed2cb1704e244b8683a377569"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_multiple-json-stderr",
+      "sha256": "b0bdec4ecb409cc846f9bcb421eda94b0123b0262c5e29bbce0d1cee01f418d6"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_multiple-json-request",
+      "sha256": "5b0f0b5f12e4b3aeb6ae19b7893dec57dba7cd1c7f22ca01d7ae92c24ea420dd"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_multiple-json-stdout",
+      "sha256": "13aaa760ee9ecee76e9220411bef945fbdbe81554af39b49e591e49742129da0"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_multiple-json-stderr",
+      "sha256": "6d2981d6582ef15dbf19d46d8db1388a846a981d84e1d0b9ca42f2c5d7ae865e"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_multiple-json-request",
+      "sha256": "5b0f0b5f12e4b3aeb6ae19b7893dec57dba7cd1c7f22ca01d7ae92c24ea420dd"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_multiple-value_copy-stdout",
+      "sha256": "8f903b0cb054626667d293adae201841daa531b5a4eaab0a791f0ab672877a8e"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_multiple-value_copy-stderr",
+      "sha256": "4eb2028ae9a523cc5175177cffab3b84d386f6b8ed489c37b044502dba56e05b"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_multiple-value_copy-request",
+      "sha256": "53a69e08882d639c9b8c6cbc55d563a261a0c7ca1cad60a0655778c0cebb6a72"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_multiple-value_copy-stdout",
+      "sha256": "050bd6596acad8501e5e33def413b56b311eccacb71fab177dacace513768e3b"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_multiple-value_copy-stderr",
+      "sha256": "2b8cd0d9e8c2a33f853abf3dfb9598a19ddd8ccc1497d1c66a6065a1c6b0b932"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_multiple-value_copy-request",
+      "sha256": "53a69e08882d639c9b8c6cbc55d563a261a0c7ca1cad60a0655778c0cebb6a72"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-nested_invalid-json-stdout",
+      "sha256": "ef96266bf5c6f62fb719692a61557512c1cb1e5e509081907b2b8d3214111ab9"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-nested_invalid-json-stderr",
+      "sha256": "c24001ce10b2c359df27af6fab0fe0ce21b0c2bbf93d62b7a6dd07174f49de9f"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-nested_invalid-json-request",
+      "sha256": "fc4bf7405ea20da8b7fef2ee590ef527548a88be65a8a91ca9c6762b4ed98a53"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-nested_invalid-json-stdout",
+      "sha256": "88759c00548db468ac4a4aeab1fe00c3f17e7f2b3ba9b82fd95b9fc278918fef"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-nested_invalid-json-stderr",
+      "sha256": "700c408d282f2ea907fe599568b662bb7696af397d5958ce11719e52699f62cb"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-nested_invalid-json-request",
+      "sha256": "fc4bf7405ea20da8b7fef2ee590ef527548a88be65a8a91ca9c6762b4ed98a53"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-nested_invalid-value_copy-stdout",
+      "sha256": "479a54b214b5f34e3d2617f083e6d263671c8d9863a07ba582cc3d460f0c8858"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-nested_invalid-value_copy-stderr",
+      "sha256": "37f75aaaeabf2d4f208c969a3562a40b2d810f4eaa5b07c7590187aebb09eeb6"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-nested_invalid-value_copy-request",
+      "sha256": "9c3ce95621b7084fd58bceb59feb9fa5df359d2dd3ab466dcb75bc572f76eccb"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-nested_invalid-value_copy-stdout",
+      "sha256": "53352c38b936af993fa9a93d6455cf92178702750e03705c87ebe26755ad8e98"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-nested_invalid-value_copy-stderr",
+      "sha256": "5b1f72938d2757d1ef1c0bd56e04cf73a3d424cf83e0d211a37bccb422eaabcf"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-nested_invalid-value_copy-request",
+      "sha256": "9c3ce95621b7084fd58bceb59feb9fa5df359d2dd3ab466dcb75bc572f76eccb"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-collection_invalid-json-stdout",
+      "sha256": "7d5f75734e22d5a732478ea940db9183f48bcfb756bfd49ce35ace1c667c086c"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-collection_invalid-json-stderr",
+      "sha256": "66c19938eba4780ff3831205fc5fbdce21ce7ada04c784b0645227b442fdfedd"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-collection_invalid-json-request",
+      "sha256": "0828b9427667e55b5a82b249a553427f2e207df3f17ba840b738f82daab89ff9"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-collection_invalid-json-stdout",
+      "sha256": "74077a790690008af4df445d8eaed2e7cdd621abd2f8fcd2fda5f0ec751a63f9"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-collection_invalid-json-stderr",
+      "sha256": "0d8c26afd11924c4b01954148dd0d88b4714591acd1eaa4bc9d7eb7bb2479f2b"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-collection_invalid-json-request",
+      "sha256": "0828b9427667e55b5a82b249a553427f2e207df3f17ba840b738f82daab89ff9"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-collection_invalid-value_copy-stdout",
+      "sha256": "5cc86cb6ec6f3efb17a888af0bf1248a91b42f211ad8d6667b1a3391060e30af"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-collection_invalid-value_copy-stderr",
+      "sha256": "46298f08f427cca87dbb771750471fcf8139e6887b9a89626a4e8f21b4041dab"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-collection_invalid-value_copy-request",
+      "sha256": "bf4b07491b271bc2e7cd2217033cac8efb73733cd39f0652abc3d475a5e78bdf"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-collection_invalid-value_copy-stdout",
+      "sha256": "925db3ba8399e9ed93e8a657f94127392e7651c7b9f67a2400662aec055e4e66"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-collection_invalid-value_copy-stderr",
+      "sha256": "12cc79b8af2000b98fa32cf37eae4a8f69b344f0651470373e9cd51ef114e858"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-collection_invalid-value_copy-request",
+      "sha256": "bf4b07491b271bc2e7cd2217033cac8efb73733cd39f0652abc3d475a5e78bdf"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-malformed_json-json-stdout",
+      "sha256": "f9435baf9305978c75a66631c2ea8366c225d29859a4fc788b8516a99e5d8be0"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-malformed_json-json-stderr",
+      "sha256": "de66a37c8bddb60cebaeaef78978794869e6eb73dd4fb1ce26abd60d6bb3e267"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-malformed_json-json-request",
+      "sha256": "f72a4f869709da1c74dc9fc1d98d62767c8196cd65fbcf7d245e1f2cdee094ae"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-malformed_json-json-stdout",
+      "sha256": "7349cd34014befdc5dc9fa381e8cd4b52142704ff9a2cacc59ea201f6c40d481"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-malformed_json-json-stderr",
+      "sha256": "de66a37c8bddb60cebaeaef78978794869e6eb73dd4fb1ce26abd60d6bb3e267"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-malformed_json-json-request",
+      "sha256": "f72a4f869709da1c74dc9fc1d98d62767c8196cd65fbcf7d245e1f2cdee094ae"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_min-json-stdout",
+      "sha256": "b144ca21954a1b434f05667c0b3247d22c2d706803991ed8550dc8fa099d15dd"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_min-json-stderr",
+      "sha256": "60bebee0cd96f71f2cdf23d1a5e1941de8ccf41cceeb2cae30cc6d1b54b4a518"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_min-json-request",
+      "sha256": "c06c31e937a53615069e55a128915d68e03cbcd3b02a31cd549485405350d913"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_min-json-stdout",
+      "sha256": "44d39862b09cabbf867c2aa919f55b5cc2a71f2515694b84c570891de0c9a239"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_min-json-stderr",
+      "sha256": "2b5978a38c220cf74306c64b0e6bc5f1fdefde94b7ddd77c63330b9d742b7662"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_min-json-request",
+      "sha256": "c06c31e937a53615069e55a128915d68e03cbcd3b02a31cd549485405350d913"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_min-value_copy-stdout",
+      "sha256": "20a492a34ea816dba8397415af806671bb670f1b7407482cae62dc13776cb637"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_min-value_copy-stderr",
+      "sha256": "8fd06251fb3fbae116b5091b16a99975e70408347131549099b7fe4aa4f80cc5"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_min-value_copy-request",
+      "sha256": "858188aa39368c0c973887a997130652a612fd71f99a806196d28e744864888a"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_min-value_copy-stdout",
+      "sha256": "2438233841c6e1442878f8ee09b54c589238dda3b2b5f2b6cf08e2958c9b7691"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_min-value_copy-stderr",
+      "sha256": "89bc7f4074abe5fd387e9c42639fb48f42aff2bf5a486d56c8b2e231bcff5edc"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_min-value_copy-request",
+      "sha256": "858188aa39368c0c973887a997130652a612fd71f99a806196d28e744864888a"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_max-json-stdout",
+      "sha256": "fbfc1fbb502348b6bb7248c011b6182ae7e17276d1a1a3aca530800d3c91db34"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_max-json-stderr",
+      "sha256": "4d4ca5f53962a54fd510dd92b5a003493e9e408f54584ff2a069eb02ff24dabf"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_max-json-request",
+      "sha256": "37f411e0b2fc0357491b737a012c313cf1637ff83fd8987bd9410615249621c1"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_max-json-stdout",
+      "sha256": "897ceefc0f9193ad0a24f3e0c28323a87a7bd0cfb7f610bb35ba8703fc28f4e4"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_max-json-stderr",
+      "sha256": "5f4b41ec5877d24035622b18fe645d09264a1874aac288fbcc1420987fb83885"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_max-json-request",
+      "sha256": "37f411e0b2fc0357491b737a012c313cf1637ff83fd8987bd9410615249621c1"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_max-value_copy-stdout",
+      "sha256": "18a689c41ec49e0edf35c479d134c393037c84bc4085afbac2ee0096d2698ca7"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_max-value_copy-stderr",
+      "sha256": "80e71ce3fe877d36eee064d03a22e21566d4b569cd29521bd6379dc2b81d58b3"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_max-value_copy-request",
+      "sha256": "243a96a9fdb7316602741cf42a451107012037568794a51d01641f32850158eb"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_max-value_copy-stdout",
+      "sha256": "95b94ba22cf87100a7b9dad0ddba605a0f5fa3b4f529697811bec743ba1636a4"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_max-value_copy-stderr",
+      "sha256": "9f2b4949a56248ada415d497716ae213506455747ee34769e64d0f4eda37e7f1"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_max-value_copy-request",
+      "sha256": "243a96a9fdb7316602741cf42a451107012037568794a51d01641f32850158eb"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_unicode64-json-stdout",
+      "sha256": "0d2643bfc1fda4a594dc893518c53ae2d732068ab6ebbed42e00f24acaa8782a"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_unicode64-json-stderr",
+      "sha256": "8246ceb1444d8d79203028256bd5f91178d97ca97ddf139bac86e15493213e9c"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_unicode64-json-request",
+      "sha256": "39d3ad6aa5c8a7495ee9fa02a3e059396777b04528398d5460d15ad73ad7cc9a"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_unicode64-json-stdout",
+      "sha256": "3e7ea8507516467ba878f75dee1b61e06d5c8162465fa94520f24db0f3643646"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_unicode64-json-stderr",
+      "sha256": "7c4edc808af608edecc72ca0c961ed6a9f052bc20087d690f580f846d9acf3cc"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_unicode64-json-request",
+      "sha256": "39d3ad6aa5c8a7495ee9fa02a3e059396777b04528398d5460d15ad73ad7cc9a"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_unicode64-value_copy-stdout",
+      "sha256": "02770a71ae6f5a9a6d57ae631e5f055e482142f7a34bbee8cdbd34bee0327bc0"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_unicode64-value_copy-stderr",
+      "sha256": "74d161d59e64bf0d8d35dde7eb8459ece291278512c9eae7ac62e5543940bb95"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_unicode64-value_copy-request",
+      "sha256": "b010677bcb7d22905d697c9d8611325af7d224ad689de80ede1ff237c3328b82"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_unicode64-value_copy-stdout",
+      "sha256": "0c8af1a7452a9ff472d84120ba426454c2ac23b15fdc48ac43e8b59a133276fc"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_unicode64-value_copy-stderr",
+      "sha256": "70e744ee15d1d33748e0fc9c8e16eaa748ecd3c57bcc2456d8ead2e5495958ea"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_unicode64-value_copy-request",
+      "sha256": "b010677bcb7d22905d697c9d8611325af7d224ad689de80ede1ff237c3328b82"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_unicode65-json-stdout",
+      "sha256": "ab299031d270a05b16d50ca999063b4c4ed5e657e6ab84e9582bf384338b4903"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_unicode65-json-stderr",
+      "sha256": "8eb5258422670a79ab362e55a4d2c4f70742064576302fe63f2b598cbd3eee86"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_unicode65-json-request",
+      "sha256": "2255a87b82cf966bcee65042e324fa43fc7f56c2cf7cf5f3827b9b72d069f446"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_unicode65-json-stdout",
+      "sha256": "0011ae737f60b46ab3ef4c3678f7a48a67f1047c2d1ae3c90ebe3f9d1ad9b579"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_unicode65-json-stderr",
+      "sha256": "6a90d5d7fb133e5e01ad76bbdc5e9c10a2692a46ae115bac21f841e540bc70eb"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_unicode65-json-request",
+      "sha256": "2255a87b82cf966bcee65042e324fa43fc7f56c2cf7cf5f3827b9b72d069f446"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_unicode65-value_copy-stdout",
+      "sha256": "28c7bf64519b69e1fe8ec73e545e7564ec7bb0a27bafd668b9ac577af875556a"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_unicode65-value_copy-stderr",
+      "sha256": "ff2abc872bc2f8242170d5ebb0a8c6e880a777a586909da4be2b4c0e1ce1d86a"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_unicode65-value_copy-request",
+      "sha256": "fbb446c2c21848c0d1cc4bea26a21ed2648e21e472fbd4a7ffc46aca331cb1f7"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_unicode65-value_copy-stdout",
+      "sha256": "3b0a1ca9adcd7480c096c8f344ffd5daeeac0e9bbd61647c6500ad1732a20f51"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_unicode65-value_copy-stderr",
+      "sha256": "1a697ffde692df34f53ea4fdb04bea724df8003a4fb254cf5cf1bc16000fb1ed"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_unicode65-value_copy-request",
+      "sha256": "fbb446c2c21848c0d1cc4bea26a21ed2648e21e472fbd4a7ffc46aca331cb1f7"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_huge_int-json-stdout",
+      "sha256": "22546111d803e6626d120d9db787850cf2ae58b290888f0de770afb6b0dda963"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_huge_int-json-stderr",
+      "sha256": "49b677772f5cf183c8c4f1974407b4f16c2ade0ff6c13477a5b41e3271d60729"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_huge_int-json-request",
+      "sha256": "49268cfe54e1eb7b7e7f638b230c035d4a2e1a8735b1a3de80ad62ef6646beb2"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_huge_int-json-stdout",
+      "sha256": "72f1b41368a8eeef8bd2ff7ff2b657914d573623fd08684c09f2b601cf6600d8"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_huge_int-json-stderr",
+      "sha256": "49b677772f5cf183c8c4f1974407b4f16c2ade0ff6c13477a5b41e3271d60729"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_huge_int-json-request",
+      "sha256": "49268cfe54e1eb7b7e7f638b230c035d4a2e1a8735b1a3de80ad62ef6646beb2"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_huge_int-value_copy-stdout",
+      "sha256": "c84d361ade7e22c0de5429a020a27c2fbe69c253d683b13581f83b4b6e52cbfc"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_huge_int-value_copy-stderr",
+      "sha256": "f6f27038eb1cdf78b1f1b1fa5790203fdb735e4048750da9ac0fc88e497163da"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_huge_int-value_copy-request",
+      "sha256": "a3b18c622c9dba6cda1413fc9a4f2747ee0c82e0c314c364f9466338ea4e791e"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_huge_int-value_copy-stdout",
+      "sha256": "c54bd07c00b7d5d66385dc6b748e69a8c8f417010b13abfa466c377915594d6e"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_huge_int-value_copy-stderr",
+      "sha256": "f6f27038eb1cdf78b1f1b1fa5790203fdb735e4048750da9ac0fc88e497163da"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_huge_int-value_copy-request",
+      "sha256": "a3b18c622c9dba6cda1413fc9a4f2747ee0c82e0c314c364f9466338ea4e791e"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_root_array-json-stdout",
+      "sha256": "30bccfb974b6cfdfb0946748c01510c011992e4ba6cca2aabd14d52d0faeff3d"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_root_array-json-stderr",
+      "sha256": "72476130150d8fd82cfa037208209080d39b716be7a7b6708c133bfa73b3b0f4"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_root_array-json-request",
+      "sha256": "c3204037d34c49fd5d9cfe2719a60909af3cea6e4212d4f65ced92098f9b2e82"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_root_array-json-stdout",
+      "sha256": "9036bb497720de25fd6b8ade3c6d4507b20955dbf622df5fadb2d77d6acf4b6c"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_root_array-json-stderr",
+      "sha256": "72476130150d8fd82cfa037208209080d39b716be7a7b6708c133bfa73b3b0f4"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_root_array-json-request",
+      "sha256": "c3204037d34c49fd5d9cfe2719a60909af3cea6e4212d4f65ced92098f9b2e82"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_root_array-value_copy-stdout",
+      "sha256": "3d9cba817e5078c9a15487e8668d5433c9829e3f79369d147b294a93d97cb83f"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_root_array-value_copy-stderr",
+      "sha256": "0a0a486ac406ef136941e3a3fd00ee4331d5824c091d4ef3b6ae11d90198c8bb"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_root_array-value_copy-request",
+      "sha256": "ad2aef8b6541a747703efa75dae2f6844e3604a242ff6ea3d0a3e7cbaf0989ea"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_root_array-value_copy-stdout",
+      "sha256": "682c0f4eb8768520a9b5dc00124e9e8651e9b2cf0745d8dbf532374e234ce0cf"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_root_array-value_copy-stderr",
+      "sha256": "0a0a486ac406ef136941e3a3fd00ee4331d5824c091d4ef3b6ae11d90198c8bb"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_root_array-value_copy-request",
+      "sha256": "ad2aef8b6541a747703efa75dae2f6844e3604a242ff6ea3d0a3e7cbaf0989ea"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-nested_extra-json-stdout",
+      "sha256": "b60be02be72a3a178be1c2e5e0c9ad42093a8227f882e469f0e136215855adc8"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-nested_extra-json-stderr",
+      "sha256": "1e318e22debec505274ef51a19874dfe9fbaed4e0c81e1f5becef19501bb763d"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-nested_extra-json-request",
+      "sha256": "3533f9b2a10f3b73f93e59f7728aea9ca5e2e3b6fee01db0fba762972c8167bd"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-nested_extra-json-stdout",
+      "sha256": "436f5e94d6c9da4b26e8db4d8574c0fe9a523c4eeff2f1497bee7be1055bcf81"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-nested_extra-json-stderr",
+      "sha256": "a93aecc008a4b876f41b07835f23cc2cafb316c3c2e21228caa82b84b5a4251a"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-nested_extra-json-request",
+      "sha256": "3533f9b2a10f3b73f93e59f7728aea9ca5e2e3b6fee01db0fba762972c8167bd"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-nested_extra-value_copy-stdout",
+      "sha256": "f4d70d47dc435c227ff83ef65f2e55fcc2438eddf8896b6efdedeed8dff995cc"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-nested_extra-value_copy-stderr",
+      "sha256": "cfea865a088067ac4223409925b987f65ecee4238a7523b5b994f9ea2a9caafc"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-nested_extra-value_copy-request",
+      "sha256": "c9992c7ca6999b9a9442a33ba201f065296ef8a2671492e144c7efb1aba9d1a6"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-nested_extra-value_copy-stdout",
+      "sha256": "f63d38a59b807dea835fe3d47f1181a89fb31e16bde06acf40c470389e27ace8"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-nested_extra-value_copy-stderr",
+      "sha256": "a09205d0b3a1c8fcaee12fd5af806bd981b10d5ff405e691612a3c95c5ebb723"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-nested_extra-value_copy-request",
+      "sha256": "c9992c7ca6999b9a9442a33ba201f065296ef8a2671492e144c7efb1aba9d1a6"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_nonintegral_float-json-stdout",
+      "sha256": "c28b0fc68b0c4ac25b66722acd12474e45e35a8fc14fdbb8668c855de52a466b"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_nonintegral_float-json-stderr",
+      "sha256": "8272ad2f8295d6563d2c4817f10eb9eba46347e6e824c64e6b0fdd1d424cdd5f"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_nonintegral_float-json-request",
+      "sha256": "46c87f7a86dee24ed0af49dcc1712c1b8e76ba838e454e739bceea5ce84a166c"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_nonintegral_float-json-stdout",
+      "sha256": "d1f58a5958bb1950981a42507ca1c500d7512bfe229a621ac3623a2f6db6d922"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_nonintegral_float-json-stderr",
+      "sha256": "8272ad2f8295d6563d2c4817f10eb9eba46347e6e824c64e6b0fdd1d424cdd5f"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_nonintegral_float-json-request",
+      "sha256": "46c87f7a86dee24ed0af49dcc1712c1b8e76ba838e454e739bceea5ce84a166c"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_nonintegral_float-value_copy-stdout",
+      "sha256": "dfb956f0e349f041ca7671b91f61c8c9ba3ebad000664d21357201562e68294a"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_nonintegral_float-value_copy-stderr",
+      "sha256": "07692f2a58218f249f9e5768bf437902709aadff318c4a6224fa8b507ceeb59d"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-baseline-flat_nonintegral_float-value_copy-request",
+      "sha256": "471a2492ebf663406f8399b06016ab922453d4cec1da362d9cbcf110b946d9c1"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_nonintegral_float-value_copy-stdout",
+      "sha256": "db4323760196e26a6e63ca5c80f2de89086bd335666cf387a44f7f63d773e3de"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_nonintegral_float-value_copy-stderr",
+      "sha256": "07692f2a58218f249f9e5768bf437902709aadff318c4a6224fa8b507ceeb59d"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-flat_nonintegral_float-value_copy-request",
+      "sha256": "471a2492ebf663406f8399b06016ab922453d4cec1da362d9cbcf110b946d9c1"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-rule-timing-stdout",
+      "sha256": "49846dcbf8321d0baafabfa1a4bbe2b90ae83b5be3084e57cba9cbae0094aaa5"
+    },
+    {
+      "artifact": "artifact:diagnostic-log-candidate-rule-timing-stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "outputs": {
+    "rule-allocations.jsonl": "dcba0b7240ac3d1dd484ff748fc5e4882fa86753e81b365b85060b7f36bb5fd2",
+    "parse-allocations.json": "7b1fcc8cad8a151e8827fdbd6766c7d0e6f2a5af80ae33047bfe5da6e3ee9b30",
+    "rule-timings.jsonl": "49846dcbf8321d0baafabfa1a4bbe2b90ae83b5be3084e57cba9cbae0094aaa5"
+  },
+  "counts": {
+    "rule_allocation_rows": 36,
+    "parse_allocation_rows": 98,
+    "rule_timing_rows": 144
+  },
+  "environment": {
+    "platform": "Linux x86_64 shared cloud host",
+    "cpu_count": 9,
+    "affinity": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ]
+  },
+  "protocol": {
+    "parse_request": {
+      "iterations": 1,
+      "warmup": 0,
+      "repeats": 1
+    },
+    "rule_timing": {
+      "rounds": 2,
+      "positions": 4,
+      "iterations": 10000,
+      "warmup": 1000,
+      "repeats": 3
+    },
+    "allocation_interval": "System allocation/reallocation calls and cumulative requested bytes. Parse: through validated Result construction, before dump/error normalization and result disposal; immutable input construction and one static-rule warmup excluded. Isolated rules: during validate_rules/Rules::validate, including construction of Context error entries, before ctx.result and disposal; value/rules/Context preparation excluded",
+    "timing_separation": "rule_timing is a separate uninstrumented executable; parse_allocations samples are retained raw but are NOT timing evidence"
+  },
+  "privacy": "Private build manifests, original Cargo receipts/logs and full execution logs stay outside the public evidence; this derivative preserves their SHA256 values and replaces local paths with artifact IDs."
+}

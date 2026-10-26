@@ -57,6 +57,13 @@ macro_rules! integer {
                 }
                 parsed
             }
+            fn validate_rules(&self, rules: &crate::rules::Rules, ctx: &mut Context) {
+                match i128::try_from(*self) {
+                    Ok(value) => rules.validate_integer(value, ctx),
+                    // Preserve the exact generic route for the upper half of u128.
+                    Err(_) => rules.validate(&self.encode(ctx), ctx),
+                }
+            }
             fn encode(&self, _ctx: &mut Context) -> Value { json!(*self) }
             fn schema(ctx: &mut SchemaContext, coerce: bool) -> Value {
                 let base = json!({"type":"integer", "minimum": <$ty>::MIN, "maximum": <$ty>::MAX});

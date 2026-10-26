@@ -1,0 +1,36 @@
+{"bytes":2,"calls":1,"case":"no_bounds","result":{"Ok":null},"route":"generic","type":"i64"}
+{"bytes":0,"calls":0,"case":"no_bounds","result":{"Ok":null},"route":"typed","type":"i64"}
+{"bytes":40,"calls":1,"case":"no_bounds","result":{"Ok":null},"route":"generic","type":"i128"}
+{"bytes":0,"calls":0,"case":"no_bounds","result":{"Ok":null},"route":"typed","type":"i128"}
+{"bytes":39,"calls":1,"case":"no_bounds","result":{"Ok":null},"route":"generic","type":"u128"}
+{"bytes":39,"calls":1,"case":"no_bounds","result":{"Ok":null},"route":"typed","type":"u128"}
+{"bytes":2,"calls":1,"case":"lexical_range","result":{"Ok":null},"route":"generic","type":"i64"}
+{"bytes":0,"calls":0,"case":"lexical_range","result":{"Ok":null},"route":"typed","type":"i64"}
+{"bytes":1142,"calls":7,"case":"lexical_range","result":{"Err":[{"code":"greater_than_equal","loc":[],"message":"value must be >= 0","params":{"limit":0},"stage":"validate"}]},"route":"generic","type":"i128"}
+{"bytes":1102,"calls":6,"case":"lexical_range","result":{"Err":[{"code":"greater_than_equal","loc":[],"message":"value must be >= 0","params":{"limit":0},"stage":"validate"}]},"route":"typed","type":"i128"}
+{"bytes":1507,"calls":21,"case":"lexical_range","result":{"Err":[{"code":"less_than_equal","loc":[],"message":"value must be <= 1000000000","params":{"limit":1000000000},"stage":"validate"}]},"route":"generic","type":"u128"}
+{"bytes":1507,"calls":21,"case":"lexical_range","result":{"Err":[{"code":"less_than_equal","loc":[],"message":"value must be <= 1000000000","params":{"limit":1000000000},"stage":"validate"}]},"route":"typed","type":"u128"}
+{"bytes":1777,"calls":12,"case":"lexical_strict","result":{"Err":[{"code":"greater_than","loc":[],"message":"value must be > 42","params":{"limit":42},"stage":"validate"},{"code":"less_than","loc":[],"message":"value must be < 42","params":{"limit":42},"stage":"validate"}]},"route":"generic","type":"i64"}
+{"bytes":1775,"calls":11,"case":"lexical_strict","result":{"Err":[{"code":"greater_than","loc":[],"message":"value must be > 42","params":{"limit":42},"stage":"validate"},{"code":"less_than","loc":[],"message":"value must be < 42","params":{"limit":42},"stage":"validate"}]},"route":"typed","type":"i64"}
+{"bytes":1137,"calls":7,"case":"lexical_strict","result":{"Err":[{"code":"greater_than","loc":[],"message":"value must be > 42","params":{"limit":42},"stage":"validate"}]},"route":"generic","type":"i128"}
+{"bytes":1097,"calls":6,"case":"lexical_strict","result":{"Err":[{"code":"greater_than","loc":[],"message":"value must be > 42","params":{"limit":42},"stage":"validate"}]},"route":"typed","type":"i128"}
+{"bytes":1483,"calls":21,"case":"lexical_strict","result":{"Err":[{"code":"less_than","loc":[],"message":"value must be < 42","params":{"limit":42},"stage":"validate"}]},"route":"generic","type":"u128"}
+{"bytes":1483,"calls":21,"case":"lexical_strict","result":{"Err":[{"code":"less_than","loc":[],"message":"value must be < 42","params":{"limit":42},"stage":"validate"}]},"route":"typed","type":"u128"}
+{"bytes":66,"calls":9,"case":"decimal_equality","result":{"Ok":null},"route":"generic","type":"i64"}
+{"bytes":66,"calls":9,"case":"decimal_equality","result":{"Ok":null},"route":"typed","type":"i64"}
+{"bytes":1497,"calls":21,"case":"decimal_equality","result":{"Err":[{"code":"greater_than_equal","loc":[],"message":"value must be >= 42.0","params":{"limit":42.0},"stage":"validate"}]},"route":"generic","type":"i128"}
+{"bytes":1497,"calls":21,"case":"decimal_equality","result":{"Err":[{"code":"greater_than_equal","loc":[],"message":"value must be >= 42.0","params":{"limit":42.0},"stage":"validate"}]},"route":"typed","type":"i128"}
+{"bytes":1493,"calls":21,"case":"decimal_equality","result":{"Err":[{"code":"less_than_equal","loc":[],"message":"value must be <= 4.2e+1","params":{"limit":4.2e+1},"stage":"validate"}]},"route":"generic","type":"u128"}
+{"bytes":1493,"calls":21,"case":"decimal_equality","result":{"Err":[{"code":"less_than_equal","loc":[],"message":"value must be <= 4.2e+1","params":{"limit":4.2e+1},"stage":"validate"}]},"route":"typed","type":"u128"}
+{"bytes":3218,"calls":30,"case":"mixed_bounds","result":{"Err":[{"code":"greater_than_equal","loc":[],"message":"value must be >= 43","params":{"limit":43},"stage":"validate"},{"code":"greater_than","loc":[],"message":"value must be > 42.0","params":{"limit":42.0},"stage":"validate"},{"code":"less_than_equal","loc":[],"message":"value must be <= 41","params":{"limit":41},"stage":"validate"},{"code":"less_than","loc":[],"message":"value must be < 4.2e+1","params":{"limit":4.2e+1},"stage":"validate"}]},"route":"generic","type":"i64"}
+{"bytes":3218,"calls":30,"case":"mixed_bounds","result":{"Err":[{"code":"greater_than_equal","loc":[],"message":"value must be >= 43","params":{"limit":43},"stage":"validate"},{"code":"greater_than","loc":[],"message":"value must be > 42.0","params":{"limit":42.0},"stage":"validate"},{"code":"less_than_equal","loc":[],"message":"value must be <= 41","params":{"limit":41},"stage":"validate"},{"code":"less_than","loc":[],"message":"value must be < 4.2e+1","params":{"limit":4.2e+1},"stage":"validate"}]},"route":"typed","type":"i64"}
+{"bytes":2178,"calls":26,"case":"mixed_bounds","result":{"Err":[{"code":"greater_than_equal","loc":[],"message":"value must be >= 43","params":{"limit":43},"stage":"validate"},{"code":"greater_than","loc":[],"message":"value must be > 42.0","params":{"limit":42.0},"stage":"validate"}]},"route":"generic","type":"i128"}
+{"bytes":2178,"calls":26,"case":"mixed_bounds","result":{"Err":[{"code":"greater_than_equal","loc":[],"message":"value must be >= 43","params":{"limit":43},"stage":"validate"},{"code":"greater_than","loc":[],"message":"value must be > 42.0","params":{"limit":42.0},"stage":"validate"}]},"route":"typed","type":"i128"}
+{"bytes":2521,"calls":40,"case":"mixed_bounds","result":{"Err":[{"code":"less_than_equal","loc":[],"message":"value must be <= 41","params":{"limit":41},"stage":"validate"},{"code":"less_than","loc":[],"message":"value must be < 4.2e+1","params":{"limit":4.2e+1},"stage":"validate"}]},"route":"generic","type":"u128"}
+{"bytes":2521,"calls":40,"case":"mixed_bounds","result":{"Err":[{"code":"less_than_equal","loc":[],"message":"value must be <= 41","params":{"limit":41},"stage":"validate"},{"code":"less_than","loc":[],"message":"value must be < 4.2e+1","params":{"limit":4.2e+1},"stage":"validate"}]},"route":"typed","type":"u128"}
+{"bytes":105,"calls":9,"case":"huge_bounds","result":{"Ok":null},"route":"generic","type":"i64"}
+{"bytes":105,"calls":9,"case":"huge_bounds","result":{"Ok":null},"route":"typed","type":"i64"}
+{"bytes":431,"calls":15,"case":"huge_bounds","result":{"Ok":null},"route":"generic","type":"i128"}
+{"bytes":431,"calls":15,"case":"huge_bounds","result":{"Ok":null},"route":"typed","type":"i128"}
+{"bytes":428,"calls":15,"case":"huge_bounds","result":{"Ok":null},"route":"generic","type":"u128"}
+{"bytes":428,"calls":15,"case":"huge_bounds","result":{"Ok":null},"route":"typed","type":"u128"}

@@ -1,0 +1,18 @@
+{
+  "recorded_before_timing": true,
+  "utc": "2026-10-26T04:05:09.932346+00:00",
+  "purpose": "isolated initial/inline/inline-plus-fallback diagnostic; no end-to-end inference",
+  "base_local_commit": "4640402e2a8caab81f9c4062fb4670cd6334addd",
+  "binaries": {
+    "rule-timing": "af9ddd974a4cdd6709411cc00359622be950b059f2c348806a4a5f821d9490ff",
+    "rule-timing-inline": "aa7e4d4f0c477fce2d79be454a52b148d0e1f925b765cba1e1ae43db1b9554fe",
+    "rule-timing-inline-fallback": "db7334d58cbba2bd9b904e1562357cb368da71c8abe7fd67eb3e443d79478aac"
+  },
+  "patches": {
+    "alt-inline.patch": "8559e0953d78f413a3c8ec815d62442a3e0694e6c93cede59adfc4cd06217763",
+    "alt-inline-fallback.patch": "2439a9a91f5795b7a5c24df775efc8d69a3664192b64e7c6c0e8b8594bd20fe6"
+  },
+  "probe_source_sha256": "d33c6c2703616730dcdc39a1d5cfaaa8c24f95346d44cb3e5a6abac0d08a337e",
+  "started": "2026-10-26T04:05:30.067177+00:00",
+  "finished": "2026-10-26T04:05:38.788683+00:00"
+}
