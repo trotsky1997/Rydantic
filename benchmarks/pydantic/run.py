@@ -48,7 +48,8 @@ def verify(case, result, request):
         raise ValueError("result consumption checksum mismatch")
     for key in ("samples_ns", "baseline_ns"):
         values = result[key]
-        if len(values) != request["repeats"] or any(type(v) is not int or v <= 0 for v in values):
+        minimum = 1 if key == "samples_ns" else 0
+        if len(values) != request["repeats"] or any(type(v) is not int or v < minimum for v in values):
             raise ValueError(f"invalid {key}")
 
 

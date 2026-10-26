@@ -1,0 +1,169 @@
+// Allocation-only instrumentation: no timers. Synthetic inputs only.
+use std::alloc::{GlobalAlloc, Layout, System};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::{hint::black_box, io::{self, Read}};
+use rydantic::{json, Model, Value};
+struct Counter;
+static ENABLED: AtomicBool = AtomicBool::new(false);
+static CALLS: AtomicUsize = AtomicUsize::new(0);
+static BYTES: AtomicUsize = AtomicUsize::new(0);
+unsafe impl GlobalAlloc for Counter {
+    unsafe fn alloc(&self, l: Layout) -> *mut u8 {
+        if ENABLED.load(Ordering::Relaxed) { CALLS.fetch_add(1, Ordering::Relaxed); BYTES.fetch_add(l.size(), Ordering::Relaxed); }
+        System.alloc(l)
+    }
+    unsafe fn alloc_zeroed(&self, l: Layout) -> *mut u8 {
+        if ENABLED.load(Ordering::Relaxed) { CALLS.fetch_add(1, Ordering::Relaxed); BYTES.fetch_add(l.size(), Ordering::Relaxed); }
+        System.alloc_zeroed(l)
+    }
+    unsafe fn dealloc(&self, p: *mut u8, l: Layout) { System.dealloc(p, l) }
+    unsafe fn realloc(&self, p: *mut u8, l: Layout, n: usize) -> *mut u8 {
+        if ENABLED.load(Ordering::Relaxed) { CALLS.fetch_add(1, Ordering::Relaxed); BYTES.fetch_add(n, Ordering::Relaxed); }
+        System.realloc(p, l, n)
+    }
+}
+#[global_allocator] static ALLOC: Counter = Counter;
+fn count<T>(f: impl FnOnce()->T) -> (T, usize, usize) {
+    CALLS.store(0,Ordering::Relaxed); BYTES.store(0,Ordering::Relaxed); ENABLED.store(true,Ordering::Relaxed);
+    let value = black_box(f());
+    ENABLED.store(false,Ordering::Relaxed);
+    (value, CALLS.load(Ordering::Relaxed), BYTES.load(Ordering::Relaxed))
+}
+#[derive(Model)] #[model(extra="forbid")] struct Flat { #[model(ge=0,le=1000000000)] id:i64, #[model(min_length=1,max_length=64)] name:String, active:bool }
+#[derive(Model)] #[model(extra="forbid")] struct Nested { user:Flat, tags:Vec<String> }
+#[derive(Model)] #[model(extra="forbid")] struct Collection { items:Vec<Flat> }
+#[derive(Model)] struct Empty {}
+#[derive(Model)] #[model(extra="ignore")] struct Ignore { id: i64 }
+#[derive(Model)] struct Flatten { #[model(flatten)] user: Flat }
+#[derive(Model)] #[model(extra="allow")] struct Extra { id: i64, #[model(extra)] extra: std::collections::BTreeMap<String, Value> }
+#[derive(Model)] #[model(tag="kind")] enum Tagged { Item { id: i64 } }
+#[derive(Model)] struct Wide {
+    #[model(default)] f000: u64,
+    #[model(default)] f001: u64,
+    #[model(default)] f002: u64,
+    #[model(default)] f003: u64,
+    #[model(default)] f004: u64,
+    #[model(default)] f005: u64,
+    #[model(default)] f006: u64,
+    #[model(default)] f007: u64,
+    #[model(default)] f008: u64,
+    #[model(default)] f009: u64,
+    #[model(default)] f010: u64,
+    #[model(default)] f011: u64,
+    #[model(default)] f012: u64,
+    #[model(default)] f013: u64,
+    #[model(default)] f014: u64,
+    #[model(default)] f015: u64,
+    #[model(default)] f016: u64,
+    #[model(default)] f017: u64,
+    #[model(default)] f018: u64,
+    #[model(default)] f019: u64,
+    #[model(default)] f020: u64,
+    #[model(default)] f021: u64,
+    #[model(default)] f022: u64,
+    #[model(default)] f023: u64,
+    #[model(default)] f024: u64,
+    #[model(default)] f025: u64,
+    #[model(default)] f026: u64,
+    #[model(default)] f027: u64,
+    #[model(default)] f028: u64,
+    #[model(default)] f029: u64,
+    #[model(default)] f030: u64,
+    #[model(default)] f031: u64,
+    #[model(default)] f032: u64,
+    #[model(default)] f033: u64,
+    #[model(default)] f034: u64,
+    #[model(default)] f035: u64,
+    #[model(default)] f036: u64,
+    #[model(default)] f037: u64,
+    #[model(default)] f038: u64,
+    #[model(default)] f039: u64,
+    #[model(default)] f040: u64,
+    #[model(default)] f041: u64,
+    #[model(default)] f042: u64,
+    #[model(default)] f043: u64,
+    #[model(default)] f044: u64,
+    #[model(default)] f045: u64,
+    #[model(default)] f046: u64,
+    #[model(default)] f047: u64,
+    #[model(default)] f048: u64,
+    #[model(default)] f049: u64,
+    #[model(default)] f050: u64,
+    #[model(default)] f051: u64,
+    #[model(default)] f052: u64,
+    #[model(default)] f053: u64,
+    #[model(default)] f054: u64,
+    #[model(default)] f055: u64,
+    #[model(default)] f056: u64,
+    #[model(default)] f057: u64,
+    #[model(default)] f058: u64,
+    #[model(default)] f059: u64,
+    #[model(default)] f060: u64,
+    #[model(default)] f061: u64,
+    #[model(default)] f062: u64,
+    #[model(default)] f063: u64,
+    #[model(default)] f064: u64,
+    #[model(default)] f065: u64,
+    #[model(default)] f066: u64,
+    #[model(default)] f067: u64,
+    #[model(default)] f068: u64,
+    #[model(default)] f069: u64,
+    #[model(default)] f070: u64,
+    #[model(default)] f071: u64,
+    #[model(default)] f072: u64,
+    #[model(default)] f073: u64,
+    #[model(default)] f074: u64,
+    #[model(default)] f075: u64,
+    #[model(default)] f076: u64,
+    #[model(default)] f077: u64,
+    #[model(default)] f078: u64,
+    #[model(default)] f079: u64,
+}
+
+fn outcome<M: Model>(result: &Result<M, rydantic::ValidationErrors>) -> Value {
+    match result {
+        Ok(model) => json!({"accepted":true,"output":model.dump().unwrap()}),
+        Err(errors) => json!({"accepted":false,"errors":serde_json::to_string(errors).unwrap(),"display":errors.to_string()}),
+    }
+}
+fn parse<M: Model>(input: &str, mode: &str) -> Value {
+    assert!(matches!(mode, "json" | "value_copy"));
+    let value = if mode == "value_copy" { Some(serde_json::from_str::<Value>(input).unwrap()) } else { None };
+    let operation = || match &value {
+        Some(value) => M::parse_value(black_box(value).clone()),
+        None => M::parse_json(black_box(input)),
+    };
+    let (result, calls, bytes) = count(operation);
+    let expected = outcome(&result);
+    drop(result);
+    let cold = json!({"calls":calls,"requested_bytes":bytes});
+    drop(black_box(operation())); // Initialize parse rule caches before warmed counts.
+    let mut warm = Vec::new();
+    for _ in 0..5 {
+        let (result, calls, bytes) = count(operation);
+        assert_eq!(outcome(&result), expected);
+        drop(result);
+        warm.push(json!({"calls":calls,"requested_bytes":bytes}));
+    }
+    assert!(warm.iter().all(|row| row == &warm[0]));
+    json!({"cold":cold,"warm":warm,"outcome":expected})
+}
+fn main() {
+    let mut input = String::new(); io::stdin().read_to_string(&mut input).unwrap();
+    let request: Value = serde_json::from_str(&input).unwrap();
+    let text = request["input"].as_str().unwrap();
+    let mode = request["mode"].as_str().unwrap();
+    let result = match request["schema"].as_str().unwrap() {
+        "flat" => parse::<Flat>(text,mode),
+        "nested" => parse::<Nested>(text,mode),
+        "collection" => parse::<Collection>(text,mode),
+        "empty" => parse::<Empty>(text,mode),
+        "ignore" => parse::<Ignore>(text,mode),
+        "flatten" => parse::<Flatten>(text,mode),
+        "extra" => parse::<Extra>(text,mode),
+        "tagged" => parse::<Tagged>(text,mode),
+        "wide" => parse::<Wide>(text,mode),
+        _ => panic!("unknown schema"),
+    };
+    println!("{}",json!({"result":result,"slot_bytes":std::mem::size_of::<Option<&rydantic::RawValue>>()}));
+}

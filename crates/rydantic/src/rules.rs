@@ -171,6 +171,74 @@ impl Rules {
             }
         }
     }
+    pub(crate) fn validate_string(&self, text: &str, ctx: &mut Context) {
+        self.validate_length(text.chars().count(), ctx);
+        if let Some(pattern) = &self.pattern {
+            if !pattern.is_match(text) {
+                ctx.push(
+                    ValidationError::new("pattern_mismatch", "string does not match the pattern")
+                        .with_param("pattern", pattern.as_str()),
+                );
+            }
+        }
+        if self.email && !email_address::EmailAddress::is_valid(text) {
+            ctx.push(ValidationError::new(
+                "email",
+                "string must be a valid email address",
+            ));
+        }
+    }
+    fn validate_number_bounds(&self, compare: impl Fn(&Number) -> Ordering, ctx: &mut Context) {
+        for (bound, operator, code) in [
+            (&self.ge, ">=", "greater_than_equal"),
+            (&self.gt, ">", "greater_than"),
+            (&self.le, "<=", "less_than_equal"),
+            (&self.lt, "<", "less_than"),
+        ] {
+            if let Some(bound) = bound {
+                let order = compare(bound);
+                let valid = match operator {
+                    ">=" => order != Ordering::Less,
+                    ">" => order == Ordering::Greater,
+                    "<=" => order != Ordering::Greater,
+                    _ => order == Ordering::Less,
+                };
+                if !valid {
+                    ctx.push(
+                        ValidationError::new(code, format!("value must be {operator} {bound}"))
+                            .with_param("limit", bound.clone()),
+                    );
+                }
+            }
+        }
+    }
+    pub(crate) fn validate_i128(&self, value: i128, ctx: &mut Context) {
+        self.validate_number_bounds(
+            |bound| match bound.as_i128() {
+                Some(bound) => value.cmp(&bound),
+                None => compare_numbers(&Number::from(value), bound),
+            },
+            ctx,
+        );
+    }
+    pub(crate) fn validate_u128(&self, value: u128, ctx: &mut Context) {
+        self.validate_number_bounds(
+            |bound| {
+                if let Some(bound) = bound.as_u128() {
+                    value.cmp(&bound)
+                } else if let Some(bound) = bound.as_i128() {
+                    if bound < 0 {
+                        Ordering::Greater
+                    } else {
+                        value.cmp(&(bound as u128))
+                    }
+                } else {
+                    compare_numbers(&Number::from(value), bound)
+                }
+            },
+            ctx,
+        );
+    }
     pub fn validate(&self, value: &Value, ctx: &mut Context) {
         // Optional fields retain all constraints on Some and accept explicit null.
         if value.is_null() {
@@ -186,47 +254,10 @@ impl Rules {
             self.validate_length(length, ctx);
         }
         if let Value::Number(number) = value {
-            for (bound, operator, code) in [
-                (&self.ge, ">=", "greater_than_equal"),
-                (&self.gt, ">", "greater_than"),
-                (&self.le, "<=", "less_than_equal"),
-                (&self.lt, "<", "less_than"),
-            ] {
-                if let Some(bound) = bound {
-                    let order = compare_numbers(number, bound);
-                    let valid = match operator {
-                        ">=" => order != Ordering::Less,
-                        ">" => order == Ordering::Greater,
-                        "<=" => order != Ordering::Greater,
-                        _ => order == Ordering::Less,
-                    };
-                    if !valid {
-                        ctx.push(
-                            ValidationError::new(code, format!("value must be {operator} {bound}"))
-                                .with_param("limit", bound.clone()),
-                        );
-                    }
-                }
-            }
+            self.validate_number_bounds(|bound| compare_numbers(number, bound), ctx);
         }
         if let Value::String(text) = value {
-            if let Some(pattern) = &self.pattern {
-                if !pattern.is_match(text) {
-                    ctx.push(
-                        ValidationError::new(
-                            "pattern_mismatch",
-                            "string does not match the pattern",
-                        )
-                        .with_param("pattern", pattern.as_str()),
-                    );
-                }
-            }
-            if self.email && !email_address::EmailAddress::is_valid(text) {
-                ctx.push(ValidationError::new(
-                    "email",
-                    "string must be a valid email address",
-                ));
-            }
+            self.validate_string(text, ctx);
         }
     }
     /// Input transformations have a structural schema plus explicit local-rule metadata.

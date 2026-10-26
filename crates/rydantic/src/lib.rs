@@ -502,6 +502,7 @@ impl<'de, T: Model> serde::Deserialize<'de> for Validated<T> {
 
 #[doc(hidden)]
 pub mod __private {
+    pub use crate::borrowed::borrowed_fields;
     pub use crate::object::{check_names, flatten_schema, merge};
     pub use regex;
     pub use serde;
