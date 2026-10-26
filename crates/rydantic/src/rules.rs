@@ -244,8 +244,8 @@ impl Rules {
         if value.is_null() {
             return;
         }
+        // String length is checked by validate_string below, before pattern/email.
         let length = match value {
-            Value::String(text) => Some(text.chars().count()),
             Value::Array(items) => Some(items.len()),
             Value::Object(map) => Some(map.len()),
             _ => None,

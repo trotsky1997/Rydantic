@@ -45,10 +45,10 @@ macro_rules! integer {
                     if !digits.is_empty()&&digits.bytes().all(|byte|byte.is_ascii_digit()) {
                         if text.starts_with('-') {
                             if let Ok(integer)=text.parse::<i64>() {
-                                if let Some(value)=Self::try_from(integer).ok(){return Some(value);}
+                                match Self::try_from(integer){Ok(value)=>return Some(value),Err(_)=>{}}
                             }
                         } else if let Ok(integer)=text.parse::<u64>() {
-                            if let Some(value)=Self::try_from(integer).ok(){return Some(value);}
+                            match Self::try_from(integer){Ok(value)=>return Some(value),Err(_)=>{}}
                         }
                     }
                 }
