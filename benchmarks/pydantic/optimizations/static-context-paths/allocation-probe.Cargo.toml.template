@@ -1,0 +1,13 @@
+[package]
+name = "static-path-allocation-probe"
+version = "0.1.0"
+edition = "2021"
+
+[workspace]
+
+[features]
+static-path = []
+
+[dependencies]
+rydantic = { path = "REPOSITORY_ROOT/crates/rydantic" }
+serde_json = "1"

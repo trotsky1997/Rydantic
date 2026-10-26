@@ -1,0 +1,144 @@
+{
+  "purpose": "Exact local public-evidence candidate inventory; authorization to publish is a separate parent decision.",
+  "runtime_commit": "ef7194a95e89541f3b343cde6dc69eebe94c0e64",
+  "baseline_commit": "2ce66b92b281ff5f0e391844bf1ce8cce8cde728",
+  "issue": "https://github.com/trotsky1997/Rydantic/issues/126",
+  "privacy": "Synthetic public fixtures and assistant-owned cloud only. Raw derivatives change only the five declared command paths; manifest SHA256/byte counts verify compression and decompressed bytes. See independent final privacy audit.",
+  "artifacts": [
+    {
+      "path": "README.md",
+      "bytes": 9608,
+      "sha256": "1eef1354ea7fe4b2cca916bbf3a585d420cd64a02a4df97536d8f1f8f3434ef2"
+    },
+    {
+      "path": "allocation-probe.Cargo.lock",
+      "bytes": 6475,
+      "sha256": "bb89a97f7cef2a22aadd8bb6b27f0147bbfd0876f52b9c8931b9245117bdea5f"
+    },
+    {
+      "path": "allocation-probe.Cargo.toml.template",
+      "bytes": 214,
+      "sha256": "6aab9ba6b6d431df500cd600a96d1fcd39a1dde6190ff33facd49855a64cb313"
+    },
+    {
+      "path": "allocation_probe.rs.txt",
+      "bytes": 4266,
+      "sha256": "9676c291e3eceabccbb0f56b3af079c9299f7d3d6a84d7ac5152845f02d55f47"
+    },
+    {
+      "path": "allocations.json",
+      "bytes": 47370,
+      "sha256": "04c45ed0c02b2cae7e6f819dd2dad3bde20360402e7322345c22bbdcc9dec34b"
+    },
+    {
+      "path": "build-provenance.json",
+      "bytes": 2327,
+      "sha256": "b819cc515912cc43cf19acb5eb6a1b9a1885c6a2299eb0145bf9551b996cc636"
+    },
+    {
+      "path": "compare.py",
+      "bytes": 6078,
+      "sha256": "d8d647efda4336b0ef4d68da33cffb5bab6ba19ee6066256e5794a1008df6df8"
+    },
+    {
+      "path": "confirmation/measured-compare.py",
+      "bytes": 6079,
+      "sha256": "151aaf87e3fdae338f73c226eb7749a08875b65d768590305cdd75d77db37220"
+    },
+    {
+      "path": "confirmation/privacy-manifest.json",
+      "bytes": 1500,
+      "sha256": "a6a6c3e5b7d4f23b41349d6cfb4ad8db78d0ae146bc5381a5001c72b68e5029b"
+    },
+    {
+      "path": "confirmation/results.json.gz",
+      "bytes": 41194,
+      "sha256": "476ee63b187b3c7198afd022bd166742e321e33c8531f2de9915648609ee9298"
+    },
+    {
+      "path": "confirmation/results.md",
+      "bytes": 7856,
+      "sha256": "39001c1fa309c53bfb8cf8dddad097b715e407139db307b92ea4bc656d34ce68"
+    },
+    {
+      "path": "export_public.py",
+      "bytes": 2637,
+      "sha256": "d058f87e8fe49da4b6d52563d621cb3c76e6c0b559e4dd202a8a0840148430e7"
+    },
+    {
+      "path": "independent-evidence-review.md",
+      "bytes": 6181,
+      "sha256": "e9a7de5f77ac3247770ad0ec6598f228f182385fd482bfa7b1ce5df36d81d5f6"
+    },
+    {
+      "path": "independent-final-review.md",
+      "bytes": 5796,
+      "sha256": "18e8f8598b92b18807ca4b315fd5559de4677a06e5a08c3080080d12e077bb80"
+    },
+    {
+      "path": "independent-source-provenance.json",
+      "bytes": 1022,
+      "sha256": "753ae95b9ad277d0df0e25b289280c6f9f8d8bcbef5dc87e60372ca9b607de82"
+    },
+    {
+      "path": "independent-source-review.md",
+      "bytes": 3694,
+      "sha256": "a10f8b5ebcb1a2ca7eeba8a5e0ff5a82e4b92a7577134d4d9b022ce7dde7c689"
+    },
+    {
+      "path": "initial/compare.py",
+      "bytes": 5093,
+      "sha256": "3deea6bb64717f7eec85ebd68987c2560f6b70fdf1a1a35e6bbbf247d75cd090"
+    },
+    {
+      "path": "initial/privacy-manifest.json",
+      "bytes": 1455,
+      "sha256": "fcf0008ed29353a8de5d4fde76e3ae04c42b931657626ee552377432e7589786"
+    },
+    {
+      "path": "initial/report.py",
+      "bytes": 2620,
+      "sha256": "535846c7ffb0295e6699de394fe49a35e5022f980a5d307e3dd7f225e8e7894e"
+    },
+    {
+      "path": "initial/results.json.gz",
+      "bytes": 31428,
+      "sha256": "85bc0de1247153a53a09ef50be1395bcf7a75aad9a9c7de3c926335951c22f63"
+    },
+    {
+      "path": "initial/results.md",
+      "bytes": 8259,
+      "sha256": "d1a235ab208d3082ee73252a9b4c17acfc66ad25fe88a1cae4b2982bc202e9f5"
+    },
+    {
+      "path": "instability-analysis.md",
+      "bytes": 5647,
+      "sha256": "d24c530444d218373fe481e94cffac9db43f5ecb5ece299aab8732f4b89a2e66"
+    },
+    {
+      "path": "pinned-diagnostic.json.gz",
+      "bytes": 20307,
+      "sha256": "ab33bbd71b892eb1b0ed26c7fa4c1452121b851d5c426afd8d2fd002bb17113c"
+    },
+    {
+      "path": "pinned-privacy-manifest.json",
+      "bytes": 1527,
+      "sha256": "f15ca224d07ead19f79930c576be52599952a35b8b1607e00c98d4bcf7a43039"
+    },
+    {
+      "path": "pinned_diagnostic.py",
+      "bytes": 7476,
+      "sha256": "f5fbb85fc41fe0ae44c14ee7b398f362003d74ebd67b6c9a6cc0b342cf1a7676"
+    },
+    {
+      "path": "report.py",
+      "bytes": 2803,
+      "sha256": "ae9f7e080f3bd68b220a514672fd34660b6461fb8c76ab2eb4a1669fdf5f90ea"
+    },
+    {
+      "path": "verification.json",
+      "bytes": 16454,
+      "sha256": "62d332f32d859d23c06476476c3dd80d72aa36ebcebf541e33d4670d2cf0fbd5"
+    }
+  ]
+}

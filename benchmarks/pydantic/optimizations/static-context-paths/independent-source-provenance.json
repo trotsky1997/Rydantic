@@ -1,0 +1,17 @@
+{
+  "timestamp_utc": "2026-10-26T04:34:17.204390+00:00",
+  "baseline_commit": "2ce66b92b281ff5f0e391844bf1ce8cce8cde728",
+  "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)\nbinary: rustc\ncommit-hash: 48a229ceaefd4985c50990b14116b6d856af0985\ncommit-date: 2026-09-01\nhost: x86_64-unknown-linux-gnu\nrelease: 1.98.1\nLLVM version: 22.1.8\n",
+  "candidate_files": {
+    "crates/rydantic/src/error.rs": "28bd4f90fe074defec83407e5f54861f3ec6b738c9216adf1fa4b667ae8fe63e",
+    "crates/rydantic-derive/src/lib.rs": "d98869aec150c9ed5d2489c0ecac4fe71eca58d539d5ec48a189d28d7aa5862a"
+  },
+  "candidate_diff_sha256": "f30f412a2f7c6342cdabdbe52b353eff24fdadf6bfdb2f91ef3a0f3876d297e6",
+  "review_source_sha256": "7ae52dd6ba3e430a9415e78dfd0e6a03d3e33c256a0f90a18c964f2d19b82962",
+  "outputs": {
+    "baseline": "2e866a0fe9391be184297ed284a91df1cbf9df0f8fad01a9fba40874f5130167",
+    "candidate": "2e866a0fe9391be184297ed284a91df1cbf9df0f8fad01a9fba40874f5130167"
+  },
+  "dependency_lock_package_lists_equal": true,
+  "records": 57
+}

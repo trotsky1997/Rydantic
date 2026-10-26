@@ -1,0 +1,36 @@
+{
+  "format": "gzip of UTF-8 JSON; deterministic mtime=0",
+  "private_original_sha256": "1db0b53f62f446b8b2df0556ec4c57d4b2e5fa9c0293a72b8474bb0f68bec277",
+  "compressed_sha256": "476ee63b187b3c7198afd022bd166742e321e33c8531f2de9915648609ee9298",
+  "decompressed_sha256": "f1227fcd21316bf29bbd5addec0e307c3245e7763d0a9a6a9626fef42751c43e",
+  "compressed_bytes": 41194,
+  "decompressed_bytes": 551495,
+  "redactions": [
+    "commands.baseline[0]",
+    "commands.candidate[0]",
+    "commands.control[0]",
+    "commands.pydantic[0]",
+    "commands.pydantic[1]"
+  ],
+  "all_other_fields_equal": true,
+  "top_level_fields": [
+    "started",
+    "rustc",
+    "cargo",
+    "platform",
+    "load_start",
+    "environment",
+    "driver_sha256",
+    "reference_sha256",
+    "protocol",
+    "sources",
+    "binary_sha256",
+    "commands",
+    "measurements",
+    "finished",
+    "load_end"
+  ],
+  "process_records": 392,
+  "scope": "Synthetic public repository fixtures and assistant-owned cloud execution only. No user-computer observations or user data. Command paths replaced; no tokens or private environment values requested or recorded.",
+  "remaining_metadata": "Public source/binary hashes, source relative filenames/status, toolchain versions, batch/whole-child measurements and protocol. Main timing runs also contain platform release and load averages; diagnostic contains allowed CPU numbers and process CPU/context-switch receipts. These are cloud execution metadata, not a private user device."
+}
