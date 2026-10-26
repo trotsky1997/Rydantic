@@ -282,7 +282,7 @@ fn with_location(field: &Field, index: usize, shape: Shape, body: Tokens, _rd: &
         quote! {__rydantic_ctx.at(#index,|__rydantic_ctx|{#body})}
     } else {
         let input = &field.input;
-        quote! {__rydantic_ctx.at(#input,|__rydantic_ctx|{#body})}
+        quote! {__rydantic_ctx.at_static(#input,|__rydantic_ctx|{#body})}
     }
 }
 fn object_names(fields: &[Field], rd: &Tokens, tag: ::core::option::Option<&str>) -> Tokens {
@@ -462,7 +462,7 @@ fn encode_shape(
         } else if field.attr.flatten || field.attr.extra {
             entries.push(quote!{let value=#encoded;#rd::__private::merge(&mut __rydantic_object,value,__rydantic_ctx);});
         } else {
-            entries.push(quote!{let value=__rydantic_ctx.at(#key,|__rydantic_ctx|#encoded);#rd::__private::merge(&mut __rydantic_object,#rd::__private::serde_json::json!({#key:value}),__rydantic_ctx);});
+            entries.push(quote!{let value=__rydantic_ctx.at_static(#key,|__rydantic_ctx|#encoded);#rd::__private::merge(&mut __rydantic_object,#rd::__private::serde_json::json!({#key:value}),__rydantic_ctx);});
         }
     }
     if shape == Shape::Tuple {
@@ -492,9 +492,9 @@ fn validate_fields(fields: &[Field], values: &[Tokens], shape: Shape, mode: &Mod
 fn async_fields(fields: &[Field], values: &[Tokens], shape: Shape, rd: &Tokens) -> Tokens {
     let checks=fields.iter().zip(values).enumerate().map(|(i,(field,value))|{
         let ty=&field.ty;let input=&field.input;
-        let segment=if field.attr.flatten||field.attr.extra||(shape==Shape::Tuple&&fields.len()==1){quote!(None)}else if shape==Shape::Tuple{quote!(Some(#rd::PathSegment::from(#i)))}else{quote!(Some(#rd::PathSegment::from(#input)))};
+        let child=if field.attr.flatten||field.attr.extra||(shape==Shape::Tuple&&fields.len()==1){quote!(__rydantic_ctx.child(None))}else if shape==Shape::Tuple{quote!(__rydantic_ctx.child(Some(#rd::PathSegment::from(#i))))}else{quote!(__rydantic_ctx.child_static(#input))};
         let callback_context=field.attr.async_validate_uses_context.then(||quote!(, &child));let custom=field.attr.async_validate.iter().map(|path|quote!{if let Err(error)=#path(#value #callback_context).await{child.push(error);}}).collect::<Tokens>();let custom=quote!{if child.error_count()==start{#custom}};
-        quote!{let mut child=__rydantic_ctx.child(#segment);let start=child.error_count();<#ty as #rd::AsyncCheck>::check_async(#value,&mut child).await;#custom __rydantic_ctx.absorb(child);}
+        quote!{let mut child=#child;let start=child.error_count();<#ty as #rd::AsyncCheck>::check_async(#value,&mut child).await;#custom __rydantic_ctx.absorb(child);}
     });
     quote!(#(#checks)*)
 }
@@ -812,8 +812,8 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
                 )
             } else if let Some(tag) = &container.tag {
                 (
-                    quote! {let mut __rydantic_object=__rydantic_raw.object(__rydantic_ctx)?;let tag=match __rydantic_object.remove(#tag){Some(raw)=>{let value=raw.into_value(__rydantic_ctx)?;match value{#rd::Value::String(value)=>value,_=>{__rydantic_ctx.at(#tag,|ctx|ctx.push(#rd::ValidationError::new("union_tag_type","discriminator must be a string").with_stage(#rd::Stage::Parse)));return None;}}},None=>{__rydantic_ctx.at(#tag,|ctx|ctx.push(#rd::ValidationError::new("union_tag_missing","discriminator is required").with_stage(#rd::Stage::Parse)));return None;}};
-                    match tag.as_str(){#(#decodes,)* _=>{__rydantic_ctx.at(#tag,|ctx|ctx.push(#rd::ValidationError::new("union_tag_invalid","unknown discriminator").with_stage(#rd::Stage::Parse).with_param("expected",#rd::__private::serde_json::json!([#(#wires),*]))));None}}},
+                    quote! {let mut __rydantic_object=__rydantic_raw.object(__rydantic_ctx)?;let tag=match __rydantic_object.remove(#tag){Some(raw)=>{let value=raw.into_value(__rydantic_ctx)?;match value{#rd::Value::String(value)=>value,_=>{__rydantic_ctx.at_static(#tag,|ctx|ctx.push(#rd::ValidationError::new("union_tag_type","discriminator must be a string").with_stage(#rd::Stage::Parse)));return None;}}},None=>{__rydantic_ctx.at_static(#tag,|ctx|ctx.push(#rd::ValidationError::new("union_tag_missing","discriminator is required").with_stage(#rd::Stage::Parse)));return None;}};
+                    match tag.as_str(){#(#decodes,)* _=>{__rydantic_ctx.at_static(#tag,|ctx|ctx.push(#rd::ValidationError::new("union_tag_invalid","unknown discriminator").with_stage(#rd::Stage::Parse).with_param("expected",#rd::__private::serde_json::json!([#(#wires),*]))));None}}},
                     quote!(#rd::__private::serde_json::json!({"oneOf":[#((#schemas)),*],"discriminator":{"propertyName":#tag}})),
                     quote!(#rd::TypeKind::Object),
                 )

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::{any::Any, collections::BTreeMap, fmt, sync::Arc};
+use std::{any::Any, borrow::Cow, collections::BTreeMap, fmt, sync::Arc};
 
 /// A location in a nested input. Object keys and array indices remain distinct.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -131,10 +131,33 @@ impl fmt::Display for ValidationErrors {
 }
 impl std::error::Error for ValidationErrors {}
 
+// Keep compile-time labels borrowed until an error needs its public owned location.
+#[derive(Debug, Clone)]
+enum ContextSegment {
+    Field(Cow<'static, str>),
+    Index(usize),
+}
+impl From<PathSegment> for ContextSegment {
+    fn from(segment: PathSegment) -> Self {
+        match segment {
+            PathSegment::Field(field) => Self::Field(Cow::Owned(field)),
+            PathSegment::Index(index) => Self::Index(index),
+        }
+    }
+}
+impl ContextSegment {
+    fn to_path_segment(&self) -> PathSegment {
+        match self {
+            Self::Field(field) => PathSegment::Field(field.to_string()),
+            Self::Index(index) => PathSegment::Index(*index),
+        }
+    }
+}
+
 /// Shared error collector used by generated code and custom `JsonType` implementations.
 #[derive(Default)]
 pub struct Context {
-    path: Vec<PathSegment>,
+    path: Vec<ContextSegment>,
     errors: Vec<ValidationError>,
     data: Option<Arc<dyn Any + Send + Sync>>,
 }
@@ -180,7 +203,11 @@ impl Context {
         self.errors.len()
     }
     pub fn push(&mut self, mut error: ValidationError) {
-        let mut path = self.path.clone();
+        let mut path = self
+            .path
+            .iter()
+            .map(ContextSegment::to_path_segment)
+            .collect::<Vec<_>>();
         path.append(&mut error.loc);
         error.loc = path;
         self.errors.push(error);
@@ -191,12 +218,28 @@ impl Context {
         }
     }
     pub fn at<T>(&mut self, segment: impl Into<PathSegment>, f: impl FnOnce(&mut Self) -> T) -> T {
-        self.path.push(segment.into());
+        self.at_segment(segment.into().into(), f)
+    }
+    /// Enter a compile-time field label without allocating it on the success path.
+    #[doc(hidden)]
+    pub fn at_static<T>(&mut self, field: &'static str, f: impl FnOnce(&mut Self) -> T) -> T {
+        self.at_segment(ContextSegment::Field(Cow::Borrowed(field)), f)
+    }
+    fn at_segment<T>(&mut self, segment: ContextSegment, f: impl FnOnce(&mut Self) -> T) -> T {
+        self.path.push(segment);
         let result = f(self);
         self.path.pop();
         result
     }
     pub fn child(&self, segment: Option<PathSegment>) -> Self {
+        self.child_segment(segment.map(Into::into))
+    }
+    /// Start a child collector beneath a compile-time field label.
+    #[doc(hidden)]
+    pub fn child_static(&self, field: &'static str) -> Self {
+        self.child_segment(Some(ContextSegment::Field(Cow::Borrowed(field))))
+    }
+    fn child_segment(&self, segment: Option<ContextSegment>) -> Self {
         let mut path = self.path.clone();
         if let Some(segment) = segment {
             path.push(segment);
@@ -247,5 +290,99 @@ impl Context {
     }
     pub fn result(self) -> Result<(), ValidationErrors> {
         self.finish(Some(()))
+    }
+}
+
+#[cfg(test)]
+mod context_path_tests {
+    use super::*;
+
+    #[test]
+    fn static_labels_remain_borrowed_in_children_until_an_error_is_recorded() {
+        let mut ctx = Context::with_data(Arc::new(42u64));
+        ctx.at_static("outer", |ctx| {
+            assert!(matches!(
+                ctx.path[0],
+                ContextSegment::Field(Cow::Borrowed("outer"))
+            ));
+            let mut child = ctx.child_static("inner");
+            assert!(matches!(
+                child.path[1],
+                ContextSegment::Field(Cow::Borrowed("inner"))
+            ));
+            assert_eq!(*child.require_data::<u64>().unwrap(), 42);
+            child.push(ValidationError::custom("failed").at(7usize));
+            assert_eq!(
+                child.errors[0].loc,
+                vec!["outer".into(), "inner".into(), 7usize.into()]
+            );
+            ctx.absorb(child);
+        });
+        assert!(ctx.path.is_empty());
+        assert_eq!(
+            ctx.result().unwrap_err().errors()[0].pointer(),
+            "/outer/inner/7"
+        );
+    }
+
+    fn diagnostics(static_labels: bool) -> (String, ValidationErrors) {
+        fn enter<T>(
+            ctx: &mut Context,
+            label: &'static str,
+            static_labels: bool,
+            f: impl FnOnce(&mut Context) -> T,
+        ) -> T {
+            if static_labels {
+                ctx.at_static(label, f)
+            } else {
+                ctx.at(label, f)
+            }
+        }
+        let mut ctx = Context::new();
+        let debug = enter(&mut ctx, "outer/~雪", static_labels, |ctx| {
+            let debug = format!("{ctx:?}");
+            // Dynamic strings remain accepted and owned beyond the caller's lifetime.
+            let key = String::from("dynamic/~");
+            ctx.at(key.as_str(), |ctx| {
+                ctx.at(2usize, |ctx| {
+                    ctx.extend(ValidationErrors(vec![
+                        ValidationError::custom("first").at("relative")
+                    ]));
+                    let mut child = if static_labels {
+                        ctx.child_static("child")
+                    } else {
+                        ctx.child(Some("child".into()))
+                    };
+                    child.push(ValidationError::new("second", "second error").with_param("n", 3));
+                    ctx.absorb(child);
+                    let mut trial = ctx.trial();
+                    trial.push(ValidationError::custom("relative trial"));
+                    assert!(trial.errors[0].loc.is_empty());
+                    let mut same_path = ctx.child(None);
+                    same_path.push(ValidationError::custom("same path"));
+                    ctx.absorb(same_path);
+                    None::<()>
+                })
+            });
+            ctx.push(ValidationError::custom("after early return"));
+            debug
+        });
+        ctx.push(ValidationError::custom("root"));
+        (debug, ctx.result().unwrap_err())
+    }
+
+    #[test]
+    fn static_and_owned_routes_have_identical_full_diagnostics_and_stack_recovery() {
+        let (static_debug, static_errors) = diagnostics(true);
+        let (owned_debug, owned_errors) = diagnostics(false);
+        assert_eq!(static_debug, owned_debug);
+        assert_eq!(static_errors, owned_errors);
+        assert_eq!(static_errors.to_json(), owned_errors.to_json());
+        assert_eq!(static_errors.errors()[3].pointer(), "/outer~1~0雪");
+        assert_eq!(static_errors.errors()[4].pointer(), "");
+        assert_eq!(
+            serde_json::from_value::<ValidationErrors>(static_errors.to_json()).unwrap(),
+            static_errors
+        );
     }
 }
