@@ -47,11 +47,11 @@ impl<'de> Input<'de> {
             Self::Object(object) => Some(object),
             Self::Borrowed(raw) => serde_json::from_str::<BorrowedObject<'de>>(raw.get())
                 .map(|object| object.0)
-                .map_err(|error| ctx.push(json_or_type_error(error, "object")))
+                .map_err(|_| ctx.push(json_or_type_error("object", raw.get())))
                 .ok(),
             Self::BorrowedJson(raw) => serde_json::from_str::<BorrowedObject<'de>>(raw)
                 .map(|object| object.0)
-                .map_err(|error| ctx.push(json_or_type_error(error, "object")))
+                .map_err(|_| ctx.push(json_or_type_error("object", raw)))
                 .ok(),
             Self::Owned(Value::Object(map)) => {
                 Some(map.into_iter().map(|(k, v)| (k, Self::Owned(v))).collect())
@@ -66,11 +66,11 @@ impl<'de> Input<'de> {
         match self {
             Self::Borrowed(raw) => serde_json::from_str::<Vec<&'de RawValue>>(raw.get())
                 .map(|items| items.into_iter().map(Self::Borrowed).collect())
-                .map_err(|error| ctx.push(json_or_type_error(error, "array")))
+                .map_err(|_| ctx.push(json_or_type_error("array", raw.get())))
                 .ok(),
             Self::BorrowedJson(raw) => serde_json::from_str::<Vec<&'de RawValue>>(raw)
                 .map(|items| items.into_iter().map(Self::Borrowed).collect())
-                .map_err(|error| ctx.push(json_or_type_error(error, "array")))
+                .map_err(|_| ctx.push(json_or_type_error("array", raw)))
                 .ok(),
             Self::Owned(Value::Array(items)) => Some(items.into_iter().map(Self::Owned).collect()),
             _ => {
@@ -164,7 +164,7 @@ pub(crate) fn borrowed_array<'de, T>(
         &mut deserializer,
     )
     .and_then(|values| deserializer.end().map(|()| values))
-    .map_err(|error| ctx.push(json_or_type_error(error, "array")))
+    .map_err(|_| ctx.push(json_or_type_error("array", raw)))
     .ok()?
 }
 
@@ -298,14 +298,14 @@ pub fn borrowed_fields<'de>(
         },
     )
     .and_then(|fields| deserializer.end().map(|()| fields))
-    .map_err(|error| ctx.push(json_or_type_error(error, "object")))
+    .map_err(|_| ctx.push(json_or_type_error("object", raw)))
     .ok()
 }
 
-fn json_or_type_error(error: serde_json::Error, expected: &str) -> ValidationError {
-    match error.classify() {
-        serde_json::error::Category::Syntax | serde_json::error::Category::Eof => json_error(error),
-        serde_json::error::Category::Io | serde_json::error::Category::Data => type_error(expected),
+fn json_or_type_error(expected: &str, input: &str) -> ValidationError {
+    match serde_json::from_str::<&RawValue>(input) {
+        Err(error) => json_error(error),
+        Ok(_) => type_error(expected),
     }
 }
 
