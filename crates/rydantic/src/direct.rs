@@ -18,22 +18,6 @@ pub(crate) fn scalar(input: Input<'_>, ctx: &mut Context, expected: &str) -> Opt
                     .ok()
             }
         }
-        Input::BorrowedJson(raw) => {
-            let value: Value = serde_json::from_str(raw)
-                .map_err(|error| ctx.push(crate::borrowed::json_error(error)))
-                .ok()?;
-            let actual = match &value {
-                Value::Object(_) => Some("object"),
-                Value::Array(_) => Some("array"),
-                _ => None,
-            };
-            if let Some(actual) = actual {
-                mismatch(ctx, expected, actual);
-                None
-            } else {
-                Some(value)
-            }
-        }
         Input::Object(_) => {
             mismatch(ctx, expected, "object");
             None
