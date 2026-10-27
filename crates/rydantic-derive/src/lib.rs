@@ -416,9 +416,10 @@ fn parse_shape(
             let ignore = container.ignore_extra;
             quote! {
                 let mut __rydantic_object=::std::collections::BTreeMap::new();
-                let mut __rydantic_fields=match __rydantic_raw{
-                    #rd::Input::Borrowed(raw)=>Some(#rd::__private::borrowed_fields(raw,__rydantic_ctx,#count,|key|match key{#(#indices)* _=>None},#ignore)?),
-                    raw=>{__rydantic_object=raw.object(__rydantic_ctx)?;None}
+                let mut __rydantic_fields=if let Some(raw)=__rydantic_raw.as_borrowed_str(){
+                    Some(#rd::__private::borrowed_fields(raw,__rydantic_ctx,#count,|key|match key{#(#indices)* _=>None},#ignore)?)
+                }else{
+                    __rydantic_object=__rydantic_raw.object(__rydantic_ctx)?;None
                 };
             }
         }
