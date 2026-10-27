@@ -75,9 +75,11 @@ A fresh registry-only consumer passed 83 tests plus 3 isolated settings cases in
 
 New checks/transforms can change accepted data; they do not migrate stored values or promise lossless conversion. Existing explicit Cap’n Proto derives, configuration-specific wire compatibility, SQLite index-safety guards, backups/manual migrations, settings secret handling, partial JSON limits and domain provenance requirements remain. Read the [full changelog](https://github.com/trotsky1997/Rydantic/blob/main/CHANGELOG.md) and [migration limits](/integrations/migrations).
 
-## RydanticAI · Unreleased
+## RydanticAI 0.7.0 · Source candidate
 
-[PDF inputs](/integrations/pdf) add `Pdf` and `Prompt::pdf()` for ordered document, image and text prompts. Embedded PDFs work through all nine protocol combinations, including JSON/SSE output, tool continuations, Partial and Iterable streams. Responses and Messages also support URL references; Chat Completions requires embedded PDF data. Validation bounds PDF data, names and counts, and replay uses compact attachment digests. CI covers 89 strict official Python SDK cases.
+This candidate pins the published core crate to `=0.8.0` and adds [PDF inputs](/integrations/pdf) through `Pdf` and `Prompt::pdf()` for ordered document, image and text prompts. Embedded PDFs work through all nine protocol combinations, including JSON/SSE output, tool continuations, Partial and Iterable streams. Responses and Messages also support URL references; Chat Completions requires embedded PDF data. Validation bounds PDF data, names and counts, and replay uses compact attachment digests. CI covers 89 strict official Python SDK cases.
+
+Version 0.7.0 is not published yet. Exact-main push CI, the release preflight and a fresh registry-only consumer remain publication gates.
 
 ## 0.7.0 · Stable
 

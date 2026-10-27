@@ -22,10 +22,10 @@ what users can install.
   optional bounded OpenAPI components added after beta.1.
   Earlier beta.1 publication documentation merged in [#81](https://github.com/trotsky1997/Rydantic/pull/81);
   its post-merge checks are tracked separately from the verified package release.
-- **RydanticAI 0.6.0** is independently published. PDF inputs and the refreshed
-  tutorials merged in [#75](https://github.com/trotsky1997/Rydantic/pull/75), but
-  the PDF API is not in the published 0.6.0 package. The workspace AI source now
-  depends on core `=0.8.0`; this does not republish or change the old package.
+- **RydanticAI 0.6.0** remains the latest published AI package. The next release
+  candidate is 0.7.0, pinned to stable core `=0.8.0`, and includes the PDF API
+  merged in [#75](https://github.com/trotsky1997/Rydantic/pull/75). Publication,
+  exact-main CI and registry-only consumer acceptance remain pending.
 - CLI and codegen remain unpublished source tools. Agent evaluation infrastructure
   exists, but no measured agent-performance improvement is established.
 - An open issue is not proof of an unimplemented defect. Existing repair and
@@ -123,9 +123,8 @@ release without conflating the core and AI lifecycles.
 
 Acceptance evidence:
 
-- Decide and document the next AI package version and supported core dependency
-  policy. A stable AI user must not be silently moved onto a core beta; current
-  source alignment alone is not a release-policy decision.
+- The 0.7.0 candidate pins stable core `=0.8.0`. Keep the package unpublished
+  until exact-main CI, release preflight and registry-only consumer acceptance pass.
 - Freeze a capability/rejection matrix for the existing three protocols and nine
   frontend/upstream combinations. Cover JSON/SSE, mixed input order, tool history,
   replay identity/isolation, cancellation/deadlines and request/output limits.

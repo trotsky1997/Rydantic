@@ -4,13 +4,13 @@ Typed Rust agents, explicit workflow graphs and a three-protocol HTTP gateway, b
 
 ```toml
 [dependencies]
-rydantic = "0.7.0-beta.3"
-rydantic-ai = "0.6.0"
+rydantic = "=0.8.0"
+rydantic-ai = "=0.7.0"
 ```
 
-`rydantic-ai` has its own version and release lifecycle inside the Rydantic workspace. The core `rydantic` crate does not depend on it. Disable default features for graphs and custom providers without HTTP dependencies.
+`rydantic-ai` 0.7.0 is a source candidate and is not published yet. It has its own release lifecycle; the core `rydantic` crate does not depend on it. Disable default features for graphs and custom providers without HTTP dependencies.
 
-Declare `rydantic` directly when deriving application models so its derive macro can resolve the model dependency, including renamed dependencies. The requirement above permits compatible published 0.7.0 prereleases.
+Declare `rydantic` directly when deriving application models so its derive macro can resolve the model dependency, including renamed dependencies. The candidate pins the published core 0.8.0 release.
 
 ## API providers
 
@@ -59,9 +59,9 @@ Run `cargo run -p rydantic-ai --example provider` for a typed tool-call round tr
 
 Synchronous validators cannot be interrupted within a poll. Ordinary runs and partial streams recheck cancellation and the deadline after successful final validation, rejecting a late result instead of accepting it.
 
-## PDF inputs (development)
+## PDF inputs in the 0.7.0 candidate
 
-The development source adds embedded PDFs across all nine Responses, Chat Completions and Messages frontend/upstream combinations. Published 0.6.0 covers image inputs; the PDF API is pending the next release.
+The 0.7.0 source candidate adds embedded PDFs across all nine Responses, Chat Completions and Messages frontend/upstream combinations. The package has not been published; 0.6.0 supports image inputs.
 
 ```rust
 use rydantic_ai::{Pdf, Prompt};
@@ -172,11 +172,11 @@ Client and global policies each use their own reservation size and cost estimate
 
 ## Independent releases
 
-RydanticAI uses tags such as `rydantic-ai-v0.6.0`. Its version is read from this package manifest and is independent of the core workspace version. A maintainer with the repository's GitHub identity and a local Cargo publishing credential can run from a clean repository checkout:
+RydanticAI uses tags such as `rydantic-ai-v0.7.0`. Its version is read from this package manifest and is independent of the core workspace version. A maintainer with the repository's GitHub identity and a local Cargo publishing credential can run from a clean repository checkout:
 
 ```sh
-python3 scripts/release_ai.py preflight --tag rydantic-ai-v0.6.0
-python3 scripts/release_ai.py publish --tag rydantic-ai-v0.6.0
+python3 scripts/release_ai.py preflight --tag rydantic-ai-v0.7.0
+python3 scripts/release_ai.py publish --tag rydantic-ai-v0.7.0
 ```
 
 The release script requires an existing remote tag on tested main history, successful exact-commit main-push CI, an unpublished registry version and a package containing no installed Node dependencies or credential files. It performs one upload attempt and verifies the registry checksum and sparse index, including after an uncertain upload exit status. It publishes only `rydantic-ai`. Use Python 3.11 or newer.
