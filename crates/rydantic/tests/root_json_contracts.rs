@@ -100,6 +100,12 @@ fn before(value: Value, ctx: &Context) -> Result<Value, ValidationError> {
 }
 
 #[derive(Debug, Model)]
+struct FixedCallback {
+    #[model(before_with_context = before)]
+    value: i64,
+}
+
+#[derive(Debug, Model)]
 struct Item {
     #[model(before_with_context = before, ge = 0)]
     value: i64,
@@ -154,6 +160,34 @@ struct Object {
 
 #[derive(Debug, Model)]
 struct Unit;
+
+#[tokio::test]
+async fn fixed_slot_json_stages_complete_syntax_before_callbacks() {
+    for input in [r#"{"value":1,"tail":[}"#, r#"{"value":1} false"#] {
+        let expected = syntax_errors(input);
+        assert_eq!(errors(FixedCallback::parse_json(input)), expected);
+        assert_eq!(
+            errors(FixedCallback::parse_json_with_context(input, Arc::new(()))),
+            expected
+        );
+        assert_eq!(
+            errors(FixedCallback::parse_json_async(input).await),
+            expected
+        );
+        assert_eq!(
+            errors(FixedCallback::parse_json_async_with_context(input, Arc::new(())).await),
+            expected
+        );
+        assert!(take_events().is_empty(), "callback ran for {input:?}");
+    }
+
+    FixedCallback::parse_json(r#"{"value":1}"#).unwrap();
+    assert_eq!(take_events(), ["before:1:0"]);
+    FixedCallback::parse_json_async_with_context(r#"{"value":1}"#, Arc::new(()))
+        .await
+        .unwrap();
+    assert_eq!(take_events(), ["before:1:0"]);
+}
 
 #[test]
 fn malformed_wrong_shape_roots_keep_full_json_errors_before_type_checks() {

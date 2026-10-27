@@ -105,6 +105,18 @@ pub enum TypeKind {
 /// constructed value together with constraint errors; public entry points reject it.
 pub trait JsonType: Sized {
     fn decode(value: Value, ctx: &mut Context, coerce: bool) -> Option<Self>;
+    /// Stage JSON text completely before model validation or callbacks begin.
+    #[doc(hidden)]
+    fn stage_json<'de>(input: &'de str, ctx: &mut Context) -> Option<Input<'de>> {
+        let raw = match serde_json::from_str::<&RawValue>(input) {
+            Ok(raw) => raw,
+            Err(error) => {
+                ctx.push(borrowed::json_error(error));
+                return None;
+            }
+        };
+        Some(Input::Borrowed(raw))
+    }
     /// Decode a raw subtree. Custom types can override this to bypass Value entirely.
     fn decode_input(input: Input<'_>, ctx: &mut Context, coerce: bool) -> Option<Self> {
         Self::decode(input.into_value(ctx)?, ctx, coerce)
@@ -160,8 +172,13 @@ pub trait Model: JsonType {
         input: &str,
         context: std::sync::Arc<C>,
     ) -> Result<Self, ValidationErrors> {
-        let raw = serde_json::from_str::<&RawValue>(input).map_err(borrowed::json_error)?;
-        Self::parse_raw_with_context(raw, context)
+        let mut staging = Context::new();
+        let input = Self::stage_json(input, &mut staging);
+        let input = staging.finish(input)?;
+        asynchronous::sync_guard(Self::async_required(&mut std::collections::HashSet::new()))?;
+        let mut ctx = Context::with_data(context);
+        let model = Self::decode_input(input, &mut ctx, false);
+        ctx.finish(model)
     }
     fn parse_slice_with_context<C: std::any::Any + Send + Sync>(
         input: &[u8],
@@ -232,8 +249,16 @@ pub trait Model: JsonType {
         Self: AsyncCheck + Send,
     {
         async move {
-            let raw = serde_json::from_str::<&RawValue>(input).map_err(borrowed::json_error)?;
-            Self::parse_raw_async_with_context(raw, context).await
+            let mut staging = Context::new();
+            let input = Self::stage_json(input, &mut staging);
+            let input = staging.finish(input)?;
+            let mut ctx = Context::with_data(context.clone());
+            let model = Self::decode_input(input, &mut ctx, false);
+            let model = ctx.finish(model)?;
+            let mut ctx = Context::with_data(context);
+            model.check_async(&mut ctx).await;
+            ctx.result()?;
+            Ok(model)
         }
     }
     fn parse_raw_async_with_context<C: std::any::Any + Send + Sync>(
@@ -312,8 +337,13 @@ pub trait Model: JsonType {
 
     /// Strict by default. Explicit field-level `coerce` is applied by the derive.
     fn parse_json(input: &str) -> Result<Self, ValidationErrors> {
-        let raw = serde_json::from_str::<&RawValue>(input).map_err(borrowed::json_error)?;
-        Self::parse_raw(raw)
+        let mut staging = Context::new();
+        let input = Self::stage_json(input, &mut staging);
+        let input = staging.finish(input)?;
+        asynchronous::sync_guard(Self::async_required(&mut std::collections::HashSet::new()))?;
+        let mut ctx = Context::new();
+        let model = Self::decode_input(input, &mut ctx, false);
+        ctx.finish(model)
     }
     fn parse_slice(input: &[u8]) -> Result<Self, ValidationErrors> {
         let raw = serde_json::from_slice::<&RawValue>(input).map_err(borrowed::json_error)?;
@@ -373,8 +403,16 @@ pub trait Model: JsonType {
         Self: AsyncCheck + Send,
     {
         async move {
-            let raw = serde_json::from_str::<&RawValue>(input).map_err(borrowed::json_error)?;
-            Self::parse_raw_async(raw).await
+            let mut staging = Context::new();
+            let input = Self::stage_json(input, &mut staging);
+            let input = staging.finish(input)?;
+            let mut ctx = Context::new();
+            let model = Self::decode_input(input, &mut ctx, false);
+            let model = ctx.finish(model)?;
+            let mut ctx = Context::new();
+            model.check_async(&mut ctx).await;
+            ctx.result()?;
+            Ok(model)
         }
     }
     fn parse_raw_async(
@@ -503,6 +541,7 @@ impl<'de, T: Model> serde::Deserialize<'de> for Validated<T> {
 #[doc(hidden)]
 pub mod __private {
     pub use crate::borrowed::borrowed_fields;
+    pub use crate::borrowed::stage_borrowed_fields;
     pub use crate::object::{check_names, flatten_schema, merge};
     pub use regex;
     pub use serde;

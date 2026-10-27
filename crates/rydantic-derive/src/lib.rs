@@ -418,6 +418,8 @@ fn parse_shape(
                 let mut __rydantic_object=::std::collections::BTreeMap::new();
                 let mut __rydantic_fields=match __rydantic_raw{
                     #rd::Input::Borrowed(raw)=>Some(#rd::__private::borrowed_fields(raw,__rydantic_ctx,#count,|key|match key{#(#indices)* _=>None},#ignore)?),
+                    #rd::Input::ParsedFields(fields) if fields.values.len()==#count=>Some(fields),
+                    #rd::Input::ParsedFields(_)=>{__rydantic_ctx.push(#rd::ValidationError::new("type_error","expected object").with_stage(#rd::Stage::Parse));return None;},
                     raw=>{__rydantic_object=raw.object(__rydantic_ctx)?;None}
                 };
             }
@@ -675,6 +677,7 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
     let tr = mode.tr();
     let mut all_fields = Vec::new();
     let mut object_impl = None;
+    let mut direct_json_stage = quote!();
     let (decode, encode, encode_input, validate, schema, asynchronous, kind) = match &input.data {
         Data::Struct(data) => {
             if container.tag.is_some() || container.untagged {
@@ -692,6 +695,19 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
                 && !fields
                     .iter()
                     .any(|field| field.attr.flatten || field.attr.extra);
+            if fixed_slots {
+                let count = fields.len();
+                let indices = fields.iter().enumerate().map(|(i, field)| {
+                    let name = &field.input;
+                    quote!(#name => Some(#i),)
+                });
+                let ignore = container.ignore_extra;
+                direct_json_stage = quote! {
+                    fn stage_json<'__rydantic_json>(__rydantic_input:&'__rydantic_json str,__rydantic_ctx:&mut #rd::Context)->::core::option::Option<#rd::Input<'__rydantic_json>>{
+                        #rd::__private::stage_borrowed_fields(__rydantic_input,__rydantic_ctx,#count,|key|match key{#(#indices)* _=>None},#ignore)
+                    }
+                };
+            }
             let decode = parse_shape(&fields, shape, ctor, &container, &mode, None, fixed_slots);
             let values = fields
                 .iter()
@@ -1041,6 +1057,7 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
         quote! {
             fn decode(raw:#rd::Value,ctx:&mut #rd::Context,coerce:bool)->::core::option::Option<Self>{<Self as #rd::JsonType>::decode_input(#rd::Input::Owned(raw),ctx,coerce)}
             fn decode_input(__rydantic_raw:#rd::Input<'_>,__rydantic_ctx:&mut #rd::Context,_coerce:bool)->::core::option::Option<Self>{#body}
+            #direct_json_stage
         }
     };
     Ok(quote! {

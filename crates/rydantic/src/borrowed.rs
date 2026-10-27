@@ -16,6 +16,8 @@ use std::{
 #[derive(Debug, Clone)]
 pub enum Input<'de> {
     Borrowed(&'de RawValue),
+    #[doc(hidden)]
+    ParsedFields(BorrowedFields<'de>),
     Owned(Value),
     Object(BTreeMap<String, Input<'de>>),
 }
@@ -24,6 +26,10 @@ impl<'de> Input<'de> {
         match self {
             Self::Object(object) => Self::from_object(object, ctx),
             Self::Owned(value) => Some(value),
+            Self::ParsedFields(_) => {
+                ctx.push(type_error("object"));
+                None
+            }
             Self::Borrowed(raw) => serde_json::from_str(raw.get())
                 .map_err(|e| ctx.push(json_error(e)))
                 .ok(),
@@ -69,17 +75,21 @@ impl<'de> Input<'de> {
         match self {
             Self::Borrowed(raw) => raw.get() == "null",
             Self::Owned(v) => v.is_null(),
-            Self::Object(_) => false,
+            Self::Object(_) | Self::ParsedFields(_) => false,
         }
     }
 }
 
-struct BorrowedArraySeed<'ctx, 'de, T> {
+struct BorrowedArraySeed<'ctx, 'de, T, F> {
     ctx: &'ctx mut Context,
     coerce: bool,
-    decode: fn(Input<'de>, &mut Context, bool) -> Option<T>,
+    decode: F,
+    marker: PhantomData<fn(&'de RawValue) -> T>,
 }
-impl<'de, 'ctx, T> DeserializeSeed<'de> for BorrowedArraySeed<'ctx, 'de, T> {
+impl<'de, 'ctx, T, F> DeserializeSeed<'de> for BorrowedArraySeed<'ctx, 'de, T, F>
+where
+    F: Fn(Input<'de>, &mut Context, bool) -> Option<T>,
+{
     type Value = Option<Vec<T>>;
 
     fn deserialize<D: serde::Deserializer<'de>>(
@@ -90,15 +100,20 @@ impl<'de, 'ctx, T> DeserializeSeed<'de> for BorrowedArraySeed<'ctx, 'de, T> {
             ctx: self.ctx,
             coerce: self.coerce,
             decode: self.decode,
+            marker: PhantomData,
         })
     }
 }
-struct BorrowedArrayVisitor<'ctx, 'de, T> {
+struct BorrowedArrayVisitor<'ctx, 'de, T, F> {
     ctx: &'ctx mut Context,
     coerce: bool,
-    decode: fn(Input<'de>, &mut Context, bool) -> Option<T>,
+    decode: F,
+    marker: PhantomData<fn(&'de RawValue) -> T>,
 }
-impl<'de, 'ctx, T> Visitor<'de> for BorrowedArrayVisitor<'ctx, 'de, T> {
+impl<'de, 'ctx, T, F> Visitor<'de> for BorrowedArrayVisitor<'ctx, 'de, T, F>
+where
+    F: Fn(Input<'de>, &mut Context, bool) -> Option<T>,
+{
     type Value = Option<Vec<T>>;
 
     fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -110,7 +125,7 @@ impl<'de, 'ctx, T> Visitor<'de> for BorrowedArrayVisitor<'ctx, 'de, T> {
         let mut complete = true;
         let mut index = 0;
         while let Some(raw) = access.next_element::<&'de RawValue>()? {
-            let decode = self.decode;
+            let decode = &self.decode;
             let coerce = self.coerce;
             match self
                 .ctx
@@ -124,18 +139,22 @@ impl<'de, 'ctx, T> Visitor<'de> for BorrowedArrayVisitor<'ctx, 'de, T> {
         Ok(complete.then_some(values))
     }
 }
-pub(crate) fn borrowed_array<'de, T>(
+pub(crate) fn borrowed_array<'de, T, F>(
     raw: &'de RawValue,
     ctx: &mut Context,
     coerce: bool,
-    decode: fn(Input<'de>, &mut Context, bool) -> Option<T>,
-) -> Option<Vec<T>> {
+    decode: F,
+) -> Option<Vec<T>>
+where
+    F: Fn(Input<'de>, &mut Context, bool) -> Option<T>,
+{
     let mut deserializer = serde_json::Deserializer::from_str(raw.get());
     serde::de::DeserializeSeed::deserialize(
         BorrowedArraySeed {
             ctx,
             coerce,
             decode,
+            marker: PhantomData,
         },
         &mut deserializer,
     )
@@ -176,23 +195,26 @@ impl<'de> serde::Deserialize<'de> for BorrowedObject<'de> {
 }
 
 /// Raw staging for generated fixed-layout models, before any field validation.
+#[derive(Debug, Clone)]
 #[doc(hidden)]
 pub struct BorrowedFields<'de> {
     pub values: Box<[Option<&'de RawValue>]>,
     pub unknown: BTreeSet<String>,
 }
 
-#[doc(hidden)]
-pub fn borrowed_fields<'de>(
-    raw: &'de RawValue,
-    ctx: &mut Context,
+fn deserialize_borrowed_fields<'de, D, F>(
+    deserializer: D,
     field_count: usize,
-    field_index: fn(&str) -> Option<usize>,
+    field_index: F,
     ignore_extra: bool,
-) -> Option<BorrowedFields<'de>> {
-    struct FieldsVisitor {
+) -> Result<BorrowedFields<'de>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    F: Fn(&str) -> Option<usize>,
+{
+    struct FieldsVisitor<F> {
         field_count: usize,
-        field_index: fn(&str) -> Option<usize>,
+        field_index: F,
         ignore_extra: bool,
     }
     enum Key {
@@ -200,11 +222,11 @@ pub fn borrowed_fields<'de>(
         Unknown(String),
         Ignored,
     }
-    struct KeySeed {
-        field_index: fn(&str) -> Option<usize>,
+    struct KeySeed<'a, F> {
+        field_index: &'a F,
         ignore_extra: bool,
     }
-    impl<'de> Visitor<'de> for KeySeed {
+    impl<'de, F: Fn(&str) -> Option<usize>> Visitor<'de> for KeySeed<'_, F> {
         type Value = Key;
 
         fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -219,7 +241,7 @@ pub fn borrowed_fields<'de>(
             })
         }
     }
-    impl<'de> DeserializeSeed<'de> for KeySeed {
+    impl<'de, F: Fn(&str) -> Option<usize>> DeserializeSeed<'de> for KeySeed<'_, F> {
         type Value = Key;
 
         fn deserialize<D: serde::Deserializer<'de>>(
@@ -229,7 +251,7 @@ pub fn borrowed_fields<'de>(
             deserializer.deserialize_str(self)
         }
     }
-    impl<'de> Visitor<'de> for FieldsVisitor {
+    impl<'de, F: Fn(&str) -> Option<usize>> Visitor<'de> for FieldsVisitor<F> {
         type Value = BorrowedFields<'de>;
 
         fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -244,7 +266,7 @@ pub fn borrowed_fields<'de>(
                 unknown: BTreeSet::new(),
             };
             while let Some(key) = access.next_key_seed(KeySeed {
-                field_index: self.field_index,
+                field_index: &self.field_index,
                 ignore_extra: self.ignore_extra,
             })? {
                 // Even ignored and overwritten values must be consumed as raw JSON.
@@ -263,19 +285,59 @@ pub fn borrowed_fields<'de>(
     }
 
     // Use deserialize_map, not deserialize_any: private serde_json marker keys
-    // remain ordinary object keys. Match Input::object's complete error mapping.
-    let mut deserializer = serde_json::Deserializer::from_str(raw.get());
+    // remain ordinary object keys.
     serde::Deserializer::deserialize_map(
-        &mut deserializer,
+        deserializer,
         FieldsVisitor {
             field_count,
             field_index,
             ignore_extra,
         },
     )
-    .and_then(|fields| deserializer.end().map(|()| fields))
-    .map_err(|_| ctx.push(type_error("object")))
-    .ok()
+}
+
+#[doc(hidden)]
+pub fn borrowed_fields<'de, F>(
+    raw: &'de RawValue,
+    ctx: &mut Context,
+    field_count: usize,
+    field_index: F,
+    ignore_extra: bool,
+) -> Option<BorrowedFields<'de>>
+where
+    F: Fn(&str) -> Option<usize>,
+{
+    let mut deserializer = serde_json::Deserializer::from_str(raw.get());
+    deserialize_borrowed_fields(&mut deserializer, field_count, field_index, ignore_extra)
+        .and_then(|fields| deserializer.end().map(|()| fields))
+        .map_err(|_| ctx.push(type_error("object")))
+        .ok()
+}
+
+#[doc(hidden)]
+pub fn stage_borrowed_fields<'de, F>(
+    input: &'de str,
+    ctx: &mut Context,
+    field_count: usize,
+    field_index: F,
+    ignore_extra: bool,
+) -> Option<Input<'de>>
+where
+    F: Fn(&str) -> Option<usize>,
+{
+    let mut deserializer = serde_json::Deserializer::from_str(input);
+    if let Ok(fields) =
+        deserialize_borrowed_fields(&mut deserializer, field_count, field_index, ignore_extra)
+    {
+        if deserializer.end().is_ok() {
+            return Some(Input::ParsedFields(fields));
+        }
+    }
+    // Keep the existing raw-object error mapping for roots the staged visitor rejects.
+    serde_json::from_str::<&'de RawValue>(input)
+        .map(Input::Borrowed)
+        .map_err(|error| ctx.push(json_error(error)))
+        .ok()
 }
 
 pub(crate) fn json_error(error: serde_json::Error) -> ValidationError {
