@@ -504,6 +504,9 @@ owned!(
 owned!(rust_decimal::Decimal);
 
 impl<'de: 'a, 'a> BorrowType<'de> for &'a str {
+    fn validate_rules(&self, rules: &Rules, ctx: &mut Context) {
+        rules.validate_string(self, ctx);
+    }
     fn decode(value: Input<'de>, ctx: &mut Context, _: bool) -> Option<Self> {
         match value {
             Input::Borrowed(raw) => serde_json::from_str::<&'de str>(raw.get())
@@ -576,6 +579,9 @@ impl<'de> Visitor<'de> for CowVisitor {
     }
 }
 impl<'de: 'a, 'a> BorrowType<'de> for Cow<'a, str> {
+    fn validate_rules(&self, rules: &Rules, ctx: &mut Context) {
+        rules.validate_string(self, ctx);
+    }
     fn decode(value: Input<'de>, ctx: &mut Context, coerce: bool) -> Option<Self> {
         match value {
             Input::Borrowed(raw) if raw.get().starts_with('"') => {

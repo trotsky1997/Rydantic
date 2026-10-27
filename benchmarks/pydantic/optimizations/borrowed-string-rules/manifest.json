@@ -1,0 +1,27 @@
+{
+  "kind": "borrowed_string_rule_allocation_evidence",
+  "base_commit": "cb116f17599caa4697e07a0cefa68395f1c4c56a",
+  "compiler": "rustc 1.98.1 (48a229cea 2026-09-01)\nbinary: rustc\ncommit-hash: 48a229ceaefd4985c50990b14116b6d856af0985\ncommit-date: 2026-09-01\nhost: x86_64-unknown-linux-gnu\nrelease: 1.98.1\nLLVM version: 22.1.8",
+  "compiler_binary_sha256": "859254978c0a0402c32f949f6de0d99aee73be8d15f45aac00ae1448aac51e74",
+  "probe_sha256": "22381fa5463af3a26420612493087db3ef684dbea6ec029255177daed1a95b65",
+  "probe_lock_sha256": "fe0123975b402b74656f8ec825af65d17095b6db0b3dc15fb0d0f594d78fceda",
+  "baseline_runtime_borrowed_rs_sha256": "f22e1e6386072b7faef8327586feccf86dad25940af898da0c3406eaf9fb806b",
+  "candidate_runtime_borrowed_rs_sha256": "e1bf22d9eb2e422b8c9cd0f67eb0aef152a3acad6d756de11ddc187e36b77323",
+  "candidate_regression_tests_sha256": "0c0c06976e116992f8ac0af5a6ffa7fb173673286d303b46f70ec0ffdc7c4e8e",
+  "baseline_binary_sha256": "73d3deb83879ae13aefd2539b44ef3780a2b861c6464fe3107653dc492e8f436",
+  "candidate_binary_sha256": "19e66fbb2a926a3012d80b89f6c57eeb66bdcf590c35b7abc92cf92c47686918",
+  "results_compressed_sha256": "32676942156633b4755557fec6e93538fe6c27d8505e141c0283a292cad77b85",
+  "results_uncompressed_sha256": "754964447d02e7d2263ca86175e503b34b2d7c5c1656ef86933cae2ffda1aec5",
+  "complete_outcome_equal_rows": 16,
+  "stable_warm_samples_per_row": 5,
+  "canonical_and_controls_unchanged_rows": 77,
+  "notes": [
+    "Base and candidate library differ only by the six-line concrete borrowed-string validate_rules specialization; tests are separately changed.",
+    "No latency or RSS claim; no Pydantic timing.",
+    "The whole-PR131 canonical probe uses String, so this borrowed-string fix does not improve its collection100 allocation counts."
+  ],
+  "preserved_root_json_contracts_sha256": "4018009fbe872c4cd5035f2b5cb422c3d52c28bc3fdfeed6b50f9c92a33c2ab9",
+  "default_core_derive_test_passes": 213,
+  "default_core_derive_test_failures": 0,
+  "default_core_derive_test_ignored": 0
+}

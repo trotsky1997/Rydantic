@@ -1,0 +1,78 @@
+// Allocation-only instrumentation: no timers. Synthetic inputs only.
+use std::alloc::{GlobalAlloc, Layout, System};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::hint::black_box;
+use rydantic::{json, BorrowType, Context, rules::Rules, Value};
+use std::borrow::Cow;
+struct Counter;
+static ENABLED: AtomicBool = AtomicBool::new(false);
+static CALLS: AtomicUsize = AtomicUsize::new(0);
+static BYTES: AtomicUsize = AtomicUsize::new(0);
+unsafe impl GlobalAlloc for Counter {
+    unsafe fn alloc(&self, l: Layout) -> *mut u8 {
+        if ENABLED.load(Ordering::Relaxed) { CALLS.fetch_add(1, Ordering::Relaxed); BYTES.fetch_add(l.size(), Ordering::Relaxed); }
+        System.alloc(l)
+    }
+    unsafe fn alloc_zeroed(&self, l: Layout) -> *mut u8 {
+        if ENABLED.load(Ordering::Relaxed) { CALLS.fetch_add(1, Ordering::Relaxed); BYTES.fetch_add(l.size(), Ordering::Relaxed); }
+        System.alloc_zeroed(l)
+    }
+    unsafe fn dealloc(&self, p: *mut u8, l: Layout) { System.dealloc(p, l) }
+    unsafe fn realloc(&self, p: *mut u8, l: Layout, n: usize) -> *mut u8 {
+        if ENABLED.load(Ordering::Relaxed) { CALLS.fetch_add(1, Ordering::Relaxed); BYTES.fetch_add(n, Ordering::Relaxed); }
+        System.realloc(p, l, n)
+    }
+}
+#[global_allocator] static ALLOC: Counter = Counter;
+fn count<T>(f: impl FnOnce()->T) -> (T, usize, usize) {
+    CALLS.store(0,Ordering::Relaxed); BYTES.store(0,Ordering::Relaxed); ENABLED.store(true,Ordering::Relaxed);
+    let value = black_box(f());
+    ENABLED.store(false,Ordering::Relaxed);
+    (value, CALLS.load(Ordering::Relaxed), BYTES.load(Ordering::Relaxed))
+}
+
+fn outcome(ctx: Context) -> Value {
+    match ctx.result() {
+        Ok(()) => json!({"accepted": true}),
+        Err(e) => json!({"accepted": false,"errors":serde_json::to_string(&e).unwrap(),"display":e.to_string()}),
+    }
+}
+fn main() {
+    let mut rows=Vec::new();
+    for (case,text,minimum,repetitions) in [("valid_ascii","sample",1,1000),("valid_unicode","😀é",1,1000),("invalid_length","x",3,1),("empty_zero_min","",0,1000)] {
+        let rules=Rules {min_length:Some(minimum),..Rules::default()};
+        let owned=text.to_owned();
+        let borrowed=Cow::Borrowed(text);
+        let cow_owned=Cow::Owned::<str>(owned.clone());
+        for kind in ["str_ref","cow_borrowed","cow_owned","string_control"] {
+            let current=|| {
+                let mut ctx=Context::new();
+                for _ in 0..repetitions {
+                    match kind {
+                        "str_ref" => BorrowType::validate_rules(black_box(&text),black_box(&rules),&mut ctx),
+                        "cow_borrowed" => BorrowType::validate_rules(black_box(&borrowed),black_box(&rules),&mut ctx),
+                        "cow_owned" => BorrowType::validate_rules(black_box(&cow_owned),black_box(&rules),&mut ctx),
+                        _ => BorrowType::validate_rules(black_box(&owned),black_box(&rules),&mut ctx),
+                    }
+                }
+                ctx
+            };
+            let direct=|| {
+                let mut ctx=Context::new();
+                for _ in 0..repetitions {BorrowType::validate_rules(black_box(&owned),black_box(&rules),&mut ctx);}
+                ctx
+            };
+            drop(current());drop(direct());
+            let mut samples=Vec::new();
+            for _ in 0..5 {
+                let (ctx,c,b)=count(current);let current_outcome=outcome(ctx);
+                let (ctx,dc,db)=count(direct);let direct_outcome=outcome(ctx);
+                assert_eq!(current_outcome,direct_outcome);
+                samples.push(json!({"current":{"calls":c,"requested_bytes":b},"owned_string_rule_control":{"calls":dc,"requested_bytes":db},"outcome":current_outcome}));
+            }
+            assert!(samples.iter().all(|x|x==&samples[0]));
+            rows.push(json!({"case":case,"kind":kind,"input":text,"utf8_bytes":text.len(),"iterations":repetitions,"samples":samples}));
+        }
+    }
+    println!("{}",json!({"kind":"rules_only_allocation_diagnostic_no_timing","rows":rows}));
+}
