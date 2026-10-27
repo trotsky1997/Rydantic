@@ -3,6 +3,8 @@ use rydantic::grpc::{CapnpCodec, Limits};
 use tonic::codegen::{http, Body, BoxFuture, Service, StdError};
 use tonic::{Request, Response, Status};
 
+pub const HELLO_RPC_PATH: &str = "/rydantic.Greeter/Hello";
+
 #[rydantic::capnp_models(namespace = "rydantic.examples.grpc")]
 pub mod models {
     #[derive(rydantic::Model, Debug, PartialEq)]
@@ -50,7 +52,7 @@ where
         let limits = self.limits;
         let invalid_output = self.invalid_output;
         Box::pin(async move {
-            if request.uri().path() != "/rydantic.Greeter/Hello" {
+            if request.uri().path() != HELLO_RPC_PATH {
                 return Ok(Status::unimplemented("unknown method").into_http());
             }
             struct Hello(bool);
@@ -79,10 +81,10 @@ where
     }
 }
 
-pub async fn greet(
+pub async fn greet_model(
     channel: tonic::transport::Channel,
     limits: Limits,
-    name: String,
+    request: models::Hello,
 ) -> Result<models::Greeting, Status> {
     let mut client = tonic::client::Grpc::new(channel)
         .max_decoding_message_size(limits.message_bytes())
@@ -93,20 +95,30 @@ pub async fn greet(
         .map_err(|_| Status::unavailable("service unavailable"))?;
     let response = client
         .unary(
-            rydantic::grpc::request(
-                models::Hello {
-                    name,
-                    context: models::Context {
-                        language: "en".into(),
-                    },
-                },
-                limits,
-            )?,
-            http::uri::PathAndQuery::from_static("/rydantic.Greeter/Hello"),
+            rydantic::grpc::request(request, limits)?,
+            http::uri::PathAndQuery::from_static(HELLO_RPC_PATH),
             CapnpCodec::<models::Hello, models::Greeting>::client(limits),
         )
         .await?;
     Ok(response.into_inner())
+}
+
+pub async fn greet(
+    channel: tonic::transport::Channel,
+    limits: Limits,
+    name: String,
+) -> Result<models::Greeting, Status> {
+    greet_model(
+        channel,
+        limits,
+        models::Hello {
+            name,
+            context: models::Context {
+                language: "en".into(),
+            },
+        },
+    )
+    .await
 }
 
 #[tokio::main]

@@ -140,7 +140,8 @@
             "pages": [
               "integrations/capnp",
               "integrations/existing-capnp",
-              "integrations/grpc-capnp"
+              "integrations/grpc-capnp",
+              "integrations/protocol-bridge"
             ]
           }
         ]

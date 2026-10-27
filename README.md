@@ -109,7 +109,7 @@ rydantic = { version = "=0.8.0", features = ["axum", "postgres"] }
 | Dates and exact decimals | `chrono`, `decimal` | [Dates and Decimal](https://rydantic.mintlify.site/models/dates-decimal) |
 | Runtime JSON Schema | `dynamic` | [JSON Schema](https://rydantic.mintlify.site/models/schema) |
 
-> **Unreleased source integration:** optional `grpc` adds [Cap’n Proto over gRPC unary transport](docs/integrations/grpc-capnp.mdx) with tonic custom codecs. It is not included in the published 0.8.0 package and is not native Cap’n Proto RPC.
+> **Unreleased source integration:** optional `grpc` adds [Cap’n Proto over gRPC unary transport](docs/integrations/grpc-capnp.mdx) with tonic custom codecs. The [protocol bridge example](docs/integrations/protocol-bridge.mdx) forwards a validated HTTP JSON request through that path and serves its OpenAPI contract. The `grpc` feature is not included in the published 0.8.0 package and does not provide native Cap’n Proto RPC.
 
 See the [complete feature reference](https://rydantic.mintlify.site/reference/features). Automatic Cap'n Proto binding generation also requires the official `capnp` compiler on `PATH`.
 
