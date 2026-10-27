@@ -16,28 +16,15 @@ use std::{
 #[derive(Debug, Clone)]
 pub enum Input<'de> {
     Borrowed(&'de RawValue),
-    BorrowedJson(&'de str),
     Owned(Value),
     Object(BTreeMap<String, Input<'de>>),
 }
 impl<'de> Input<'de> {
-    #[doc(hidden)]
-    pub fn as_borrowed_str(&self) -> Option<&'de str> {
-        match self {
-            Self::Borrowed(raw) => Some(raw.get()),
-            Self::BorrowedJson(raw) => Some(raw),
-            Self::Owned(_) | Self::Object(_) => None,
-        }
-    }
-
     pub fn into_value(self, ctx: &mut Context) -> Option<Value> {
         match self {
             Self::Object(object) => Self::from_object(object, ctx),
             Self::Owned(value) => Some(value),
             Self::Borrowed(raw) => serde_json::from_str(raw.get())
-                .map_err(|e| ctx.push(json_error(e)))
-                .ok(),
-            Self::BorrowedJson(raw) => serde_json::from_str(raw)
                 .map_err(|e| ctx.push(json_error(e)))
                 .ok(),
         }
@@ -47,11 +34,7 @@ impl<'de> Input<'de> {
             Self::Object(object) => Some(object),
             Self::Borrowed(raw) => serde_json::from_str::<BorrowedObject<'de>>(raw.get())
                 .map(|object| object.0)
-                .map_err(|error| ctx.push(json_or_type_error(error, "object")))
-                .ok(),
-            Self::BorrowedJson(raw) => serde_json::from_str::<BorrowedObject<'de>>(raw)
-                .map(|object| object.0)
-                .map_err(|error| ctx.push(json_or_type_error(error, "object")))
+                .map_err(|_| ctx.push(type_error("object")))
                 .ok(),
             Self::Owned(Value::Object(map)) => {
                 Some(map.into_iter().map(|(k, v)| (k, Self::Owned(v))).collect())
@@ -66,11 +49,7 @@ impl<'de> Input<'de> {
         match self {
             Self::Borrowed(raw) => serde_json::from_str::<Vec<&'de RawValue>>(raw.get())
                 .map(|items| items.into_iter().map(Self::Borrowed).collect())
-                .map_err(|error| ctx.push(json_or_type_error(error, "array")))
-                .ok(),
-            Self::BorrowedJson(raw) => serde_json::from_str::<Vec<&'de RawValue>>(raw)
-                .map(|items| items.into_iter().map(Self::Borrowed).collect())
-                .map_err(|error| ctx.push(json_or_type_error(error, "array")))
+                .map_err(|_| ctx.push(type_error("array")))
                 .ok(),
             Self::Owned(Value::Array(items)) => Some(items.into_iter().map(Self::Owned).collect()),
             _ => {
@@ -89,9 +68,6 @@ impl<'de> Input<'de> {
     pub fn is_null(&self) -> bool {
         match self {
             Self::Borrowed(raw) => raw.get() == "null",
-            Self::BorrowedJson(raw) => {
-                raw.trim_matches(|ch| matches!(ch, ' ' | '\n' | '\r' | '\t')) == "null"
-            }
             Self::Owned(v) => v.is_null(),
             Self::Object(_) => false,
         }
@@ -149,12 +125,12 @@ impl<'de, 'ctx, T> Visitor<'de> for BorrowedArrayVisitor<'ctx, 'de, T> {
     }
 }
 pub(crate) fn borrowed_array<'de, T>(
-    raw: &'de str,
+    raw: &'de RawValue,
     ctx: &mut Context,
     coerce: bool,
     decode: fn(Input<'de>, &mut Context, bool) -> Option<T>,
 ) -> Option<Vec<T>> {
-    let mut deserializer = serde_json::Deserializer::from_str(raw);
+    let mut deserializer = serde_json::Deserializer::from_str(raw.get());
     serde::de::DeserializeSeed::deserialize(
         BorrowedArraySeed {
             ctx,
@@ -164,7 +140,7 @@ pub(crate) fn borrowed_array<'de, T>(
         &mut deserializer,
     )
     .and_then(|values| deserializer.end().map(|()| values))
-    .map_err(|error| ctx.push(json_or_type_error(error, "array")))
+    .map_err(|_| ctx.push(type_error("array")))
     .ok()?
 }
 
@@ -208,7 +184,7 @@ pub struct BorrowedFields<'de> {
 
 #[doc(hidden)]
 pub fn borrowed_fields<'de>(
-    raw: &'de str,
+    raw: &'de RawValue,
     ctx: &mut Context,
     field_count: usize,
     field_index: fn(&str) -> Option<usize>,
@@ -288,7 +264,7 @@ pub fn borrowed_fields<'de>(
 
     // Use deserialize_map, not deserialize_any: private serde_json marker keys
     // remain ordinary object keys. Match Input::object's complete error mapping.
-    let mut deserializer = serde_json::Deserializer::from_str(raw);
+    let mut deserializer = serde_json::Deserializer::from_str(raw.get());
     serde::Deserializer::deserialize_map(
         &mut deserializer,
         FieldsVisitor {
@@ -298,15 +274,8 @@ pub fn borrowed_fields<'de>(
         },
     )
     .and_then(|fields| deserializer.end().map(|()| fields))
-    .map_err(|error| ctx.push(json_or_type_error(error, "object")))
+    .map_err(|_| ctx.push(type_error("object")))
     .ok()
-}
-
-fn json_or_type_error(error: serde_json::Error, expected: &str) -> ValidationError {
-    match error.classify() {
-        serde_json::error::Category::Syntax | serde_json::error::Category::Eof => json_error(error),
-        serde_json::error::Category::Io | serde_json::error::Category::Data => type_error(expected),
-    }
 }
 
 pub(crate) fn json_error(error: serde_json::Error) -> ValidationError {
@@ -757,8 +726,7 @@ impl<'de, T: BorrowType<'de>> BorrowType<'de> for Vec<T> {
     }
     fn decode(value: Input<'de>, ctx: &mut Context, coerce: bool) -> Option<Self> {
         let items = match value {
-            Input::Borrowed(raw) => return borrowed_array(raw.get(), ctx, coerce, T::decode),
-            Input::BorrowedJson(raw) => return borrowed_array(raw, ctx, coerce, T::decode),
+            Input::Borrowed(raw) => return borrowed_array(raw, ctx, coerce, T::decode),
             value => value.array(ctx)?,
         };
         let mut result = Vec::with_capacity(items.len());
@@ -973,7 +941,7 @@ mod object_materialization_tests {
             let old = Input::Borrowed(raw).object(&mut old_ctx);
             let mut new_ctx = Context::new();
             let new = borrowed_fields(
-                raw.get(),
+                raw,
                 &mut new_ctx,
                 4,
                 |key| NAMES.iter().position(|name| *name == key),

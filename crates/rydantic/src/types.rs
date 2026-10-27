@@ -338,9 +338,6 @@ impl<T: JsonType> JsonType for Vec<T> {
     fn decode_input(input: Input<'_>, ctx: &mut Context, coerce: bool) -> Option<Self> {
         let items = match input {
             Input::Borrowed(raw) => {
-                return crate::borrowed::borrowed_array(raw.get(), ctx, coerce, T::decode_input)
-            }
-            Input::BorrowedJson(raw) => {
                 return crate::borrowed::borrowed_array(raw, ctx, coerce, T::decode_input)
             }
             input => input.array(ctx)?,

@@ -160,10 +160,8 @@ pub trait Model: JsonType {
         input: &str,
         context: std::sync::Arc<C>,
     ) -> Result<Self, ValidationErrors> {
-        asynchronous::sync_guard(Self::async_required(&mut std::collections::HashSet::new()))?;
-        let mut ctx = Context::with_data(context);
-        let model = Self::decode_input(Input::BorrowedJson(input), &mut ctx, false);
-        ctx.finish(model)
+        let raw = serde_json::from_str::<&RawValue>(input).map_err(borrowed::json_error)?;
+        Self::parse_raw_with_context(raw, context)
     }
     fn parse_slice_with_context<C: std::any::Any + Send + Sync>(
         input: &[u8],
@@ -234,13 +232,8 @@ pub trait Model: JsonType {
         Self: AsyncCheck + Send,
     {
         async move {
-            let mut ctx = Context::with_data(context.clone());
-            let model = Self::decode_input(Input::BorrowedJson(input), &mut ctx, false);
-            let model = ctx.finish(model)?;
-            let mut ctx = Context::with_data(context);
-            model.check_async(&mut ctx).await;
-            ctx.result()?;
-            Ok(model)
+            let raw = serde_json::from_str::<&RawValue>(input).map_err(borrowed::json_error)?;
+            Self::parse_raw_async_with_context(raw, context).await
         }
     }
     fn parse_raw_async_with_context<C: std::any::Any + Send + Sync>(
@@ -319,10 +312,8 @@ pub trait Model: JsonType {
 
     /// Strict by default. Explicit field-level `coerce` is applied by the derive.
     fn parse_json(input: &str) -> Result<Self, ValidationErrors> {
-        asynchronous::sync_guard(Self::async_required(&mut std::collections::HashSet::new()))?;
-        let mut ctx = Context::new();
-        let model = Self::decode_input(Input::BorrowedJson(input), &mut ctx, false);
-        ctx.finish(model)
+        let raw = serde_json::from_str::<&RawValue>(input).map_err(borrowed::json_error)?;
+        Self::parse_raw(raw)
     }
     fn parse_slice(input: &[u8]) -> Result<Self, ValidationErrors> {
         let raw = serde_json::from_slice::<&RawValue>(input).map_err(borrowed::json_error)?;
@@ -382,13 +373,8 @@ pub trait Model: JsonType {
         Self: AsyncCheck + Send,
     {
         async move {
-            let mut ctx = Context::new();
-            let model = Self::decode_input(Input::BorrowedJson(input), &mut ctx, false);
-            let model = ctx.finish(model)?;
-            let mut ctx = Context::new();
-            model.check_async(&mut ctx).await;
-            ctx.result()?;
-            Ok(model)
+            let raw = serde_json::from_str::<&RawValue>(input).map_err(borrowed::json_error)?;
+            Self::parse_raw_async(raw).await
         }
     }
     fn parse_raw_async(
