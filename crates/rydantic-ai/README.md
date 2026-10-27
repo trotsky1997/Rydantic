@@ -15,7 +15,7 @@ Declare `rydantic` directly when deriving application models so its derive macro
 ## Upgrading from AI 0.6
 
 **Breaking dependency upgrade:** published AI 0.6.0 declared core `0.7.0-beta.3`;
-this candidate requires `=0.8.0`. Align your application's direct `rydantic`
+AI 0.7 requires `=0.8.0`. Align your application's direct `rydantic`
 dependency (including renamed dependencies) with `=0.8.0` and rebuild derived
 models. Keeping a separate core 0.7 dependency can produce incompatible
 `Model`/`JsonType` trait identities; no compatibility layer joins them.
@@ -191,8 +191,8 @@ Client and global policies each use their own reservation size and cost estimate
 ## Independent releases
 
 RydanticAI has an independent package version and tags such as
-`rydantic-ai-v0.7.0-beta.1` and `rydantic-ai-v0.7.0`. The current plain `0.7.0`
-manifest is an unpublished source candidate, not a published or beta release.
+`rydantic-ai-v0.7.0-beta.1` and `rydantic-ai-v0.7.0`. A plain `0.7.0` version
+denotes a stable version, not a beta; a beta requires an explicit prerelease suffix.
 For this larger/core-breaking upgrade, first prepare a reviewed explicit
 `0.7.0-beta.N` manifest and lockfile, publish that tested beta, and mark its
 GitHub Release as a prerelease, not latest stable. Do not maintain a long-lived
@@ -212,9 +212,9 @@ For each version, keep these stages separate:
    python3 scripts/release_ai.py publish --tag rydantic-ai-v0.7.0-beta.1
    ```
 
-   These example commands require the matching beta manifest/tag; they do not
-   apply to the current plain `0.7.0` candidate. The publish command verifies the
-   package before its single upload attempt and publishes only `rydantic-ai`.
+   These example commands require the matching beta manifest and tag. Use the
+   matching stable manifest and tag only after beta acceptance. The publish command
+   verifies the package before its single upload attempt and publishes only `rydantic-ai`.
 2. **After upload:** verify the registry checksum and sparse index (the script
    does this even after an uncertain upload exit), then run a fresh registry-only
    consumer and record acceptance. This consumer requires the newly published
