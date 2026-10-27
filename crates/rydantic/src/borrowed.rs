@@ -973,7 +973,7 @@ mod object_materialization_tests {
             let old = Input::Borrowed(raw).object(&mut old_ctx);
             let mut new_ctx = Context::new();
             let new = borrowed_fields(
-                raw,
+                raw.get(),
                 &mut new_ctx,
                 4,
                 |key| NAMES.iter().position(|name| *name == key),
