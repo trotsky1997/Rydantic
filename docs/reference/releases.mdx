@@ -79,30 +79,8 @@ New checks/transforms can change accepted data; they do not migrate stored value
 
 Published on 2026-10-27: [GitHub release](https://github.com/trotsky1997/Rydantic/releases/tag/rydantic-ai-v0.7.0) and [crate](https://crates.io/crates/rydantic-ai/0.7.0). This release pins the published core crate to `=0.8.0` and adds [PDF inputs](/integrations/pdf) through `Pdf` and `Prompt::pdf()` for ordered document, image and text prompts. Embedded PDFs work through all nine protocol combinations, including JSON/SSE output, tool continuations, Partial and Iterable streams. Responses and Messages also support URL references; Chat Completions requires embedded PDF data. Validation bounds PDF data, names and counts, and replay uses compact attachment digests. CI covers 89 strict official Python SDK cases.
 
-Tag `rydantic-ai-v0.7.0` points to exact main commit [`6517e6f9f59b7b5a9fb349665ab7987c886289f5`](https://github.com/trotsky1997/Rydantic/commit/6517e6f9f59b7b5a9fb349665ab7987c886289f5). [Exact-main push CI](https://github.com/trotsky1997/Rydantic/actions/runs/40529535081) passed; the release record reports that the guarded release preflight passed. The published archive SHA-256 matches the local package, crates.io API and sparse index: `686e804910edd87411483ca994930f6990a12d8faa9485205b9074e5a0f339ab`; the version is not yanked. A fresh registry-only consumer resolved both exact crate versions without path patches and passed its PDF prompt/API test.
-
-**Release-process deviation:** the registry contains no AI `0.7.0-beta.N`
-prerelease preceding this stable publication. The beta-first gate for this
-larger/core-breaking AI upgrade was not completed. Core's own beta acceptance
-does not substitute for AI beta acceptance. For future upgrades of this scope,
-publish and verify an explicitly versioned beta with a GitHub Release marked
-prerelease before separately testing/promoting stable; no long-lived beta branch
-is needed.
-
-The published archive identifies source `6517e6f9`, before the migration warnings
-were added in [#141](https://github.com/trotsky1997/Rydantic/pull/141). Its immutable README does not include those warnings; follow
-the upgrade guidance below when adopting this package. The GitHub Release also
-contains upgrade guidance; the missing warnings concern the immutable crate README,
-not every public release document.
-
-Before each upload, require the matching merged version/lockfile, successful
-exact-main push CI, release preflight and package verification. After upload,
-verify registry and sparse-index checksums and run a fresh registry-only consumer
-of that published version. Record acceptance before declaring the release
-verified; postpublication consumer acceptance cannot precede upload.
-
 **Breaking upgrade from AI 0.6:** its tagged manifest declared core
-`0.7.0-beta.3`; AI 0.7.0 pins `=0.8.0`. Align direct core dependencies and
+`0.7.0-beta.3`; this release pins `=0.8.0`. Align direct core dependencies and
 rebuild derived models to avoid distinct incompatible `Model`/`JsonType` trait
 identities. Core 0.8 `Context` loses `UnwindSafe`/`RefUnwindSafe`; keep it inside
 panic boundaries or avoid captures, rather than blindly adding `AssertUnwindSafe`.
@@ -110,6 +88,27 @@ See the core 0.8 migration warning above. Validate application behavior and back
 up affected persisted state before upgrading. Shared effects are not rolled back,
 and transformations/checks can change data; no automatic or lossless migration
 of existing data/deployments is promised. Users retain responsibility for them.
+
+Tag `rydantic-ai-v0.7.0` points to exact main commit [`6517e6f9f59b7b5a9fb349665ab7987c886289f5`](https://github.com/trotsky1997/Rydantic/commit/6517e6f9f59b7b5a9fb349665ab7987c886289f5). [Exact-main push CI](https://github.com/trotsky1997/Rydantic/actions/runs/40529535081) passed; the release record reports that the guarded release preflight passed. The published archive SHA-256 matches the local package, crates.io API and sparse index: `686e804910edd87411483ca994930f6990a12d8faa9485205b9074e5a0f339ab`; the version is not yanked. A fresh registry-only consumer resolved both exact crate versions without path patches and passed its PDF prompt/API test.
+
+**Release-process deviation:** the registry contains no AI `0.7.0-beta.N`
+prerelease preceding this stable publication. The beta-first gate for this
+larger/core-breaking AI upgrade was not completed; core's beta acceptance does
+not substitute for AI beta acceptance. Future upgrades of this scope require a
+published, verified beta with a GitHub Release marked prerelease before a
+separately tested stable promotion, without a long-lived beta branch.
+
+The published archive identifies source `6517e6f9`, before the migration warnings
+were added in [#141](https://github.com/trotsky1997/Rydantic/pull/141). Its immutable
+README lacks those warnings; follow the upgrade guidance above. The GitHub
+Release also contains upgrade guidance, so this limitation does not apply to
+all public release documents.
+
+Before each upload, require the matching merged version/lockfile, successful
+exact-main push CI, release preflight and package verification. After upload,
+verify registry and sparse-index checksums and run a fresh registry-only consumer
+of that published version. Record acceptance before declaring the release
+verified; postpublication consumer acceptance cannot precede upload.
 
 ## 0.7.0 · Stable
 

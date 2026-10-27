@@ -139,30 +139,28 @@ Acceptance evidence:
   index: `686e804910edd87411483ca994930f6990a12d8faa9485205b9074e5a0f339ab`;
   the registry version is not yanked. A fresh registry-only consumer resolved
   both AI 0.7.0 and core 0.8.0 and passed its PDF prompt/API test.
+- AI 0.6 users must align direct core dependencies with `=0.8.0` and review the
+  [upgrade warning](crates/rydantic-ai/README.md#upgrading-from-ai-06). No
+  compatibility layer or automatic/lossless data migration is promised.
 - Examples, dependency pins and publication status now match the crate on
   crates.io.
 
 **Release-process deviation:** no AI `0.7.0-beta.N` version was published in the
 registry before this stable release. The PDF publication milestone is delivered,
-but the beta-first acceptance gate was not completed; do not treat stable
-publication or core's earlier beta acceptance as evidence of an AI beta campaign.
+but the beta-first acceptance gate was not completed; neither stable publication
+nor core's earlier beta acceptance demonstrates an AI beta campaign.
 
-Retain these gates for future larger or core-breaking AI upgrades:
+For future core-breaking AI releases, publish a tested explicit `beta.N` first,
+complete registry-only acceptance, then promote a separately tested stable
+version, with the beta GitHub Release marked prerelease. Use versioned channels
+instead of a long-lived beta branch. Before each upload, require the matching
+merged version/lockfile, exact-main push CI, preflight and package verification.
+After upload, verify registry/API and sparse-index checksums and run a fresh
+registry-only consumer; that acceptance cannot precede the upload.
 
-- Prepare and test an explicitly versioned beta first, publish it with a GitHub
-  Release marked prerelease, and record acceptance before separately testing and
-  promoting stable. Use versions/channels, not a long-lived beta branch.
-- Before each upload: merge the matching version/lockfile preparation, require
-  successful exact-main push CI, and pass release preflight plus package verification.
-  After upload: verify registry/API and sparse-index checksums and run a fresh
-  registry-only consumer. Postpublication acceptance cannot precede the upload.
-- AI 0.6 consumers must align direct core dependencies with `=0.8.0` and review
-  the [AI upgrade warning](crates/rydantic-ai/README.md#upgrading-from-ai-06).
-  No compatibility layer or automatic/lossless data migration is promised.
-
-**Dependencies:** the core compatibility decision, not necessarily a core stable
-promotion. Live-provider tests require a separately authorized environment and
-budget; fixtures are not proof of universal provider support. See
+**Dependency:** stable core `=0.8.0`. Live-provider tests require a separately
+authorized environment and budget; fixtures are not proof of universal provider
+support. See
 [#75](https://github.com/trotsky1997/Rydantic/pull/75) and the
 [PDF contract](docs/integrations/pdf.mdx).
 
