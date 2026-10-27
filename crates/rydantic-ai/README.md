@@ -12,6 +12,24 @@ rydantic-ai = "=0.7.0"
 
 Declare `rydantic` directly when deriving application models so its derive macro can resolve the model dependency, including renamed dependencies. The candidate pins the published core 0.8.0 release.
 
+## Upgrading from AI 0.6
+
+**Breaking dependency upgrade:** published AI 0.6.0 declared core `0.7.0-beta.3`;
+this candidate requires `=0.8.0`. Align your application's direct `rydantic`
+dependency (including renamed dependencies) with `=0.8.0` and rebuild derived
+models. Keeping a separate core 0.7 dependency can produce incompatible
+`Model`/`JsonType` trait identities; no compatibility layer joins them.
+
+Core 0.8 `Context` no longer implements `UnwindSafe`/`RefUnwindSafe`, even without
+data. Construct and consume it inside a panic boundary or avoid capturing it;
+never apply a blanket `AssertUnwindSafe` without auditing captures and shared
+payloads. See the [core 0.8 migration warning](https://github.com/trotsky1997/Rydantic/blob/main/docs/reference/releases.mdx#080--stable).
+Validation failures are `Result` errors, not transactions: prior shared effects
+are not rolled back, and transformations/checks can change data. Validate your
+application and back up affected persisted state before adopting the upgrade;
+this release performs no automatic or guaranteed lossless stored-data migration.
+Users remain responsible for their existing data and deployments.
+
 ## API providers
 
 Connect using `BASEURL` and an optional `APIKEY`. `BASEURL` includes the API prefix, such as `https://api.openai.com/v1` or `https://api.anthropic.com/v1`. Choose `MODEL` from the configured endpoint.
@@ -172,14 +190,40 @@ Client and global policies each use their own reservation size and cost estimate
 
 ## Independent releases
 
-RydanticAI uses tags such as `rydantic-ai-v0.7.0`. Its version is read from this package manifest and is independent of the core workspace version. A maintainer with the repository's GitHub identity and a local Cargo publishing credential can run from a clean repository checkout:
+RydanticAI has an independent package version and tags such as
+`rydantic-ai-v0.7.0-beta.1` and `rydantic-ai-v0.7.0`. The current plain `0.7.0`
+manifest is an unpublished source candidate, not a published or beta release.
+For this larger/core-breaking upgrade, first prepare a reviewed explicit
+`0.7.0-beta.N` manifest and lockfile, publish that tested beta, and mark its
+GitHub Release as a prerelease, not latest stable. Do not maintain a long-lived
+beta branch. Only after beta acceptance should a separately tested `0.7.0`
+version be promoted to stable.
 
-```sh
-python3 scripts/release_ai.py preflight --tag rydantic-ai-v0.7.0
-python3 scripts/release_ai.py publish --tag rydantic-ai-v0.7.0
-```
+For each version, keep these stages separate:
 
-The release script requires an existing remote tag on tested main history, successful exact-commit main-push CI, an unpublished registry version and a package containing no installed Node dependencies or credential files. It performs one upload attempt and verifies the registry checksum and sparse index, including after an uncertain upload exit status. It publishes only `rydantic-ai`. Use Python 3.11 or newer.
+1. **Before upload:** merge its preparation, wait for successful exact-commit
+   main-push CI, create its matching immutable remote tag, and pass release
+   preflight and package verification. A maintainer using the repository's
+   GitHub identity and an existing Cargo publishing credential can run the
+   following from the clean tagged checkout (Python 3.11+):
+
+   ```sh
+   python3 scripts/release_ai.py preflight --tag rydantic-ai-v0.7.0-beta.1
+   python3 scripts/release_ai.py publish --tag rydantic-ai-v0.7.0-beta.1
+   ```
+
+   These example commands require the matching beta manifest/tag; they do not
+   apply to the current plain `0.7.0` candidate. The publish command verifies the
+   package before its single upload attempt and publishes only `rydantic-ai`.
+2. **After upload:** verify the registry checksum and sparse index (the script
+   does this even after an uncertain upload exit), then run a fresh registry-only
+   consumer and record acceptance. This consumer requires the newly published
+   version and cannot be a pre-upload gate. An uploaded package is not yet a
+   verified release until this acceptance completes; inspect an uncertain outcome
+   before retrying and never blindly repeat the upload.
+
+The script rejects an existing version and packages containing installed Node
+dependencies or credential files. No new credential setup is implied here.
 
 ## Validation
 
