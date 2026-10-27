@@ -138,8 +138,16 @@ impl JsonType for String {
     }
     fn decode_input(input: Input<'_>, ctx: &mut Context, coerce: bool) -> Option<Self> {
         if let Input::Borrowed(raw) = &input {
-            if raw.get().trim_start().starts_with('"') {
-                if let Ok(value) = serde_json::from_str::<String>(raw.get()) {
+            let json = raw.get();
+            if let Some(value) = json
+                .trim()
+                .strip_prefix('"')
+                .and_then(|value| value.strip_suffix('"'))
+            {
+                if !value.as_bytes().contains(&b'\\') {
+                    return Some(value.to_owned());
+                }
+                if let Ok(value) = serde_json::from_str::<String>(json) {
                     return Some(value);
                 }
             }
@@ -180,6 +188,13 @@ impl JsonType for bool {
         Some(self)
     }
     fn decode_input(input: Input<'_>, ctx: &mut Context, coerce: bool) -> Option<Self> {
+        if let Input::Borrowed(raw) = &input {
+            match raw.get().trim() {
+                "true" => return Some(true),
+                "false" => return Some(false),
+                _ => {}
+            }
+        }
         Self::decode(crate::direct::scalar(input, ctx, "boolean")?, ctx, coerce)
     }
     fn decode(value: Value, ctx: &mut Context, coerce: bool) -> Option<Self> {
