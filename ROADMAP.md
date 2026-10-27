@@ -1,6 +1,6 @@
 # Rydantic roadmap
 
-**Baseline: 2026-10-25.** Stabilize contracts before expanding capabilities.
+**Baseline: 2026-10-27.** Stabilize contracts before expanding capabilities.
 Now / Next / Later express priority and dependencies, not promised dates or
 release commitments. An item is complete only when its acceptance evidence is
 recorded; source availability, passing tests and publication are separate states.
@@ -22,10 +22,9 @@ what users can install.
   optional bounded OpenAPI components added after beta.1.
   Earlier beta.1 publication documentation merged in [#81](https://github.com/trotsky1997/Rydantic/pull/81);
   its post-merge checks are tracked separately from the verified package release.
-- **RydanticAI 0.6.0** remains the latest published AI package. The next release
-  candidate is 0.7.0, pinned to stable core `=0.8.0`, and includes the PDF API
-  merged in [#75](https://github.com/trotsky1997/Rydantic/pull/75). Publication,
-  exact-main CI and registry-only consumer acceptance remain pending.
+- **RydanticAI 0.7.0** is the latest published AI package, pinned to stable core
+  `=0.8.0`. Its PDF release record includes exact-main CI, registry checksum and
+  consumer receipts: [GitHub release](https://github.com/trotsky1997/Rydantic/releases/tag/rydantic-ai-v0.7.0).
 - CLI and codegen remain unpublished source tools. Agent evaluation infrastructure
   exists, but no measured agent-performance improvement is established.
 - An open issue is not proof of an unimplemented defect. Existing repair and
@@ -116,40 +115,43 @@ percentage is promised. Existing evidence: [COVERAGE.md](COVERAGE.md),
 [#76](https://github.com/trotsky1997/Rydantic/pull/76) and
 [#78](https://github.com/trotsky1997/Rydantic/pull/78).
 
-## Next: P1 — deliver PDF support as an independent AI release
+## Delivered: P1 — publish PDF support as an independent AI release
 
-**Outcome:** turn merged source into an installable, accurately documented AI
-release without conflating the core and AI lifecycles.
+**Outcome:** RydanticAI 0.7.0 is published independently from core 0.8.0 and
+available from crates.io. Release record: [RydanticAI 0.7.0](https://github.com/trotsky1997/Rydantic/releases/tag/rydantic-ai-v0.7.0).
 
 Acceptance evidence:
 
-- The unpublished 0.7.0 source candidate pins stable core `=0.8.0`; plain
-  `0.7.0` is not a beta prerelease. For this larger/core-breaking upgrade, prepare
-  and test an explicit `0.7.0-beta.N` package first, with a GitHub Release marked
-  prerelease. Use versions/channels, not a long-lived beta branch.
-- Before each upload: merge the matching version/lockfile preparation, require
-  successful exact-main push CI, and pass release preflight plus package verification.
-  After upload: verify registry/API and sparse-index checksums and run a fresh
-  registry-only consumer. Record that acceptance before promoting a separately
-  tested plain `0.7.0` stable release; postpublication acceptance is not a condition
-  that can be completed before the first upload.
-- AI 0.6 consumers must align direct core dependencies with `=0.8.0` and review
-  the [AI upgrade warning](crates/rydantic-ai/README.md#upgrading-from-ai-06).
-  No compatibility layer or automatic/lossless data migration is promised.
-- Freeze a capability/rejection matrix for the existing three protocols and nine
-  frontend/upstream combinations. Cover JSON/SSE, mixed input order, tool history,
-  replay identity/isolation, cancellation/deadlines and request/output limits.
-- Retain PDF portability boundaries: embedded data across all nine routes;
-  URLs only where supported; explicit detail controls rejected on unsupported
-  routes. MIME/Base64/header validation is not full PDF parsing or a guarantee
-  of upstream page/model support.
-- Verify the final package with offline/loopback regressions, official SDK
-  fixtures and a registry-only consumer. Match examples, dependencies and docs
-  to the actual published version; retain exact-head CI and archive receipts.
+- Tag `rydantic-ai-v0.7.0` points to exact main commit
+  `6517e6f9f59b7b5a9fb349665ab7987c886289f5`; exact-main push CI
+  [passed](https://github.com/trotsky1997/Rydantic/actions/runs/40529535081)
+  and the guarded release preflight passed.
+- The protocol matrix covers JSON/SSE, mixed input order, tool history, replay
+  identity/isolation, cancellation/deadlines and request/output limits across
+  the three protocols and nine frontend/upstream combinations.
+- PDF portability boundaries are documented and tested: embedded data across
+  all nine routes, URLs only where supported, and detail controls rejected on
+  unsupported routes. MIME/Base64/header validation is not full PDF parsing or
+  a guarantee of upstream page/model support.
+- Exact-main CI includes offline/loopback regressions and 89 strict official
+  Python SDK cases; the release preflight and package audit passed.
+- Published archive SHA-256 matches the local package, crates.io API and sparse
+  index: `686e804910edd87411483ca994930f6990a12d8faa9485205b9074e5a0f339ab`;
+  the registry version is not yanked. A fresh registry-only consumer resolved
+  both AI 0.7.0 and core 0.8.0 and passed its PDF prompt/API test.
+- AI 0.6 users must align direct core dependencies with `=0.8.0` and review the
+  [upgrade warning](crates/rydantic-ai/README.md#upgrading-from-ai-06). No
+  compatibility layer or automatic/lossless data migration is promised.
+- Examples, dependency pins and publication status now match the crate on
+  crates.io.
 
-**Dependencies:** the core compatibility decision, not necessarily a core stable
-promotion. Live-provider tests require a separately authorized environment and
-budget; fixtures are not proof of universal provider support. See
+For future core-breaking AI releases, publish a tested explicit `beta.N` first,
+complete registry-only acceptance, then promote a separately tested stable
+version. Use versioned channels instead of a long-lived beta branch.
+
+**Dependency:** stable core `=0.8.0`. Live-provider tests require a separately
+authorized environment and budget; fixtures are not proof of universal provider
+support. See
 [#75](https://github.com/trotsky1997/Rydantic/pull/75) and the
 [PDF contract](docs/integrations/pdf.mdx).
 
