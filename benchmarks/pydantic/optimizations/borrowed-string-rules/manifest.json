@@ -7,7 +7,7 @@
   "probe_lock_sha256": "fe0123975b402b74656f8ec825af65d17095b6db0b3dc15fb0d0f594d78fceda",
   "baseline_runtime_borrowed_rs_sha256": "f22e1e6386072b7faef8327586feccf86dad25940af898da0c3406eaf9fb806b",
   "candidate_runtime_borrowed_rs_sha256": "e1bf22d9eb2e422b8c9cd0f67eb0aef152a3acad6d756de11ddc187e36b77323",
-  "candidate_regression_tests_sha256": "4a44289b75634550c34645f6203a9d1023d7e920bb006c6d928cccc1441ccfe8",
+  "candidate_regression_tests_sha256": "0c0c06976e116992f8ac0af5a6ffa7fb173673286d303b46f70ec0ffdc7c4e8e",
   "baseline_binary_sha256": "73d3deb83879ae13aefd2539b44ef3780a2b861c6464fe3107653dc492e8f436",
   "candidate_binary_sha256": "19e66fbb2a926a3012d80b89f6c57eeb66bdcf590c35b7abc92cf92c47686918",
   "results_compressed_sha256": "32676942156633b4755557fec6e93538fe6c27d8505e141c0283a292cad77b85",

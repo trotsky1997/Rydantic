@@ -291,11 +291,11 @@ thread_local! {
     static STRING_CALLBACKS: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
 }
 
-fn check_normalized_text(value: &str, ctx: &Context) -> Result<(), ValidationError> {
+fn check_normalized_text(field: &str, value: &str, ctx: &Context) -> Result<(), ValidationError> {
     STRING_CALLBACKS.with(|events| {
         events
             .borrow_mut()
-            .push(format!("{value}:{}", ctx.error_count()))
+            .push(format!("{field}:{value}:{}", ctx.error_count()))
     });
     if value == "no" {
         Err(ValidationError::new("reserved", "reserved text").with_param("value", value))
@@ -304,13 +304,21 @@ fn check_normalized_text(value: &str, ctx: &Context) -> Result<(), ValidationErr
     }
 }
 
+fn check_borrowed_text(value: &str, ctx: &Context) -> Result<(), ValidationError> {
+    check_normalized_text("borrowed", value, ctx)
+}
+
+fn check_cow_text(value: &str, ctx: &Context) -> Result<(), ValidationError> {
+    check_normalized_text("cow", value, ctx)
+}
+
 #[derive(Debug, Model)]
 struct CallbackStrings<'a> {
     #[model(validation_alias = "borrow/~", trim, min_length = 2,
-            validate_with_context = check_normalized_text)]
+            validate_with_context = check_borrowed_text)]
     borrowed: &'a str,
     #[model(validation_alias = "cow/值", trim, lowercase, min_length = 2,
-            validate_with_context = check_normalized_text)]
+            validate_with_context = check_cow_text)]
     cow: Cow<'a, str>,
 }
 
@@ -320,11 +328,11 @@ fn string_callbacks_follow_normalization_and_only_skip_the_failing_field() {
     let parsed = CallbackStrings::parse_json(r#"{"borrow/~":" ok ","cow/值":" OK "}"#).unwrap();
     assert_eq!(parsed.borrowed, "ok");
     assert_eq!(parsed.cow, "ok");
-    STRING_CALLBACKS.with(|events| assert_eq!(*events.borrow(), ["ok:0", "ok:0"]));
+    STRING_CALLBACKS.with(|events| assert_eq!(*events.borrow(), ["borrowed:ok:0", "cow:ok:0"]));
 
     STRING_CALLBACKS.with(|events| events.borrow_mut().clear());
     let errors = CallbackStrings::parse_json(r#"{"borrow/~":" x ","cow/值":" NO "}"#).unwrap_err();
-    STRING_CALLBACKS.with(|events| assert_eq!(*events.borrow(), ["no:1"]));
+    STRING_CALLBACKS.with(|events| assert_eq!(*events.borrow(), ["cow:no:1"]));
     assert_eq!(
         errors.to_json(),
         json!([
