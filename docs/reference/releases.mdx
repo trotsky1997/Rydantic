@@ -79,7 +79,27 @@ New checks/transforms can change accepted data; they do not migrate stored value
 
 This candidate pins the published core crate to `=0.8.0` and adds [PDF inputs](/integrations/pdf) through `Pdf` and `Prompt::pdf()` for ordered document, image and text prompts. Embedded PDFs work through all nine protocol combinations, including JSON/SSE output, tool continuations, Partial and Iterable streams. Responses and Messages also support URL references; Chat Completions requires embedded PDF data. Validation bounds PDF data, names and counts, and replay uses compact attachment digests. CI covers 89 strict official Python SDK cases.
 
-Version 0.7.0 is not published yet. Exact-main push CI, the release preflight and a fresh registry-only consumer remain publication gates.
+Version 0.7.0 is not published yet. A plain source-candidate version is not a
+beta prerelease. For this larger/core-breaking upgrade, first prepare and test
+`0.7.0-beta.N`, publish it with a GitHub Release marked prerelease, and verify it
+before a separately tested `0.7.0` stable promotion. Versions/channels distinguish
+beta from stable; no long-lived beta branch is needed.
+
+Before each upload, require the matching merged version/lockfile, successful
+exact-main push CI, release preflight and package verification. After upload,
+verify registry and sparse-index checksums and run a fresh registry-only consumer
+of that published version. Record acceptance before declaring the release
+verified; postpublication consumer acceptance cannot precede upload.
+
+**Breaking upgrade from AI 0.6:** its tagged manifest declared core
+`0.7.0-beta.3`; this candidate pins `=0.8.0`. Align direct core dependencies and
+rebuild derived models to avoid distinct incompatible `Model`/`JsonType` trait
+identities. Core 0.8 `Context` loses `UnwindSafe`/`RefUnwindSafe`; keep it inside
+panic boundaries or avoid captures, rather than blindly adding `AssertUnwindSafe`.
+See the core 0.8 migration warning above. Validate application behavior and back
+up affected persisted state before upgrading. Shared effects are not rolled back,
+and transformations/checks can change data; no automatic or lossless migration
+of existing data/deployments is promised. Users retain responsibility for them.
 
 ## 0.7.0 · Stable
 

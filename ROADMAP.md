@@ -123,8 +123,19 @@ release without conflating the core and AI lifecycles.
 
 Acceptance evidence:
 
-- The 0.7.0 candidate pins stable core `=0.8.0`. Keep the package unpublished
-  until exact-main CI, release preflight and registry-only consumer acceptance pass.
+- The unpublished 0.7.0 source candidate pins stable core `=0.8.0`; plain
+  `0.7.0` is not a beta prerelease. For this larger/core-breaking upgrade, prepare
+  and test an explicit `0.7.0-beta.N` package first, with a GitHub Release marked
+  prerelease. Use versions/channels, not a long-lived beta branch.
+- Before each upload: merge the matching version/lockfile preparation, require
+  successful exact-main push CI, and pass release preflight plus package verification.
+  After upload: verify registry/API and sparse-index checksums and run a fresh
+  registry-only consumer. Record that acceptance before promoting a separately
+  tested plain `0.7.0` stable release; postpublication acceptance is not a condition
+  that can be completed before the first upload.
+- AI 0.6 consumers must align direct core dependencies with `=0.8.0` and review
+  the [AI upgrade warning](crates/rydantic-ai/README.md#upgrading-from-ai-06).
+  No compatibility layer or automatic/lossless data migration is promised.
 - Freeze a capability/rejection matrix for the existing three protocols and nine
   frontend/upstream combinations. Cover JSON/SSE, mixed input order, tool history,
   replay identity/isolation, cancellation/deadlines and request/output limits.
