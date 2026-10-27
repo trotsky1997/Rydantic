@@ -1,0 +1,45 @@
+---
+title: "One model across HTTP, OpenAPI and gRPC"
+description: "Forward validated HTTP JSON through a Cap'n Proto gRPC service and publish the HTTP contract."
+icon: "workflow"
+---
+
+<Warning>
+The <code>grpc</code> feature used here is source-only and is not included in the published <code>rydantic = "=0.8.0"</code> package. The <code>capnp</code>, <code>axum</code>, and <code>openapi</code> features are available in 0.8.0.
+</Warning>
+
+## Run the bridge
+
+Install the official Cap’n Proto compiler, then run the combined example from a source checkout:
+
+    cargo run --locked -p rydantic --example protocol_bridge --features "grpc axum openapi"
+
+The example starts a local Tonic backend and an Axum HTTP gateway. It prints the HTTP address and serves:
+
+- <code>POST /greet</code> — validates JSON into the shared <code>Hello</code> model, encodes it as Cap’n Proto, calls the unary gRPC method, then returns the validated <code>Greeting</code> as JSON.
+- <code>GET /openapi.json</code> — returns an OpenAPI 3.1 document with input and output schemas generated from those same models.
+
+The OpenAPI operation includes <code>x-rydantic-grpc-method</code> to record the corresponding Tonic method path. The example explicitly wires the HTTP route, Tonic service and OpenAPI operation.
+
+The request path is:
+
+    HTTP JSON → Rydantic validation → Cap’n Proto encoding → Tonic unary gRPC
+             ← JSON response     ← Rydantic validation ← Cap’n Proto decoding
+
+Try it using the address printed by the example:
+
+```sh
+curl -H 'content-type: application/json' \
+  -d '{"name":" Alice ","context":{"language":"en"}}' \
+  http://127.0.0.1:<printed-port>/greet
+
+curl http://127.0.0.1:<printed-port>/openapi.json
+```
+
+The example binds both listeners to loopback and runs until stopped. It has no authentication, TLS, rate limiting or deployment configuration.
+
+## Wire contract
+
+The gRPC hop uses the existing <code>CapnpModel</code> wire types and Tonic custom codec. Both peers must use the same service method path, Cap’n Proto root type, field ordinals and field types. This is unary Cap’n Proto serialization over gRPC; standard protobuf clients, <code>.proto</code> generation, reflection, streaming, and native Cap’n Proto RPC are not part of this adapter.
+
+The OpenAPI document describes the HTTP gateway operation. Its vendor extension records the gRPC method mapping; it does not create routes or transcode requests by itself. Other-language gRPC peers need a matching Cap’n Proto codec and service implementation.
