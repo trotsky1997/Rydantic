@@ -8,7 +8,7 @@ use rydantic::axum::{
 };
 use rydantic::grpc::Limits;
 use rydantic::schema::openapi::OpenApiComponents;
-use rydantic::{json, SchemaMode};
+use rydantic::{json, CapnpModel, SchemaMode};
 use serde_json::Value;
 use std::error::Error;
 
@@ -23,6 +23,17 @@ async fn greet_http(
     State(state): State<GatewayState>,
     Json(request): Json<grpc_capnp::models::Hello>,
 ) -> Result<Json<grpc_capnp::models::Greeting>, StatusCode> {
+    // Reject local wire-encoding failures before contacting the backend. Do not
+    // classify a backend's InvalidArgument status as an HTTP client error.
+    let message = request
+        .to_capnp_message()
+        .map_err(|_| StatusCode::UNPROCESSABLE_ENTITY)?;
+    let size = capnp::serialize::compute_serialized_size_in_words(&message).checked_mul(8);
+    if size.is_none_or(|size| size > state.limits.message_bytes()) {
+        return Err(StatusCode::PAYLOAD_TOO_LARGE);
+    }
+    drop(message);
+
     grpc_capnp::greet_model(state.channel, state.limits, request)
         .await
         .map(Json)
@@ -59,9 +70,9 @@ pub fn openapi_document() -> Result<Value, Box<dyn Error>> {
                         "content": {"application/json": {"schema": response.reference}}
                     },
                     "400": {"description": "Malformed JSON"},
-                    "413": {"description": "Request body exceeds the HTTP limit"},
+                    "413": {"description": "Request exceeds the HTTP body or encoded gRPC message limit"},
                     "415": {"description": "Unsupported content type"},
-                    "422": {"description": "Request model validation failed"},
+                    "422": {"description": "Request model validation or local Cap'n Proto encoding failed"},
                     "502": {"description": "gRPC backend failure"}
                 }
             }}

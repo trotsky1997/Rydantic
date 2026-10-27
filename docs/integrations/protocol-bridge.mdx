@@ -36,6 +36,8 @@ curl -H 'content-type: application/json' \
 curl http://127.0.0.1:<printed-port>/openapi.json
 ```
 
+Before contacting the backend, the gateway checks the encoded Cap’n Proto request size against its configured gRPC message limit. Oversized HTTP bodies or encoded requests return <code>413</code>; request validation or local encoding failures return <code>422</code>. Backend and response failures remain redacted <code>502</code> responses, including a backend's <code>InvalidArgument</code> status.
+
 The example binds both listeners to loopback and runs until stopped. It has no authentication, TLS, rate limiting or deployment configuration.
 
 ## Wire contract
