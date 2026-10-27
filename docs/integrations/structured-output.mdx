@@ -4,16 +4,16 @@ description: "Stream partial JSON previews and validated list elements with boun
 icon: "list-checks"
 ---
 
-RydanticAI 0.6.0 provides Instructor-style structured extraction inside the existing Agent API. Define a Rydantic model, then choose a partial-object stream or an iterable-item stream. Model definitions, async checks, tool execution, validation correction, history and usage remain shared with ordinary agent runs.
+The RydanticAI 0.7.0 source candidate provides Instructor-style structured extraction inside the existing Agent API. Define a Rydantic model, then choose a partial-object stream or an iterable-item stream. Model definitions, async checks, tool execution, validation correction, history and usage remain shared with ordinary agent runs. Version 0.7.0 has not been published yet.
 
 ```toml
 [dependencies]
-rydantic = "0.7.0-beta.3"
-rydantic-ai = "0.6.0"
+rydantic = "=0.8.0"
+rydantic-ai = "=0.7.0"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ```
 
-Keep the direct `rydantic` dependency for model derive resolution. Custom providers work with `rydantic-ai = { version = "0.6.0", default-features = false }`. Streams start on the current Tokio runtime.
+Keep the direct `rydantic` dependency for model derive resolution. Custom providers work with `rydantic-ai = { version = "=0.7.0", default-features = false }`. Streams start on the current Tokio runtime.
 
 ## Partial object previews
 
