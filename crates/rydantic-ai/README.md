@@ -8,9 +8,9 @@ rydantic = "=0.8.0"
 rydantic-ai = "=0.7.0"
 ```
 
-`rydantic-ai` 0.7.0 is a source candidate and is not published yet. It has its own release lifecycle; the core `rydantic` crate does not depend on it. Disable default features for graphs and custom providers without HTTP dependencies.
+`rydantic-ai` is independently versioned from core and released on its own schedule. Version 0.7.0 pins the published core crate at `=0.8.0`. Disable default features for graphs and custom providers without HTTP dependencies.
 
-Declare `rydantic` directly when deriving application models so its derive macro can resolve the model dependency, including renamed dependencies. The candidate pins the published core 0.8.0 release.
+Declare `rydantic` directly when deriving application models so its derive macro can resolve the model dependency, including renamed dependencies.
 
 ## API providers
 
@@ -59,9 +59,9 @@ Run `cargo run -p rydantic-ai --example provider` for a typed tool-call round tr
 
 Synchronous validators cannot be interrupted within a poll. Ordinary runs and partial streams recheck cancellation and the deadline after successful final validation, rejecting a late result instead of accepting it.
 
-## PDF inputs in the 0.7.0 candidate
+## PDF inputs
 
-The 0.7.0 source candidate adds embedded PDFs across all nine Responses, Chat Completions and Messages frontend/upstream combinations. The package has not been published; 0.6.0 supports image inputs.
+RydanticAI 0.7.0 supports embedded PDFs across all nine Responses, Chat Completions and Messages frontend/upstream combinations. The previous 0.6.0 release supports image inputs.
 
 ```rust
 use rydantic_ai::{Pdf, Prompt};
