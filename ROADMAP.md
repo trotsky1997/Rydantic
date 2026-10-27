@@ -125,7 +125,7 @@ Acceptance evidence:
 - Tag `rydantic-ai-v0.7.0` points to exact main commit
   `6517e6f9f59b7b5a9fb349665ab7987c886289f5`; exact-main push CI
   [passed](https://github.com/trotsky1997/Rydantic/actions/runs/40529535081)
-  and the guarded release preflight passed.
+  and the release record reports that the guarded release preflight passed.
 - The protocol matrix covers JSON/SSE, mixed input order, tool history, replay
   identity/isolation, cancellation/deadlines and request/output limits across
   the three protocols and nine frontend/upstream combinations.
@@ -134,7 +134,7 @@ Acceptance evidence:
   unsupported routes. MIME/Base64/header validation is not full PDF parsing or
   a guarantee of upstream page/model support.
 - Exact-main CI includes offline/loopback regressions and 89 strict official
-  Python SDK cases; the release preflight and package audit passed.
+  Python SDK cases; the release record reports successful preflight and package audit.
 - Published archive SHA-256 matches the local package, crates.io API and sparse
   index: `686e804910edd87411483ca994930f6990a12d8faa9485205b9074e5a0f339ab`;
   the registry version is not yanked. A fresh registry-only consumer resolved
@@ -145,9 +145,18 @@ Acceptance evidence:
 - Examples, dependency pins and publication status now match the crate on
   crates.io.
 
+**Release-process deviation:** no AI `0.7.0-beta.N` version was published in the
+registry before this stable release. The PDF publication milestone is delivered,
+but the beta-first acceptance gate was not completed; neither stable publication
+nor core's earlier beta acceptance demonstrates an AI beta campaign.
+
 For future core-breaking AI releases, publish a tested explicit `beta.N` first,
 complete registry-only acceptance, then promote a separately tested stable
-version. Use versioned channels instead of a long-lived beta branch.
+version, with the beta GitHub Release marked prerelease. Use versioned channels
+instead of a long-lived beta branch. Before each upload, require the matching
+merged version/lockfile, exact-main push CI, preflight and package verification.
+After upload, verify registry/API and sparse-index checksums and run a fresh
+registry-only consumer; that acceptance cannot precede the upload.
 
 **Dependency:** stable core `=0.8.0`. Live-provider tests require a separately
 authorized environment and budget; fixtures are not proof of universal provider

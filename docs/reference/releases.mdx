@@ -89,7 +89,26 @@ up affected persisted state before upgrading. Shared effects are not rolled back
 and transformations/checks can change data; no automatic or lossless migration
 of existing data/deployments is promised. Users retain responsibility for them.
 
-Tag `rydantic-ai-v0.7.0` points to exact main commit [`6517e6f9f59b7b5a9fb349665ab7987c886289f5`](https://github.com/trotsky1997/Rydantic/commit/6517e6f9f59b7b5a9fb349665ab7987c886289f5). [Exact-main push CI](https://github.com/trotsky1997/Rydantic/actions/runs/40529535081) and the guarded release preflight passed. The published archive SHA-256 matches the local package, crates.io API and sparse index: `686e804910edd87411483ca994930f6990a12d8faa9485205b9074e5a0f339ab`; the version is not yanked. A fresh registry-only consumer resolved both exact crate versions without path patches and passed its PDF prompt/API test.
+Tag `rydantic-ai-v0.7.0` points to exact main commit [`6517e6f9f59b7b5a9fb349665ab7987c886289f5`](https://github.com/trotsky1997/Rydantic/commit/6517e6f9f59b7b5a9fb349665ab7987c886289f5). [Exact-main push CI](https://github.com/trotsky1997/Rydantic/actions/runs/40529535081) passed; the release record reports that the guarded release preflight passed. The published archive SHA-256 matches the local package, crates.io API and sparse index: `686e804910edd87411483ca994930f6990a12d8faa9485205b9074e5a0f339ab`; the version is not yanked. A fresh registry-only consumer resolved both exact crate versions without path patches and passed its PDF prompt/API test.
+
+**Release-process deviation:** the registry contains no AI `0.7.0-beta.N`
+prerelease preceding this stable publication. The beta-first gate for this
+larger/core-breaking AI upgrade was not completed; core's beta acceptance does
+not substitute for AI beta acceptance. Future upgrades of this scope require a
+published, verified beta with a GitHub Release marked prerelease before a
+separately tested stable promotion, without a long-lived beta branch.
+
+The published archive identifies source `6517e6f9`, before the migration warnings
+were added in [#141](https://github.com/trotsky1997/Rydantic/pull/141). Its immutable
+README lacks those warnings; follow the upgrade guidance above. The GitHub
+Release also contains upgrade guidance, so this limitation does not apply to
+all public release documents.
+
+Before each upload, require the matching merged version/lockfile, successful
+exact-main push CI, release preflight and package verification. After upload,
+verify registry and sparse-index checksums and run a fresh registry-only consumer
+of that published version. Record acceptance before declaring the release
+verified; postpublication consumer acceptance cannot precede upload.
 
 ## 0.7.0 · Stable
 
