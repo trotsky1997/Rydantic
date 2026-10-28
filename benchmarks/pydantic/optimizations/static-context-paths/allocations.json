@@ -1,0 +1,1998 @@
+{
+  "baseline": {
+    "dynamic_control": {
+      "calls": 1000,
+      "operations": 1000,
+      "requested_bytes": 11000
+    },
+    "isolated_failure": {
+      "calls": 8,
+      "errors": [
+        {
+          "code": "custom",
+          "loc": [
+            "field_label",
+            3
+          ],
+          "message": "failure",
+          "stage": "validate"
+        }
+      ],
+      "operations": 1,
+      "requested_bytes": 667
+    },
+    "isolated_success": {
+      "calls": 1000,
+      "operations": 1000,
+      "requested_bytes": 11000
+    },
+    "parse": [
+      {
+        "case": "flat_valid",
+        "mode": "json",
+        "result": {
+          "accepted": true,
+          "calls": 14,
+          "errors": null,
+          "requested_bytes": 862
+        }
+      },
+      {
+        "case": "flat_valid",
+        "mode": "value_copy",
+        "result": {
+          "accepted": true,
+          "calls": 15,
+          "errors": null,
+          "requested_bytes": 1702
+        }
+      },
+      {
+        "case": "flat_unicode",
+        "mode": "json",
+        "result": {
+          "accepted": true,
+          "calls": 14,
+          "errors": null,
+          "requested_bytes": 876
+        }
+      },
+      {
+        "case": "flat_unicode",
+        "mode": "value_copy",
+        "result": {
+          "accepted": true,
+          "calls": 15,
+          "errors": null,
+          "requested_bytes": 1716
+        }
+      },
+      {
+        "case": "nested_valid",
+        "mode": "json",
+        "result": {
+          "accepted": true,
+          "calls": 26,
+          "errors": null,
+          "requested_bytes": 1770
+        }
+      },
+      {
+        "case": "nested_valid",
+        "mode": "value_copy",
+        "result": {
+          "accepted": true,
+          "calls": 27,
+          "errors": null,
+          "requested_bytes": 3394
+        }
+      },
+      {
+        "case": "collection_100",
+        "mode": "json",
+        "result": {
+          "accepted": true,
+          "calls": 1215,
+          "errors": null,
+          "requested_bytes": 81430
+        }
+      },
+      {
+        "case": "collection_100",
+        "mode": "value_copy",
+        "result": {
+          "accepted": true,
+          "calls": 1309,
+          "errors": null,
+          "requested_bytes": 162238
+        }
+      },
+      {
+        "case": "flat_wrong_type",
+        "mode": "json",
+        "result": {
+          "accepted": false,
+          "calls": 22,
+          "errors": [
+            {
+              "code": "type_error",
+              "loc": [
+                "id"
+              ],
+              "message": "expected integer, received string",
+              "params": {
+                "actual": "string",
+                "expected": "integer"
+              },
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 1995
+        }
+      },
+      {
+        "case": "flat_wrong_type",
+        "mode": "value_copy",
+        "result": {
+          "accepted": false,
+          "calls": 24,
+          "errors": [
+            {
+              "code": "type_error",
+              "loc": [
+                "id"
+              ],
+              "message": "expected integer, received string",
+              "params": {
+                "actual": "string",
+                "expected": "integer"
+              },
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 2851
+        }
+      },
+      {
+        "case": "flat_bool_as_int",
+        "mode": "json",
+        "result": {
+          "accepted": false,
+          "calls": 21,
+          "errors": [
+            {
+              "code": "type_error",
+              "loc": [
+                "id"
+              ],
+              "message": "expected integer, received boolean",
+              "params": {
+                "actual": "boolean",
+                "expected": "integer"
+              },
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 1994
+        }
+      },
+      {
+        "case": "flat_bool_as_int",
+        "mode": "value_copy",
+        "result": {
+          "accepted": false,
+          "calls": 23,
+          "errors": [
+            {
+              "code": "type_error",
+              "loc": [
+                "id"
+              ],
+              "message": "expected integer, received boolean",
+              "params": {
+                "actual": "boolean",
+                "expected": "integer"
+              },
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 2850
+        }
+      },
+      {
+        "case": "flat_negative",
+        "mode": "json",
+        "result": {
+          "accepted": false,
+          "calls": 22,
+          "errors": [
+            {
+              "code": "greater_than_equal",
+              "loc": [
+                "id"
+              ],
+              "message": "value must be >= 0",
+              "params": {
+                "limit": 0
+              },
+              "stage": "validate"
+            }
+          ],
+          "requested_bytes": 1990
+        }
+      },
+      {
+        "case": "flat_negative",
+        "mode": "value_copy",
+        "result": {
+          "accepted": false,
+          "calls": 23,
+          "errors": [
+            {
+              "code": "greater_than_equal",
+              "loc": [
+                "id"
+              ],
+              "message": "value must be >= 0",
+              "params": {
+                "limit": 0
+              },
+              "stage": "validate"
+            }
+          ],
+          "requested_bytes": 2830
+        }
+      },
+      {
+        "case": "flat_upper_bound",
+        "mode": "json",
+        "result": {
+          "accepted": false,
+          "calls": 22,
+          "errors": [
+            {
+              "code": "less_than_equal",
+              "loc": [
+                "id"
+              ],
+              "message": "value must be <= 1000000000",
+              "params": {
+                "limit": 1000000000
+              },
+              "stage": "validate"
+            }
+          ],
+          "requested_bytes": 2012
+        }
+      },
+      {
+        "case": "flat_upper_bound",
+        "mode": "value_copy",
+        "result": {
+          "accepted": false,
+          "calls": 23,
+          "errors": [
+            {
+              "code": "less_than_equal",
+              "loc": [
+                "id"
+              ],
+              "message": "value must be <= 1000000000",
+              "params": {
+                "limit": 1000000000
+              },
+              "stage": "validate"
+            }
+          ],
+          "requested_bytes": 2852
+        }
+      },
+      {
+        "case": "flat_empty_name",
+        "mode": "json",
+        "result": {
+          "accepted": false,
+          "calls": 22,
+          "errors": [
+            {
+              "code": "too_short",
+              "loc": [
+                "name"
+              ],
+              "message": "length must be >= 1",
+              "params": {
+                "actual": 0,
+                "limit": 1
+              },
+              "stage": "validate"
+            }
+          ],
+          "requested_bytes": 1986
+        }
+      },
+      {
+        "case": "flat_empty_name",
+        "mode": "value_copy",
+        "result": {
+          "accepted": false,
+          "calls": 23,
+          "errors": [
+            {
+              "code": "too_short",
+              "loc": [
+                "name"
+              ],
+              "message": "length must be >= 1",
+              "params": {
+                "actual": 0,
+                "limit": 1
+              },
+              "stage": "validate"
+            }
+          ],
+          "requested_bytes": 2826
+        }
+      },
+      {
+        "case": "flat_long_name",
+        "mode": "json",
+        "result": {
+          "accepted": false,
+          "calls": 24,
+          "errors": [
+            {
+              "code": "too_long",
+              "loc": [
+                "name"
+              ],
+              "message": "length must be <= 64",
+              "params": {
+                "actual": 65,
+                "limit": 64
+              },
+              "stage": "validate"
+            }
+          ],
+          "requested_bytes": 2117
+        }
+      },
+      {
+        "case": "flat_long_name",
+        "mode": "value_copy",
+        "result": {
+          "accepted": false,
+          "calls": 25,
+          "errors": [
+            {
+              "code": "too_long",
+              "loc": [
+                "name"
+              ],
+              "message": "length must be <= 64",
+              "params": {
+                "actual": 65,
+                "limit": 64
+              },
+              "stage": "validate"
+            }
+          ],
+          "requested_bytes": 2957
+        }
+      },
+      {
+        "case": "flat_missing",
+        "mode": "json",
+        "result": {
+          "accepted": false,
+          "calls": 16,
+          "errors": [
+            {
+              "code": "missing",
+              "loc": [
+                "name"
+              ],
+              "message": "field is required",
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 1320
+        }
+      },
+      {
+        "case": "flat_missing",
+        "mode": "value_copy",
+        "result": {
+          "accepted": false,
+          "calls": 17,
+          "errors": [
+            {
+              "code": "missing",
+              "loc": [
+                "name"
+              ],
+              "message": "field is required",
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 2160
+        }
+      },
+      {
+        "case": "flat_null",
+        "mode": "json",
+        "result": {
+          "accepted": false,
+          "calls": 22,
+          "errors": [
+            {
+              "code": "type_error",
+              "loc": [
+                "name"
+              ],
+              "message": "expected string, received null",
+              "params": {
+                "actual": "null",
+                "expected": "string"
+              },
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 2006
+        }
+      },
+      {
+        "case": "flat_null",
+        "mode": "value_copy",
+        "result": {
+          "accepted": false,
+          "calls": 23,
+          "errors": [
+            {
+              "code": "type_error",
+              "loc": [
+                "name"
+              ],
+              "message": "expected string, received null",
+              "params": {
+                "actual": "null",
+                "expected": "string"
+              },
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 2846
+        }
+      },
+      {
+        "case": "flat_extra",
+        "mode": "json",
+        "result": {
+          "accepted": false,
+          "calls": 20,
+          "errors": [
+            {
+              "code": "extra_forbidden",
+              "loc": [
+                "unknown"
+              ],
+              "message": "unknown field",
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 1344
+        }
+      },
+      {
+        "case": "flat_extra",
+        "mode": "value_copy",
+        "result": {
+          "accepted": false,
+          "calls": 22,
+          "errors": [
+            {
+              "code": "extra_forbidden",
+              "loc": [
+                "unknown"
+              ],
+              "message": "unknown field",
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 2185
+        }
+      },
+      {
+        "case": "flat_multiple",
+        "mode": "json",
+        "result": {
+          "accepted": false,
+          "calls": 39,
+          "errors": [
+            {
+              "code": "greater_than_equal",
+              "loc": [
+                "id"
+              ],
+              "message": "value must be >= 0",
+              "params": {
+                "limit": 0
+              },
+              "stage": "validate"
+            },
+            {
+              "code": "too_short",
+              "loc": [
+                "name"
+              ],
+              "message": "length must be >= 1",
+              "params": {
+                "actual": 0,
+                "limit": 1
+              },
+              "stage": "validate"
+            },
+            {
+              "code": "type_error",
+              "loc": [
+                "active"
+              ],
+              "message": "expected boolean, received string",
+              "params": {
+                "actual": "string",
+                "expected": "boolean"
+              },
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 3440
+        }
+      },
+      {
+        "case": "flat_multiple",
+        "mode": "value_copy",
+        "result": {
+          "accepted": false,
+          "calls": 40,
+          "errors": [
+            {
+              "code": "greater_than_equal",
+              "loc": [
+                "id"
+              ],
+              "message": "value must be >= 0",
+              "params": {
+                "limit": 0
+              },
+              "stage": "validate"
+            },
+            {
+              "code": "too_short",
+              "loc": [
+                "name"
+              ],
+              "message": "length must be >= 1",
+              "params": {
+                "actual": 0,
+                "limit": 1
+              },
+              "stage": "validate"
+            },
+            {
+              "code": "type_error",
+              "loc": [
+                "active"
+              ],
+              "message": "expected boolean, received string",
+              "params": {
+                "actual": "string",
+                "expected": "boolean"
+              },
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 4280
+        }
+      },
+      {
+        "case": "nested_invalid",
+        "mode": "json",
+        "result": {
+          "accepted": false,
+          "calls": 48,
+          "errors": [
+            {
+              "code": "type_error",
+              "loc": [
+                "user",
+                "active"
+              ],
+              "message": "expected boolean, received number",
+              "params": {
+                "actual": "number",
+                "expected": "boolean"
+              },
+              "stage": "parse"
+            },
+            {
+              "code": "type_error",
+              "loc": [
+                "tags",
+                1
+              ],
+              "message": "expected string, received number",
+              "params": {
+                "actual": "number",
+                "expected": "string"
+              },
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 3673
+        }
+      },
+      {
+        "case": "nested_invalid",
+        "mode": "value_copy",
+        "result": {
+          "accepted": false,
+          "calls": 47,
+          "errors": [
+            {
+              "code": "type_error",
+              "loc": [
+                "user",
+                "active"
+              ],
+              "message": "expected boolean, received number",
+              "params": {
+                "actual": "number",
+                "expected": "boolean"
+              },
+              "stage": "parse"
+            },
+            {
+              "code": "type_error",
+              "loc": [
+                "tags",
+                1
+              ],
+              "message": "expected string, received number",
+              "params": {
+                "actual": "number",
+                "expected": "string"
+              },
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 5265
+        }
+      },
+      {
+        "case": "collection_invalid",
+        "mode": "json",
+        "result": {
+          "accepted": false,
+          "calls": 43,
+          "errors": [
+            {
+              "code": "too_short",
+              "loc": [
+                "items",
+                1,
+                "name"
+              ],
+              "message": "length must be >= 1",
+              "params": {
+                "actual": 0,
+                "limit": 1
+              },
+              "stage": "validate"
+            }
+          ],
+          "requested_bytes": 3587
+        }
+      },
+      {
+        "case": "collection_invalid",
+        "mode": "value_copy",
+        "result": {
+          "accepted": false,
+          "calls": 44,
+          "errors": [
+            {
+              "code": "too_short",
+              "loc": [
+                "items",
+                1,
+                "name"
+              ],
+              "message": "length must be >= 1",
+              "params": {
+                "actual": 0,
+                "limit": 1
+              },
+              "stage": "validate"
+            }
+          ],
+          "requested_bytes": 6043
+        }
+      },
+      {
+        "case": "malformed_json",
+        "mode": "json",
+        "result": {
+          "accepted": false,
+          "calls": 10,
+          "errors": [
+            {
+              "code": "json_invalid",
+              "loc": [],
+              "message": "EOF while parsing a value at line 1 column 6",
+              "params": {
+                "column": 6,
+                "line": 1
+              },
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 875
+        }
+      },
+      {
+        "case": "flat_min",
+        "mode": "json",
+        "result": {
+          "accepted": true,
+          "calls": 14,
+          "errors": null,
+          "requested_bytes": 860
+        }
+      },
+      {
+        "case": "flat_min",
+        "mode": "value_copy",
+        "result": {
+          "accepted": true,
+          "calls": 15,
+          "errors": null,
+          "requested_bytes": 1700
+        }
+      },
+      {
+        "case": "flat_max",
+        "mode": "json",
+        "result": {
+          "accepted": true,
+          "calls": 14,
+          "errors": null,
+          "requested_bytes": 878
+        }
+      },
+      {
+        "case": "flat_max",
+        "mode": "value_copy",
+        "result": {
+          "accepted": true,
+          "calls": 15,
+          "errors": null,
+          "requested_bytes": 1718
+        }
+      },
+      {
+        "case": "flat_unicode64",
+        "mode": "json",
+        "result": {
+          "accepted": true,
+          "calls": 14,
+          "errors": null,
+          "requested_bytes": 1368
+        }
+      },
+      {
+        "case": "flat_unicode64",
+        "mode": "value_copy",
+        "result": {
+          "accepted": true,
+          "calls": 15,
+          "errors": null,
+          "requested_bytes": 2208
+        }
+      },
+      {
+        "case": "flat_unicode65",
+        "mode": "json",
+        "result": {
+          "accepted": false,
+          "calls": 24,
+          "errors": [
+            {
+              "code": "too_long",
+              "loc": [
+                "name"
+              ],
+              "message": "length must be <= 64",
+              "params": {
+                "actual": 65,
+                "limit": 64
+              },
+              "stage": "validate"
+            }
+          ],
+          "requested_bytes": 2507
+        }
+      },
+      {
+        "case": "flat_unicode65",
+        "mode": "value_copy",
+        "result": {
+          "accepted": false,
+          "calls": 25,
+          "errors": [
+            {
+              "code": "too_long",
+              "loc": [
+                "name"
+              ],
+              "message": "length must be <= 64",
+              "params": {
+                "actual": 65,
+                "limit": 64
+              },
+              "stage": "validate"
+            }
+          ],
+          "requested_bytes": 3347
+        }
+      },
+      {
+        "case": "flat_huge_int",
+        "mode": "json",
+        "result": {
+          "accepted": false,
+          "calls": 19,
+          "errors": [
+            {
+              "code": "int_out_of_range",
+              "loc": [
+                "id"
+              ],
+              "message": "value must be an integer representable as i64",
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 1412
+        }
+      },
+      {
+        "case": "flat_huge_int",
+        "mode": "value_copy",
+        "result": {
+          "accepted": false,
+          "calls": 19,
+          "errors": [
+            {
+              "code": "int_out_of_range",
+              "loc": [
+                "id"
+              ],
+              "message": "value must be an integer representable as i64",
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 2220
+        }
+      },
+      {
+        "case": "flat_root_array",
+        "mode": "json",
+        "result": {
+          "accepted": false,
+          "calls": 8,
+          "errors": [
+            {
+              "code": "type_error",
+              "loc": [],
+              "message": "expected object",
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 696
+        }
+      },
+      {
+        "case": "flat_root_array",
+        "mode": "value_copy",
+        "result": {
+          "accepted": false,
+          "calls": 4,
+          "errors": [
+            {
+              "code": "type_error",
+              "loc": [],
+              "message": "expected object",
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 528
+        }
+      },
+      {
+        "case": "nested_extra",
+        "mode": "json",
+        "result": {
+          "accepted": false,
+          "calls": 27,
+          "errors": [
+            {
+              "code": "extra_forbidden",
+              "loc": [
+                "user",
+                "extra"
+              ],
+              "message": "unknown field",
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 2024
+        }
+      },
+      {
+        "case": "nested_extra",
+        "mode": "value_copy",
+        "result": {
+          "accepted": false,
+          "calls": 30,
+          "errors": [
+            {
+              "code": "extra_forbidden",
+              "loc": [
+                "user",
+                "extra"
+              ],
+              "message": "unknown field",
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 3713
+        }
+      },
+      {
+        "case": "flat_nonintegral_float",
+        "mode": "json",
+        "result": {
+          "accepted": false,
+          "calls": 20,
+          "errors": [
+            {
+              "code": "int_type",
+              "loc": [
+                "id"
+              ],
+              "message": "value must be an integer representable as i64",
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 1385
+        }
+      },
+      {
+        "case": "flat_nonintegral_float",
+        "mode": "value_copy",
+        "result": {
+          "accepted": false,
+          "calls": 21,
+          "errors": [
+            {
+              "code": "int_type",
+              "loc": [
+                "id"
+              ],
+              "message": "value must be an integer representable as i64",
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 2213
+        }
+      }
+    ]
+  },
+  "candidate": {
+    "dynamic_control": {
+      "calls": 1000,
+      "operations": 1000,
+      "requested_bytes": 11000
+    },
+    "isolated_failure": {
+      "calls": 7,
+      "errors": [
+        {
+          "code": "custom",
+          "loc": [
+            "field_label",
+            3
+          ],
+          "message": "failure",
+          "stage": "validate"
+        }
+      ],
+      "operations": 1,
+      "requested_bytes": 656
+    },
+    "isolated_success": {
+      "calls": 0,
+      "operations": 1000,
+      "requested_bytes": 0
+    },
+    "parse": [
+      {
+        "case": "flat_valid",
+        "mode": "json",
+        "result": {
+          "accepted": true,
+          "calls": 11,
+          "errors": null,
+          "requested_bytes": 850
+        }
+      },
+      {
+        "case": "flat_valid",
+        "mode": "value_copy",
+        "result": {
+          "accepted": true,
+          "calls": 12,
+          "errors": null,
+          "requested_bytes": 1690
+        }
+      },
+      {
+        "case": "flat_unicode",
+        "mode": "json",
+        "result": {
+          "accepted": true,
+          "calls": 11,
+          "errors": null,
+          "requested_bytes": 864
+        }
+      },
+      {
+        "case": "flat_unicode",
+        "mode": "value_copy",
+        "result": {
+          "accepted": true,
+          "calls": 12,
+          "errors": null,
+          "requested_bytes": 1704
+        }
+      },
+      {
+        "case": "nested_valid",
+        "mode": "json",
+        "result": {
+          "accepted": true,
+          "calls": 21,
+          "errors": null,
+          "requested_bytes": 1750
+        }
+      },
+      {
+        "case": "nested_valid",
+        "mode": "value_copy",
+        "result": {
+          "accepted": true,
+          "calls": 22,
+          "errors": null,
+          "requested_bytes": 3374
+        }
+      },
+      {
+        "case": "collection_100",
+        "mode": "json",
+        "result": {
+          "accepted": true,
+          "calls": 914,
+          "errors": null,
+          "requested_bytes": 80225
+        }
+      },
+      {
+        "case": "collection_100",
+        "mode": "value_copy",
+        "result": {
+          "accepted": true,
+          "calls": 1008,
+          "errors": null,
+          "requested_bytes": 161033
+        }
+      },
+      {
+        "case": "flat_wrong_type",
+        "mode": "json",
+        "result": {
+          "accepted": false,
+          "calls": 19,
+          "errors": [
+            {
+              "code": "type_error",
+              "loc": [
+                "id"
+              ],
+              "message": "expected integer, received string",
+              "params": {
+                "actual": "string",
+                "expected": "integer"
+              },
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 1983
+        }
+      },
+      {
+        "case": "flat_wrong_type",
+        "mode": "value_copy",
+        "result": {
+          "accepted": false,
+          "calls": 21,
+          "errors": [
+            {
+              "code": "type_error",
+              "loc": [
+                "id"
+              ],
+              "message": "expected integer, received string",
+              "params": {
+                "actual": "string",
+                "expected": "integer"
+              },
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 2839
+        }
+      },
+      {
+        "case": "flat_bool_as_int",
+        "mode": "json",
+        "result": {
+          "accepted": false,
+          "calls": 18,
+          "errors": [
+            {
+              "code": "type_error",
+              "loc": [
+                "id"
+              ],
+              "message": "expected integer, received boolean",
+              "params": {
+                "actual": "boolean",
+                "expected": "integer"
+              },
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 1982
+        }
+      },
+      {
+        "case": "flat_bool_as_int",
+        "mode": "value_copy",
+        "result": {
+          "accepted": false,
+          "calls": 20,
+          "errors": [
+            {
+              "code": "type_error",
+              "loc": [
+                "id"
+              ],
+              "message": "expected integer, received boolean",
+              "params": {
+                "actual": "boolean",
+                "expected": "integer"
+              },
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 2838
+        }
+      },
+      {
+        "case": "flat_negative",
+        "mode": "json",
+        "result": {
+          "accepted": false,
+          "calls": 19,
+          "errors": [
+            {
+              "code": "greater_than_equal",
+              "loc": [
+                "id"
+              ],
+              "message": "value must be >= 0",
+              "params": {
+                "limit": 0
+              },
+              "stage": "validate"
+            }
+          ],
+          "requested_bytes": 1978
+        }
+      },
+      {
+        "case": "flat_negative",
+        "mode": "value_copy",
+        "result": {
+          "accepted": false,
+          "calls": 20,
+          "errors": [
+            {
+              "code": "greater_than_equal",
+              "loc": [
+                "id"
+              ],
+              "message": "value must be >= 0",
+              "params": {
+                "limit": 0
+              },
+              "stage": "validate"
+            }
+          ],
+          "requested_bytes": 2818
+        }
+      },
+      {
+        "case": "flat_upper_bound",
+        "mode": "json",
+        "result": {
+          "accepted": false,
+          "calls": 19,
+          "errors": [
+            {
+              "code": "less_than_equal",
+              "loc": [
+                "id"
+              ],
+              "message": "value must be <= 1000000000",
+              "params": {
+                "limit": 1000000000
+              },
+              "stage": "validate"
+            }
+          ],
+          "requested_bytes": 2000
+        }
+      },
+      {
+        "case": "flat_upper_bound",
+        "mode": "value_copy",
+        "result": {
+          "accepted": false,
+          "calls": 20,
+          "errors": [
+            {
+              "code": "less_than_equal",
+              "loc": [
+                "id"
+              ],
+              "message": "value must be <= 1000000000",
+              "params": {
+                "limit": 1000000000
+              },
+              "stage": "validate"
+            }
+          ],
+          "requested_bytes": 2840
+        }
+      },
+      {
+        "case": "flat_empty_name",
+        "mode": "json",
+        "result": {
+          "accepted": false,
+          "calls": 19,
+          "errors": [
+            {
+              "code": "too_short",
+              "loc": [
+                "name"
+              ],
+              "message": "length must be >= 1",
+              "params": {
+                "actual": 0,
+                "limit": 1
+              },
+              "stage": "validate"
+            }
+          ],
+          "requested_bytes": 1974
+        }
+      },
+      {
+        "case": "flat_empty_name",
+        "mode": "value_copy",
+        "result": {
+          "accepted": false,
+          "calls": 20,
+          "errors": [
+            {
+              "code": "too_short",
+              "loc": [
+                "name"
+              ],
+              "message": "length must be >= 1",
+              "params": {
+                "actual": 0,
+                "limit": 1
+              },
+              "stage": "validate"
+            }
+          ],
+          "requested_bytes": 2814
+        }
+      },
+      {
+        "case": "flat_long_name",
+        "mode": "json",
+        "result": {
+          "accepted": false,
+          "calls": 21,
+          "errors": [
+            {
+              "code": "too_long",
+              "loc": [
+                "name"
+              ],
+              "message": "length must be <= 64",
+              "params": {
+                "actual": 65,
+                "limit": 64
+              },
+              "stage": "validate"
+            }
+          ],
+          "requested_bytes": 2105
+        }
+      },
+      {
+        "case": "flat_long_name",
+        "mode": "value_copy",
+        "result": {
+          "accepted": false,
+          "calls": 22,
+          "errors": [
+            {
+              "code": "too_long",
+              "loc": [
+                "name"
+              ],
+              "message": "length must be <= 64",
+              "params": {
+                "actual": 65,
+                "limit": 64
+              },
+              "stage": "validate"
+            }
+          ],
+          "requested_bytes": 2945
+        }
+      },
+      {
+        "case": "flat_missing",
+        "mode": "json",
+        "result": {
+          "accepted": false,
+          "calls": 13,
+          "errors": [
+            {
+              "code": "missing",
+              "loc": [
+                "name"
+              ],
+              "message": "field is required",
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 1308
+        }
+      },
+      {
+        "case": "flat_missing",
+        "mode": "value_copy",
+        "result": {
+          "accepted": false,
+          "calls": 14,
+          "errors": [
+            {
+              "code": "missing",
+              "loc": [
+                "name"
+              ],
+              "message": "field is required",
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 2148
+        }
+      },
+      {
+        "case": "flat_null",
+        "mode": "json",
+        "result": {
+          "accepted": false,
+          "calls": 19,
+          "errors": [
+            {
+              "code": "type_error",
+              "loc": [
+                "name"
+              ],
+              "message": "expected string, received null",
+              "params": {
+                "actual": "null",
+                "expected": "string"
+              },
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 1994
+        }
+      },
+      {
+        "case": "flat_null",
+        "mode": "value_copy",
+        "result": {
+          "accepted": false,
+          "calls": 20,
+          "errors": [
+            {
+              "code": "type_error",
+              "loc": [
+                "name"
+              ],
+              "message": "expected string, received null",
+              "params": {
+                "actual": "null",
+                "expected": "string"
+              },
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 2834
+        }
+      },
+      {
+        "case": "flat_extra",
+        "mode": "json",
+        "result": {
+          "accepted": false,
+          "calls": 17,
+          "errors": [
+            {
+              "code": "extra_forbidden",
+              "loc": [
+                "unknown"
+              ],
+              "message": "unknown field",
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 1332
+        }
+      },
+      {
+        "case": "flat_extra",
+        "mode": "value_copy",
+        "result": {
+          "accepted": false,
+          "calls": 19,
+          "errors": [
+            {
+              "code": "extra_forbidden",
+              "loc": [
+                "unknown"
+              ],
+              "message": "unknown field",
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 2173
+        }
+      },
+      {
+        "case": "flat_multiple",
+        "mode": "json",
+        "result": {
+          "accepted": false,
+          "calls": 36,
+          "errors": [
+            {
+              "code": "greater_than_equal",
+              "loc": [
+                "id"
+              ],
+              "message": "value must be >= 0",
+              "params": {
+                "limit": 0
+              },
+              "stage": "validate"
+            },
+            {
+              "code": "too_short",
+              "loc": [
+                "name"
+              ],
+              "message": "length must be >= 1",
+              "params": {
+                "actual": 0,
+                "limit": 1
+              },
+              "stage": "validate"
+            },
+            {
+              "code": "type_error",
+              "loc": [
+                "active"
+              ],
+              "message": "expected boolean, received string",
+              "params": {
+                "actual": "string",
+                "expected": "boolean"
+              },
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 3428
+        }
+      },
+      {
+        "case": "flat_multiple",
+        "mode": "value_copy",
+        "result": {
+          "accepted": false,
+          "calls": 37,
+          "errors": [
+            {
+              "code": "greater_than_equal",
+              "loc": [
+                "id"
+              ],
+              "message": "value must be >= 0",
+              "params": {
+                "limit": 0
+              },
+              "stage": "validate"
+            },
+            {
+              "code": "too_short",
+              "loc": [
+                "name"
+              ],
+              "message": "length must be >= 1",
+              "params": {
+                "actual": 0,
+                "limit": 1
+              },
+              "stage": "validate"
+            },
+            {
+              "code": "type_error",
+              "loc": [
+                "active"
+              ],
+              "message": "expected boolean, received string",
+              "params": {
+                "actual": "string",
+                "expected": "boolean"
+              },
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 4268
+        }
+      },
+      {
+        "case": "nested_invalid",
+        "mode": "json",
+        "result": {
+          "accepted": false,
+          "calls": 43,
+          "errors": [
+            {
+              "code": "type_error",
+              "loc": [
+                "user",
+                "active"
+              ],
+              "message": "expected boolean, received number",
+              "params": {
+                "actual": "number",
+                "expected": "boolean"
+              },
+              "stage": "parse"
+            },
+            {
+              "code": "type_error",
+              "loc": [
+                "tags",
+                1
+              ],
+              "message": "expected string, received number",
+              "params": {
+                "actual": "number",
+                "expected": "string"
+              },
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 3653
+        }
+      },
+      {
+        "case": "nested_invalid",
+        "mode": "value_copy",
+        "result": {
+          "accepted": false,
+          "calls": 42,
+          "errors": [
+            {
+              "code": "type_error",
+              "loc": [
+                "user",
+                "active"
+              ],
+              "message": "expected boolean, received number",
+              "params": {
+                "actual": "number",
+                "expected": "boolean"
+              },
+              "stage": "parse"
+            },
+            {
+              "code": "type_error",
+              "loc": [
+                "tags",
+                1
+              ],
+              "message": "expected string, received number",
+              "params": {
+                "actual": "number",
+                "expected": "string"
+              },
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 5245
+        }
+      },
+      {
+        "case": "collection_invalid",
+        "mode": "json",
+        "result": {
+          "accepted": false,
+          "calls": 36,
+          "errors": [
+            {
+              "code": "too_short",
+              "loc": [
+                "items",
+                1,
+                "name"
+              ],
+              "message": "length must be >= 1",
+              "params": {
+                "actual": 0,
+                "limit": 1
+              },
+              "stage": "validate"
+            }
+          ],
+          "requested_bytes": 3558
+        }
+      },
+      {
+        "case": "collection_invalid",
+        "mode": "value_copy",
+        "result": {
+          "accepted": false,
+          "calls": 37,
+          "errors": [
+            {
+              "code": "too_short",
+              "loc": [
+                "items",
+                1,
+                "name"
+              ],
+              "message": "length must be >= 1",
+              "params": {
+                "actual": 0,
+                "limit": 1
+              },
+              "stage": "validate"
+            }
+          ],
+          "requested_bytes": 6014
+        }
+      },
+      {
+        "case": "malformed_json",
+        "mode": "json",
+        "result": {
+          "accepted": false,
+          "calls": 10,
+          "errors": [
+            {
+              "code": "json_invalid",
+              "loc": [],
+              "message": "EOF while parsing a value at line 1 column 6",
+              "params": {
+                "column": 6,
+                "line": 1
+              },
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 875
+        }
+      },
+      {
+        "case": "flat_min",
+        "mode": "json",
+        "result": {
+          "accepted": true,
+          "calls": 11,
+          "errors": null,
+          "requested_bytes": 848
+        }
+      },
+      {
+        "case": "flat_min",
+        "mode": "value_copy",
+        "result": {
+          "accepted": true,
+          "calls": 12,
+          "errors": null,
+          "requested_bytes": 1688
+        }
+      },
+      {
+        "case": "flat_max",
+        "mode": "json",
+        "result": {
+          "accepted": true,
+          "calls": 11,
+          "errors": null,
+          "requested_bytes": 866
+        }
+      },
+      {
+        "case": "flat_max",
+        "mode": "value_copy",
+        "result": {
+          "accepted": true,
+          "calls": 12,
+          "errors": null,
+          "requested_bytes": 1706
+        }
+      },
+      {
+        "case": "flat_unicode64",
+        "mode": "json",
+        "result": {
+          "accepted": true,
+          "calls": 11,
+          "errors": null,
+          "requested_bytes": 1356
+        }
+      },
+      {
+        "case": "flat_unicode64",
+        "mode": "value_copy",
+        "result": {
+          "accepted": true,
+          "calls": 12,
+          "errors": null,
+          "requested_bytes": 2196
+        }
+      },
+      {
+        "case": "flat_unicode65",
+        "mode": "json",
+        "result": {
+          "accepted": false,
+          "calls": 21,
+          "errors": [
+            {
+              "code": "too_long",
+              "loc": [
+                "name"
+              ],
+              "message": "length must be <= 64",
+              "params": {
+                "actual": 65,
+                "limit": 64
+              },
+              "stage": "validate"
+            }
+          ],
+          "requested_bytes": 2495
+        }
+      },
+      {
+        "case": "flat_unicode65",
+        "mode": "value_copy",
+        "result": {
+          "accepted": false,
+          "calls": 22,
+          "errors": [
+            {
+              "code": "too_long",
+              "loc": [
+                "name"
+              ],
+              "message": "length must be <= 64",
+              "params": {
+                "actual": 65,
+                "limit": 64
+              },
+              "stage": "validate"
+            }
+          ],
+          "requested_bytes": 3335
+        }
+      },
+      {
+        "case": "flat_huge_int",
+        "mode": "json",
+        "result": {
+          "accepted": false,
+          "calls": 16,
+          "errors": [
+            {
+              "code": "int_out_of_range",
+              "loc": [
+                "id"
+              ],
+              "message": "value must be an integer representable as i64",
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 1400
+        }
+      },
+      {
+        "case": "flat_huge_int",
+        "mode": "value_copy",
+        "result": {
+          "accepted": false,
+          "calls": 16,
+          "errors": [
+            {
+              "code": "int_out_of_range",
+              "loc": [
+                "id"
+              ],
+              "message": "value must be an integer representable as i64",
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 2208
+        }
+      },
+      {
+        "case": "flat_root_array",
+        "mode": "json",
+        "result": {
+          "accepted": false,
+          "calls": 8,
+          "errors": [
+            {
+              "code": "type_error",
+              "loc": [],
+              "message": "expected object",
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 696
+        }
+      },
+      {
+        "case": "flat_root_array",
+        "mode": "value_copy",
+        "result": {
+          "accepted": false,
+          "calls": 4,
+          "errors": [
+            {
+              "code": "type_error",
+              "loc": [],
+              "message": "expected object",
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 528
+        }
+      },
+      {
+        "case": "nested_extra",
+        "mode": "json",
+        "result": {
+          "accepted": false,
+          "calls": 22,
+          "errors": [
+            {
+              "code": "extra_forbidden",
+              "loc": [
+                "user",
+                "extra"
+              ],
+              "message": "unknown field",
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 2004
+        }
+      },
+      {
+        "case": "nested_extra",
+        "mode": "value_copy",
+        "result": {
+          "accepted": false,
+          "calls": 25,
+          "errors": [
+            {
+              "code": "extra_forbidden",
+              "loc": [
+                "user",
+                "extra"
+              ],
+              "message": "unknown field",
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 3693
+        }
+      },
+      {
+        "case": "flat_nonintegral_float",
+        "mode": "json",
+        "result": {
+          "accepted": false,
+          "calls": 17,
+          "errors": [
+            {
+              "code": "int_type",
+              "loc": [
+                "id"
+              ],
+              "message": "value must be an integer representable as i64",
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 1373
+        }
+      },
+      {
+        "case": "flat_nonintegral_float",
+        "mode": "value_copy",
+        "result": {
+          "accepted": false,
+          "calls": 18,
+          "errors": [
+            {
+              "code": "int_type",
+              "loc": [
+                "id"
+              ],
+              "message": "value must be an integer representable as i64",
+              "stage": "parse"
+            }
+          ],
+          "requested_bytes": 2201
+        }
+      }
+    ]
+  },
+  "protocol": "Counts use an independent System allocator, one warmed operation per canonical case/mode. Fixture parsing and rule-cache warmup excluded; parse_value includes input cloning. Isolated Context successes reuse the path-vector capacity. Cumulative requested bytes are not peak or RSS; no instrumented durations are timing evidence.",
+  "probe_source_sha256": "9676c291e3eceabccbb0f56b3af079c9299f7d3d6a84d7ac5152845f02d55f47"
+}

@@ -1,0 +1,49 @@
+{
+  "baseline": {
+    "profile": {
+      "opt_level": "3",
+      "debuginfo": 0,
+      "debug_assertions": false,
+      "overflow_checks": false,
+      "test": false
+    },
+    "binary_sha256": "bd16da874b4350af0f8548daadb396d0076c1cf682017f2821fbba4d636705ee",
+    "artifact_executable": "<baseline-isolated-target>/release/examples/pydantic_benchmark",
+    "artifact_fresh_on_verification": true,
+    "reported_package_root": "<baseline-repo>",
+    "build_jsonl_sha256": "6e15235fa5701ba67dd9aece2cdcaab50baffbf2027907a28ebf955c7e43dacb"
+  },
+  "candidate": {
+    "profile": {
+      "opt_level": "3",
+      "debuginfo": 0,
+      "debug_assertions": false,
+      "overflow_checks": false,
+      "test": false
+    },
+    "binary_sha256": "1e9806eaa9fe6fa1ae381c43016134add27d239bda68b0b83fa29c7fa4beee9e",
+    "artifact_executable": "<candidate-isolated-target>/release/examples/pydantic_benchmark",
+    "artifact_fresh_on_verification": true,
+    "reported_package_root": "<candidate-repo>",
+    "build_jsonl_sha256": "1daf04fa111b6592d415232cdc4a2f99284584013d036e0030a79c55f70766ff"
+  },
+  "notes": [
+    "Fresh isolated release targets built before timing; the JSON artifact receipts are a subsequent no-op verification of the exact artifacts. Full build logs retained in verification receipts.",
+    "The early target misleadingly named baseline-release was confirmed to contain candidate source and never used as baseline. After source/profile/hash verification it is explicitly labeled same-source candidate control. The true baseline is baseline-final-release, built via the explicit baseline manifest."
+  ],
+  "control": {
+    "profile": {
+      "opt_level": "3",
+      "debuginfo": 0,
+      "debug_assertions": false,
+      "overflow_checks": false,
+      "test": false
+    },
+    "binary_sha256": "1e9806eaa9fe6fa1ae381c43016134add27d239bda68b0b83fa29c7fa4beee9e",
+    "artifact_executable": "<same-source-candidate-control-target>/release/examples/pydantic_benchmark",
+    "artifact_fresh_on_verification": true,
+    "reported_package_root": "<candidate-repo>",
+    "build_jsonl_sha256": "c80a043a24d3fd3255b7d7d6fc322c5c0c582205116f6683412c360129f2da03",
+    "notes": "Independent candidate target build; verified byte-identical executable. A process-order/noise control, not a different code-layout build."
+  }
+}

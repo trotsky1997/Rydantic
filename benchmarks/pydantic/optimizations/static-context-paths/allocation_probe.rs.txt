@@ -1,0 +1,64 @@
+// Independent System-allocator instrumentation. Never use its durations as timings.
+use std::alloc::{GlobalAlloc, Layout, System};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::{hint::black_box, io::{self, Read}};
+use rydantic::{json, Context, Model, ValidationError};
+struct Counter;
+static ENABLED: AtomicBool = AtomicBool::new(false);
+static CALLS: AtomicUsize = AtomicUsize::new(0);
+static BYTES: AtomicUsize = AtomicUsize::new(0);
+unsafe impl GlobalAlloc for Counter {
+    unsafe fn alloc(&self, l: Layout) -> *mut u8 {
+        if ENABLED.load(Ordering::Relaxed) { CALLS.fetch_add(1, Ordering::Relaxed); BYTES.fetch_add(l.size(), Ordering::Relaxed); }
+        System.alloc(l)
+    }
+    unsafe fn alloc_zeroed(&self, l: Layout) -> *mut u8 {
+        if ENABLED.load(Ordering::Relaxed) { CALLS.fetch_add(1, Ordering::Relaxed); BYTES.fetch_add(l.size(), Ordering::Relaxed); }
+        System.alloc_zeroed(l)
+    }
+    unsafe fn dealloc(&self, p: *mut u8, l: Layout) { System.dealloc(p, l) }
+    unsafe fn realloc(&self, p: *mut u8, l: Layout, n: usize) -> *mut u8 {
+        if ENABLED.load(Ordering::Relaxed) { CALLS.fetch_add(1, Ordering::Relaxed); BYTES.fetch_add(n, Ordering::Relaxed); }
+        System.realloc(p, l, n)
+    }
+}
+#[global_allocator] static ALLOC: Counter = Counter;
+fn count<T>(f: impl FnOnce()->T) -> (T, usize, usize) {
+    CALLS.store(0,Ordering::Relaxed); BYTES.store(0,Ordering::Relaxed); ENABLED.store(true,Ordering::Relaxed);
+    let value = black_box(f());
+    ENABLED.store(false,Ordering::Relaxed);
+    (value, CALLS.load(Ordering::Relaxed), BYTES.load(Ordering::Relaxed))
+}
+fn enter<T>(ctx:&mut Context, f:impl FnOnce(&mut Context)->T)->T {
+    #[cfg(feature="static-path")] { ctx.at_static("field_label",f) }
+    #[cfg(not(feature="static-path"))] { ctx.at("field_label",f) }
+}
+#[derive(Model)] #[model(extra="forbid")] struct Flat { #[model(ge=0,le=1000000000)] id:i64, #[model(min_length=1,max_length=64)] name:String, active:bool }
+#[derive(Model)] #[model(extra="forbid")] struct Nested { user:Flat, tags:Vec<String> }
+#[derive(Model)] #[model(extra="forbid")] struct Collection { items:Vec<Flat> }
+fn parse<M:Model>(input:&str,mode:&str)->serde_json::Value {
+    let value=if mode=="value_copy" { Some(serde_json::from_str::<serde_json::Value>(input).unwrap()) } else { None };
+    let operation=|| match &value { Some(v)=>M::parse_value(black_box(v).clone()),None=>M::parse_json(black_box(input)) };
+    drop(black_box(operation())); // Initialize rule caches before counting each warmed parse.
+    let (result,calls,bytes)=count(operation);
+    json!({"calls":calls,"requested_bytes":bytes,"accepted":result.is_ok(),"errors":result.err().map(|e|e.to_json())})
+}
+fn main() {
+    let mut ctx=Context::new(); enter(&mut ctx,|_|()); // Prewarm only path-vector capacity.
+    let (_,calls,bytes)=count(||for _ in 0..1000 { enter(black_box(&mut ctx),|c|{black_box(c.error_count());}); });
+    let success=json!({"operations":1000,"calls":calls,"requested_bytes":bytes});
+    let key=String::from("dynamic_key");
+    let (_,calls,bytes)=count(||for _ in 0..1000 { ctx.at(black_box(key.as_str()),|c|{black_box(c.error_count());}); });
+    let dynamic=json!({"operations":1000,"calls":calls,"requested_bytes":bytes});
+    let (_,calls,bytes)=count(||enter(&mut ctx,|c|c.push(ValidationError::custom("failure").at(3usize))));
+    let failure=json!({"operations":1,"calls":calls,"requested_bytes":bytes,"errors":ctx.result().unwrap_err().to_json()});
+    let mut input=String::new();io::stdin().read_to_string(&mut input).unwrap();
+    let fixtures:serde_json::Value=serde_json::from_str(&input).unwrap();
+    let mut rows=vec![];
+    for case in fixtures["cases"].as_array().unwrap() { for mode in case["modes"].as_array().unwrap() {
+        let text=case["input"].as_str().unwrap();let m=mode.as_str().unwrap();
+        let result=match case["schema"].as_str().unwrap(){"flat"=>parse::<Flat>(text,m),"nested"=>parse::<Nested>(text,m),"collection"=>parse::<Collection>(text,m),_=>panic!("unknown schema")};
+        rows.push(json!({"case":case["name"],"mode":mode,"result":result}));
+    }}
+    println!("{}",json!({"isolated_success":success,"dynamic_control":dynamic,"isolated_failure":failure,"parse":rows}));
+}
