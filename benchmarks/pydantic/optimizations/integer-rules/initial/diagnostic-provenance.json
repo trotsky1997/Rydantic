@@ -1,0 +1,31 @@
+{
+  "status": "post_hoc_fingerprints_for_initial_diagnostics",
+  "limitations": [
+    "Initial diagnostic fingerprints were recorded after measurement, not by a pre/post-run build/snapshot gate. They are weaker provenance than the canonical run and final gated diagnostics.",
+    "Original source, binaries and build logs were retained in the task workspace. These artifacts are exploratory controls, not substituted for final paired evidence."
+  ],
+  "measured_runtime_local_commit": "4640402e2a8caab81f9c4062fb4670cd6334addd",
+  "compiler": "rustc 1.98.1 (48a229cea 2026-09-01)\nbinary: rustc\ncommit-hash: 48a229ceaefd4985c50990b14116b6d856af0985\ncommit-date: 2026-09-01\nhost: x86_64-unknown-linux-gnu\nrelease: 1.98.1\nLLVM version: 22.1.8\n",
+  "command_profile": "cargo build --release --locked --offline; no RUSTFLAGS override",
+  "probe_source_sha256": {
+    "rule_timing.rs": "d33c6c2703616730dcdc39a1d5cfaaa8c24f95346d44cb3e5a6abac0d08a337e",
+    "rule_allocations.rs": "4903a75c0002fce1c97ea621b0c9d165b12a7b1e815c275bb178bdf6e9a52e7a",
+    "parse_allocations.rs": "70b047fbe868b3a9e309e9efb3f23cfa447173bce7adca3dfd4ff2ee02f678d9"
+  },
+  "probe_lock_sha256": "172ddac5355f7b1a2962cbe71addf20b3bc6db4d1ad0e018be114bbf6a5a5815",
+  "binaries_sha256": {
+    "rule-timing": "af9ddd974a4cdd6709411cc00359622be950b059f2c348806a4a5f821d9490ff",
+    "rule-allocations-initial": "0a3ffbf60ac5da9d04cb32a1b53f95ddc7976f849af652a701a715dfd52b5f42",
+    "parse-alloc-baseline": "077b7e35ff06d168f918b69f85df0761660716d2580893887ec3c65e2cfe5e71",
+    "parse-alloc-candidate": "a1137aab00a03a992429379a43cc40d71f5fd4aa46b339eec5bae7b333f22726"
+  },
+  "build_log_sha256": {
+    "published-probes-final-build.log": "56aa84c50464d3988dc0c649359e212b9124e27a5cb076959a4aea3517aadfd0",
+    "published-baseline-probe-build.log": "879e0abd551a7d612eceb2cbb93d3f81fc361412f659df3c58f6e1c5e1d3e15b"
+  },
+  "raw_sha256": {
+    "rule-allocations.jsonl": "dcba0b7240ac3d1dd484ff748fc5e4882fa86753e81b365b85060b7f36bb5fd2",
+    "rule-timings.jsonl": "2ddcf8f4a550a03640f705ab80490b42c4c114e5db048df9dd00d93402bf6fbc",
+    "parse-allocations.json": "3eabbe662b43243efa46f4492d6d563d470ffc3c08bfdf52538ee751abb85a72"
+  }
+}

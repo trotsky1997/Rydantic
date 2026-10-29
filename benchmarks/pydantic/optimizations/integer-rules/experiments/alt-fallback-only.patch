@@ -1,0 +1,25 @@
+diff --git a/crates/rydantic/src/rules.rs b/crates/rydantic/src/rules.rs
+index d9be805..2b207e7 100644
+--- a/crates/rydantic/src/rules.rs
++++ b/crates/rydantic/src/rules.rs
+@@ -26,6 +26,10 @@ pub fn compare_numbers(left: &Number, right: &Number) -> Ordering {
+     if let (Some(left), Some(right)) = (left.as_i128(), right.as_i128()) {
+         return left.cmp(&right);
+     }
++    compare_decimal_numbers(left, right)
++}
++
++fn compare_decimal_numbers(left: &Number, right: &Number) -> Ordering {
+     fn parts(number: &Number) -> (bool, Vec<u8>, i64) {
+         let text = number.to_string();
+         let negative = text.starts_with('-');
+@@ -207,7 +211,8 @@ impl Rules {
+                     value.cmp(&bound)
+                 } else {
+                     let number = encoded.get_or_insert_with(|| Number::from(value));
+-                    compare_numbers(number, bound)
++                    // The bound already failed as_i128 above; do not parse it twice.
++                    compare_decimal_numbers(number, bound)
+                 }
+             },
+             ctx,

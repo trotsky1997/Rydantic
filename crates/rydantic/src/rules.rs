@@ -26,6 +26,10 @@ pub fn compare_numbers(left: &Number, right: &Number) -> Ordering {
     if let (Some(left), Some(right)) = (left.as_i128(), right.as_i128()) {
         return left.cmp(&right);
     }
+    compare_decimal_numbers(left, right)
+}
+
+fn compare_decimal_numbers(left: &Number, right: &Number) -> Ordering {
     fn parts(number: &Number) -> (bool, Vec<u8>, i64) {
         let text = number.to_string();
         let negative = text.starts_with('-');
@@ -171,6 +175,50 @@ impl Rules {
             }
         }
     }
+    // The comparison changes for decoded integers, not the error construction or order.
+    fn validate_number(&self, mut compare: impl FnMut(&Number) -> Ordering, ctx: &mut Context) {
+        for (bound, operator, code) in [
+            (&self.ge, ">=", "greater_than_equal"),
+            (&self.gt, ">", "greater_than"),
+            (&self.le, "<=", "less_than_equal"),
+            (&self.lt, "<", "less_than"),
+        ] {
+            if let Some(bound) = bound {
+                let order = compare(bound);
+                let valid = match operator {
+                    ">=" => order != Ordering::Less,
+                    ">" => order == Ordering::Greater,
+                    "<=" => order != Ordering::Greater,
+                    _ => order == Ordering::Less,
+                };
+                if !valid {
+                    ctx.push(
+                        ValidationError::new(code, format!("value must be {operator} {bound}"))
+                            .with_param("limit", bound.clone()),
+                    );
+                }
+            }
+        }
+    }
+
+    pub(crate) fn validate_integer(&self, value: i128, ctx: &mut Context) {
+        // Only uncommon decimal/exponent or out-of-i128 bounds need a JSON Number.
+        // Construct it at most once, and never repeat a failed comparison.
+        let mut encoded = None;
+        self.validate_number(
+            |bound| {
+                if let Some(bound) = bound.as_i128() {
+                    value.cmp(&bound)
+                } else {
+                    let number = encoded.get_or_insert_with(|| Number::from(value));
+                    // The bound already failed as_i128 above; do not parse it twice.
+                    compare_decimal_numbers(number, bound)
+                }
+            },
+            ctx,
+        );
+    }
+
     pub fn validate(&self, value: &Value, ctx: &mut Context) {
         // Optional fields retain all constraints on Some and accept explicit null.
         if value.is_null() {
@@ -186,28 +234,7 @@ impl Rules {
             self.validate_length(length, ctx);
         }
         if let Value::Number(number) = value {
-            for (bound, operator, code) in [
-                (&self.ge, ">=", "greater_than_equal"),
-                (&self.gt, ">", "greater_than"),
-                (&self.le, "<=", "less_than_equal"),
-                (&self.lt, "<", "less_than"),
-            ] {
-                if let Some(bound) = bound {
-                    let order = compare_numbers(number, bound);
-                    let valid = match operator {
-                        ">=" => order != Ordering::Less,
-                        ">" => order == Ordering::Greater,
-                        "<=" => order != Ordering::Greater,
-                        _ => order == Ordering::Less,
-                    };
-                    if !valid {
-                        ctx.push(
-                            ValidationError::new(code, format!("value must be {operator} {bound}"))
-                                .with_param("limit", bound.clone()),
-                        );
-                    }
-                }
-            }
+            self.validate_number(|bound| compare_numbers(number, bound), ctx);
         }
         if let Value::String(text) = value {
             if let Some(pattern) = &self.pattern {

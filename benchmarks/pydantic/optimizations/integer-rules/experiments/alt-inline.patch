@@ -1,0 +1,12 @@
+diff --git a/crates/rydantic/src/types.rs b/crates/rydantic/src/types.rs
+index fb9bec1..521a06b 100644
+--- a/crates/rydantic/src/types.rs
++++ b/crates/rydantic/src/types.rs
+@@ -57,6 +57,7 @@ macro_rules! integer {
+                 }
+                 parsed
+             }
++            #[inline]
+             fn validate_rules(&self, rules: &crate::rules::Rules, ctx: &mut Context) {
+                 match i128::try_from(*self) {
+                     Ok(value) => rules.validate_integer(value, ctx),
