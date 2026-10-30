@@ -1,0 +1,15 @@
+{
+  "scope": "Exact allocation-probe ELF executables only; GNU size output. Not general library or latency evidence.",
+  "baseline": {
+    "text": 991295,
+    "data": 22280,
+    "bss": 968,
+    "file_bytes": 1376280
+  },
+  "candidate": {
+    "text": 1058687,
+    "data": 22744,
+    "bss": 2760,
+    "file_bytes": 1449192
+  }
+}
