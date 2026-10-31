@@ -105,6 +105,7 @@ jobs:
         run: |
           cargo test --manifest-path skills/rydantic/assets/stable-0.6.0/Cargo.toml --locked
           cargo test --manifest-path skills/rydantic/assets/stable-0.7.0/Cargo.toml --locked
+          cargo test --manifest-path skills/rydantic/assets/stable-0.8.0/Cargo.toml --locked
       - name: Verify exact-source agent Skill consumer
         run: |
           python3 scripts/with_source_checkout.py .ci-source-6006720 -- cargo fetch --manifest-path skills/rydantic/assets/source-6006720/Cargo.toml --locked

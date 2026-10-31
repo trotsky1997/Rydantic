@@ -9,11 +9,12 @@ use std::{
     path::PathBuf,
 };
 
-pub const KNOWLEDGE_VERSIONS: &[&str] = &["0.6.0", "0.7.0"];
+pub const KNOWLEDGE_VERSIONS: &[&str] = &["0.6.0", "0.7.0", "0.8.0"];
 pub fn knowledge(version: &str) -> Option<Value> {
     let raw = match version {
         "0.6.0" => include_str!("../knowledge/stable-0.6.0.json"),
         "0.7.0" => include_str!("../knowledge/stable-0.7.0.json"),
+        "0.8.0" => include_str!("../knowledge/stable-0.8.0.json"),
         _ => return None,
     };
     Some(serde_json::from_str(raw).expect("bundled knowledge is valid"))
