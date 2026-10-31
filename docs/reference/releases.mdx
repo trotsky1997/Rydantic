@@ -71,13 +71,44 @@ A fresh registry-only consumer passed 83 tests plus 3 isolated settings cases in
 - [Typed per-call context](/models/validation-context): explicit hooks and owned Model entry points carry `Any + Send + Sync` data through nested validation/encoding. Missing or wrong types are validation errors. Models do not retain context; ordinary/Serde and existing high-level Axum/SQL/Cap’n Proto entry points stay context-free.
 - [Sync/async pipelines](/models/validator-extensions): typed, sequential, fail-fast stages with explicit wrappers that may skip/repeat their continuation. No automatic rollback, model-validity proof, schema synthesis, scheduler or implicit retries. Single callbacks remain supported through the same implementation, not a compatibility layer.
 - **Breaking from 0.7.0:** `Context` no longer implements `UnwindSafe` or `RefUnwindSafe`, even without data. The erased `Arc<dyn Any + Send + Sync>` payload omits these markers, so captures across `catch_unwind` can stop compiling. Construct and consume the context inside the closure or avoid capturing it. Use `AssertUnwindSafe` only after auditing every captured value and shared payload, never as a blind wrapper. Validation failures remain ordinary `Result` errors; no compatibility layer restores the old bounds.
-- This core release covers only runtime/derive. AI remains independently versioned at 0.6.0, with its source path dependency adjusted for this workspace; it is not being published here. CLI/codegen remain unpublished 0.1.0 tools. Frozen Skill/evaluation versions are unchanged.
+- This core release covers only runtime/derive. AI is independently versioned at 0.7.0; CLI/codegen remain unpublished 0.1.0 tools. Frozen Skill/evaluation versions are unchanged.
 
 New checks/transforms can change accepted data; they do not migrate stored values or promise lossless conversion. Existing explicit Cap’n Proto derives, configuration-specific wire compatibility, SQLite index-safety guards, backups/manual migrations, settings secret handling, partial JSON limits and domain provenance requirements remain. Read the [full changelog](https://github.com/trotsky1997/Rydantic/blob/main/CHANGELOG.md) and [migration limits](/integrations/migrations).
 
-## RydanticAI · Unreleased
+## RydanticAI 0.7.0 · Published stable release
 
-[PDF inputs](/integrations/pdf) add `Pdf` and `Prompt::pdf()` for ordered document, image and text prompts. Embedded PDFs work through all nine protocol combinations, including JSON/SSE output, tool continuations, Partial and Iterable streams. Responses and Messages also support URL references; Chat Completions requires embedded PDF data. Validation bounds PDF data, names and counts, and replay uses compact attachment digests. CI covers 89 strict official Python SDK cases.
+Published on 2026-10-27: [GitHub release](https://github.com/trotsky1997/Rydantic/releases/tag/rydantic-ai-v0.7.0) and [crate](https://crates.io/crates/rydantic-ai/0.7.0). This release pins the published core crate to `=0.8.0` and adds [PDF inputs](/integrations/pdf) through `Pdf` and `Prompt::pdf()` for ordered document, image and text prompts. Embedded PDFs work through all nine protocol combinations, including JSON/SSE output, tool continuations, Partial and Iterable streams. Responses and Messages also support URL references; Chat Completions requires embedded PDF data. Validation bounds PDF data, names and counts, and replay uses compact attachment digests. CI covers 89 strict official Python SDK cases.
+
+**Breaking upgrade from AI 0.6:** its tagged manifest declared core
+`0.7.0-beta.3`; this release pins `=0.8.0`. Align direct core dependencies and
+rebuild derived models to avoid distinct incompatible `Model`/`JsonType` trait
+identities. Core 0.8 `Context` loses `UnwindSafe`/`RefUnwindSafe`; keep it inside
+panic boundaries or avoid captures, rather than blindly adding `AssertUnwindSafe`.
+See the core 0.8 migration warning above. Validate application behavior and back
+up affected persisted state before upgrading. Shared effects are not rolled back,
+and transformations/checks can change data; no automatic or lossless migration
+of existing data/deployments is promised. Users retain responsibility for them.
+
+Tag `rydantic-ai-v0.7.0` points to exact main commit [`6517e6f9f59b7b5a9fb349665ab7987c886289f5`](https://github.com/trotsky1997/Rydantic/commit/6517e6f9f59b7b5a9fb349665ab7987c886289f5). [Exact-main push CI](https://github.com/trotsky1997/Rydantic/actions/runs/40529535081) passed; the release record reports that the guarded release preflight passed. The published archive SHA-256 matches the local package, crates.io API and sparse index: `686e804910edd87411483ca994930f6990a12d8faa9485205b9074e5a0f339ab`; the version is not yanked. A fresh registry-only consumer resolved both exact crate versions without path patches and passed its PDF prompt/API test.
+
+**Release-process deviation:** the registry contains no AI `0.7.0-beta.N`
+prerelease preceding this stable publication. The beta-first gate for this
+larger/core-breaking AI upgrade was not completed; core's beta acceptance does
+not substitute for AI beta acceptance. Future upgrades of this scope require a
+published, verified beta with a GitHub Release marked prerelease before a
+separately tested stable promotion, without a long-lived beta branch.
+
+The published archive identifies source `6517e6f9`, before the migration warnings
+were added in [#141](https://github.com/trotsky1997/Rydantic/pull/141). Its immutable
+README lacks those warnings; follow the upgrade guidance above. The GitHub
+Release also contains upgrade guidance, so this limitation does not apply to
+all public release documents.
+
+Before each upload, require the matching merged version/lockfile, successful
+exact-main push CI, release preflight and package verification. After upload,
+verify registry and sparse-index checksums and run a fresh registry-only consumer
+of that published version. Record acceptance before declaring the release
+verified; postpublication consumer acceptance cannot precede upload.
 
 ## 0.7.0 · Stable
 

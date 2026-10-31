@@ -175,6 +175,10 @@ pub trait Model: JsonType {
         let mut staging = Context::new();
         let input = Self::stage_json(input, &mut staging);
         let input = staging.finish(input)?;
+        // Preserve custom raw-entry policies for the default staging route.
+        if let Input::Borrowed(raw) = input {
+            return Self::parse_raw_with_context(raw, context);
+        }
         asynchronous::sync_guard(Self::async_required(&mut std::collections::HashSet::new()))?;
         let mut ctx = Context::with_data(context);
         let model = Self::decode_input(input, &mut ctx, false);
@@ -252,6 +256,10 @@ pub trait Model: JsonType {
             let mut staging = Context::new();
             let input = Self::stage_json(input, &mut staging);
             let input = staging.finish(input)?;
+            // Preserve custom raw-entry policies for the default staging route.
+            if let Input::Borrowed(raw) = input {
+                return Self::parse_raw_async_with_context(raw, context).await;
+            }
             let mut ctx = Context::with_data(context.clone());
             let model = Self::decode_input(input, &mut ctx, false);
             let model = ctx.finish(model)?;
@@ -340,6 +348,10 @@ pub trait Model: JsonType {
         let mut staging = Context::new();
         let input = Self::stage_json(input, &mut staging);
         let input = staging.finish(input)?;
+        // Preserve custom raw-entry policies for the default staging route.
+        if let Input::Borrowed(raw) = input {
+            return Self::parse_raw(raw);
+        }
         asynchronous::sync_guard(Self::async_required(&mut std::collections::HashSet::new()))?;
         let mut ctx = Context::new();
         let model = Self::decode_input(input, &mut ctx, false);
@@ -406,6 +418,10 @@ pub trait Model: JsonType {
             let mut staging = Context::new();
             let input = Self::stage_json(input, &mut staging);
             let input = staging.finish(input)?;
+            // Preserve custom raw-entry policies for the default staging route.
+            if let Input::Borrowed(raw) = input {
+                return Self::parse_raw_async(raw).await;
+            }
             let mut ctx = Context::new();
             let model = Self::decode_input(input, &mut ctx, false);
             let model = ctx.finish(model)?;

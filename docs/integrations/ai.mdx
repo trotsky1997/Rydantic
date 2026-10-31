@@ -4,7 +4,7 @@ description: "Build typed agents, resumable graphs and a three-protocol gateway 
 icon: "bot"
 ---
 
-`rydantic-ai` lives in the same workspace with its own `0.6.0` version and publishing lifecycle. The core Rydantic model crate remains independent of AI transport dependencies.
+`rydantic-ai` lives in the same workspace with an independent version and publishing lifecycle. The published 0.7.0 release adds PDF prompts and pins the published core `=0.8.0`. The core Rydantic model crate remains independent of AI transport dependencies.
 
 <div className="rd-guide-map" aria-label="Typed agent workflow"><span>Prompt & tools</span><span aria-hidden="true">→</span><span>Agent</span><span aria-hidden="true">→</span><span>Validated Rust output</span></div>
 
@@ -21,8 +21,8 @@ icon: "bot"
 
 ```toml
 [dependencies]
-rydantic = "0.7.0-beta.3"
-rydantic-ai = "0.6.0"
+rydantic = "=0.8.0"
+rydantic-ai = "=0.7.0"
 ```
 
 ## Connect an API
@@ -31,7 +31,7 @@ Configure `BASEURL`, `MODEL` and optional `APIKEY`. Select `ResponsesProvider`, 
 
 `BASEURL` includes the API prefix, such as `https://api.openai.com/v1` or `https://api.anthropic.com/v1`. The provider appends `/responses`, `/chat/completions` or `/messages`. See [API providers](/integrations/api-providers) for authentication, capability selection, native history and protocol limits.
 
-Use ordered [`Prompt` image inputs](/integrations/images) with all three providers. The development source also adds [`Pdf` document inputs](/integrations/pdf), including embedded PDF conversion across every protocol combination.
+Use ordered [`Prompt` image inputs](/integrations/images) with all three providers. RydanticAI 0.7.0 adds [`Pdf` document inputs](/integrations/pdf), including embedded PDF conversion across every protocol combination. Install it from [crates.io](https://crates.io/crates/rydantic-ai/0.7.0).
 
 ## Return a validated Rust type
 
