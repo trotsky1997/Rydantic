@@ -99,3 +99,7 @@ required-features = ["derive", "jsonrpc"]
 [[example]]
 name = "grpc_capnp"
 required-features = ["derive", "grpc"]
+
+[[example]]
+name = "protocol_bridge"
+required-features = ["derive", "grpc", "axum", "openapi"]

@@ -4,7 +4,7 @@ description: "Connect Responses, Chat Completions and Anthropic Messages with BA
 icon: "plug-zap"
 ---
 
-RydanticAI 0.6.0 supports three upstream protocols. They share typed Agent output, client tools, validation correction, [Partial and Iterable streams](/integrations/structured-output), token usage, deadlines and cancellation.
+RydanticAI 0.7.0 supports three upstream protocols. They share typed Agent output, client tools, validation correction, [Partial and Iterable streams](/integrations/structured-output), token usage, deadlines and cancellation. Install the published crate with `rydantic-ai = "=0.7.0"`.
 
 | Protocol | Rust provider | Path appended to BASEURL | APIKEY header |
 | --- | --- | --- | --- |
@@ -70,7 +70,7 @@ Native schema support depends on the selected model and its accepted schema subs
 
 The shared `ModelRequest` uses Responses-shaped text, images and function-tool history. Chat Completions and Messages adapters convert that history to their native request shapes. All three support ordered user text/image parts, HTTP(S) image URLs and Base64 images. Use [`Prompt` and `Image`](/integrations/images) with Agents and structured streams. Unsupported media and Responses-specific reasoning request settings fail before dispatch.
 
-The development source also supports [`Pdf` and `Prompt::pdf()`](/integrations/pdf). Embedded PDF data converts across all three protocols. Responses and Messages accept PDF URLs; Chat Completions requires embedded data. Explicit PDF detail controls are supported only by Responses. PDF file IDs and provider-specific document controls fail explicitly.
+RydanticAI 0.7.0 also supports [`Pdf` and `Prompt::pdf()`](/integrations/pdf). Embedded PDF data converts across all three protocols. Responses and Messages accept PDF URLs; Chat Completions requires embedded data. Explicit PDF detail controls are supported only by Responses. PDF file IDs and provider-specific document controls fail explicitly.
 
 ## Native tools and history
 
