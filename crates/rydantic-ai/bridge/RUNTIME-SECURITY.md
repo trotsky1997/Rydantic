@@ -32,7 +32,9 @@ runtime support change**, not a Rust crate API/version change. Upgrade Node and
 reinstall from the lockfile. No data or credentials are migrated or deleted.
 Other Node major lines are outside this bridge's audited support scope, not
 necessarily vulnerable. npm's engines field normally warns rather than blocking
-startup. CI tests exact baselines plus moving 22/24 releases; the runtime test
+startup. CI tests exact baselines plus moving 22/24 releases with
+`setup-node`'s `check-latest: true` (avoiding a stale tool-cache selection for
+moving tracks); the runtime test
 records Node/undici versions and rejects a baseline regression. Later patches
 within the same undici major are accepted; a new major requires re-audit.
 
