@@ -22,6 +22,10 @@ pub(crate) fn scalar(input: Input<'_>, ctx: &mut Context, expected: &str) -> Opt
             mismatch(ctx, expected, "object");
             None
         }
+        Input::ParsedFields(_) => {
+            mismatch(ctx, expected, "object");
+            None
+        }
     }
 }
 fn mismatch(ctx: &mut Context, expected: &str, actual: &str) {

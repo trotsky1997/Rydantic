@@ -1,0 +1,11 @@
+{
+  "baseline_commit": "2ce66b92b281ff5f0e391844bf1ce8cce8cde728",
+  "records": 1172,
+  "oracle_sha256": "1574834b6c70e13edb4288ac5d3a7a765488bcf6fd44792fe11ebe9f343acb4c",
+  "files": {
+    "crates/rydantic/tests/fixed_model_slots.rs": "b0e7ff5a2b4948777c4eb06b434ae6798a31e896085929fb3f29d8eed6743d50",
+    "crates/rydantic/src/borrowed.rs": "c999b386acfd2248b430e24850f9521a6a90629839f054ff1d36e6a6e9a544a9",
+    "crates/rydantic/src/lib.rs": "088081bbf20254e08a75f781bd8dac51540012fe64053236425d8a636fea1277",
+    "crates/rydantic-derive/src/lib.rs": "d1ead2a3746b3f3c8ad9be464818fe60b9609eeaa5a7a29074c7f45cc287a44c"
+  }
+}

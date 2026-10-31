@@ -32,7 +32,28 @@ macro_rules! integer {
     ($($ty:ty),* $(,)?) => {$(
         impl JsonType for $ty {
             fn prepare_default(self,ctx:&mut Context)->Option<Self>{self.validate_into(ctx);Some(self)}
-            fn decode_input(input:Input<'_>,ctx:&mut Context,coerce:bool)->Option<Self>{Self::decode(crate::direct::scalar(input,ctx,"integer")?,ctx,coerce)}
+            fn validate_rules(&self,rules:&crate::rules::Rules,ctx:&mut Context){
+                match i128::try_from(*self){
+                    Ok(value)=>rules.validate_i128(value,ctx),
+                    Err(_)=>rules.validate_u128(*self as u128,ctx),
+                }
+            }
+            fn decode_input(input:Input<'_>,ctx:&mut Context,coerce:bool)->Option<Self>{
+                if let Input::Borrowed(raw)=&input {
+                    let text=raw.get().trim();
+                    let digits=text.strip_prefix('-').unwrap_or(text);
+                    if !digits.is_empty()&&digits.bytes().all(|byte|byte.is_ascii_digit()) {
+                        if text.starts_with('-') {
+                            if let Ok(integer)=text.parse::<i64>() {
+                                match Self::try_from(integer){Ok(value)=>return Some(value),Err(_)=>{}}
+                            }
+                        } else if let Ok(integer)=text.parse::<u64>() {
+                            match Self::try_from(integer){Ok(value)=>return Some(value),Err(_)=>{}}
+                        }
+                    }
+                }
+                Self::decode(crate::direct::scalar(input,ctx,"integer")?,ctx,coerce)
+            }
             fn decode(value: Value, ctx: &mut Context, coerce: bool) -> Option<Self> {
                 if coerce {
                     if let Value::String(text) = &value {
@@ -112,7 +133,25 @@ impl JsonType for String {
         self.validate_into(ctx);
         Some(self)
     }
+    fn validate_rules(&self, rules: &crate::rules::Rules, ctx: &mut Context) {
+        rules.validate_string(self, ctx);
+    }
     fn decode_input(input: Input<'_>, ctx: &mut Context, coerce: bool) -> Option<Self> {
+        if let Input::Borrowed(raw) = &input {
+            let json = raw.get();
+            if let Some(value) = json
+                .trim()
+                .strip_prefix('"')
+                .and_then(|value| value.strip_suffix('"'))
+            {
+                if !value.as_bytes().contains(&b'\\') {
+                    return Some(value.to_owned());
+                }
+                if let Ok(value) = serde_json::from_str::<String>(json) {
+                    return Some(value);
+                }
+            }
+        }
         Self::decode(crate::direct::scalar(input, ctx, "string")?, ctx, coerce)
     }
     fn decode(value: Value, ctx: &mut Context, coerce: bool) -> Option<Self> {
@@ -149,6 +188,13 @@ impl JsonType for bool {
         Some(self)
     }
     fn decode_input(input: Input<'_>, ctx: &mut Context, coerce: bool) -> Option<Self> {
+        if let Input::Borrowed(raw) = &input {
+            match raw.get().trim() {
+                "true" => return Some(true),
+                "false" => return Some(false),
+                _ => {}
+            }
+        }
         Self::decode(crate::direct::scalar(input, ctx, "boolean")?, ctx, coerce)
     }
     fn decode(value: Value, ctx: &mut Context, coerce: bool) -> Option<Self> {
@@ -305,7 +351,12 @@ impl<T: JsonType> JsonType for Vec<T> {
         complete.then_some(result)
     }
     fn decode_input(input: Input<'_>, ctx: &mut Context, coerce: bool) -> Option<Self> {
-        let items = input.array(ctx)?;
+        let items = match input {
+            Input::Borrowed(raw) => {
+                return crate::borrowed::borrowed_array(raw, ctx, coerce, T::decode_input)
+            }
+            input => input.array(ctx)?,
+        };
         let mut values = Vec::with_capacity(items.len());
         let mut complete = true;
         for (index, item) in items.into_iter().enumerate() {

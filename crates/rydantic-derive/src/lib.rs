@@ -282,7 +282,7 @@ fn with_location(field: &Field, index: usize, shape: Shape, body: Tokens, _rd: &
         quote! {__rydantic_ctx.at(#index,|__rydantic_ctx|{#body})}
     } else {
         let input = &field.input;
-        quote! {__rydantic_ctx.at(#input,|__rydantic_ctx|{#body})}
+        quote! {__rydantic_ctx.at_static(#input,|__rydantic_ctx|{#body})}
     }
 }
 fn object_names(fields: &[Field], rd: &Tokens, tag: ::core::option::Option<&str>) -> Tokens {
@@ -347,6 +347,7 @@ fn parse_shape(
     container: &attrs::Container,
     mode: &Mode,
     tag: ::core::option::Option<&str>,
+    fixed_slots: bool,
 ) -> Tokens {
     let rd = mode.rd;
     let tr = mode.tr();
@@ -363,7 +364,9 @@ fn parse_shape(
         let ty = &field.ty;
         let input = &field.input;
         let has_default = field.attr.has_default();
-        let raw = if shape == Shape::Named {
+        let raw = if fixed_slots {
+            quote!(match __rydantic_fields.as_mut(){Some(fields)=>fields.values[#i].take().map(#rd::Input::Borrowed),None=>__rydantic_object.remove(#input)})
+        } else if shape == Shape::Named {
             if field.attr.flatten || field.attr.extra {
                 quote! {{let names=<#ty as #rd::ObjectType>::field_names(#rd::SchemaMode::Input,&mut ::std::collections::HashSet::new());
                     let capture=<#ty as #rd::ObjectType>::captures_extra(&mut ::std::collections::HashSet::new());
@@ -395,8 +398,32 @@ fn parse_shape(
     }
     let first = parses.iter().map(|(_, a, _)| a);
     let last = parses.iter().map(|(_, _, b)| b);
-    let unknown=(!container.ignore_extra&&shape==Shape::Named).then(||quote!{for (key,_) in __rydantic_object{__rydantic_ctx.at(key,|ctx|ctx.push(#rd::ValidationError::new("extra_forbidden","unknown field").with_stage(#rd::Stage::Parse)));}});
+    let unknown_keys = if fixed_slots {
+        quote!(__rydantic_fields
+            .into_iter()
+            .flat_map(|fields| fields.unknown)
+            .chain(__rydantic_object.into_keys()))
+    } else {
+        quote!(__rydantic_object.into_keys())
+    };
+    let unknown=(!container.ignore_extra&&shape==Shape::Named).then(||quote!{for key in #unknown_keys{__rydantic_ctx.at(key,|ctx|ctx.push(#rd::ValidationError::new("extra_forbidden","unknown field").with_stage(#rd::Stage::Parse)));}});
     let setup = match shape {
+        Shape::Named if fixed_slots => {
+            let indices = fields.iter().enumerate().map(|(i, field)| {
+                let name = &field.input;
+                quote!(#name => Some(#i),)
+            });
+            let ignore = container.ignore_extra;
+            quote! {
+                let mut __rydantic_object=::std::collections::BTreeMap::new();
+                let mut __rydantic_fields=match __rydantic_raw{
+                    #rd::Input::Borrowed(raw)=>Some(#rd::__private::borrowed_fields(raw,__rydantic_ctx,#count,|key|match key{#(#indices)* _=>None},#ignore)?),
+                    #rd::Input::ParsedFields(fields) if fields.values.len()==#count=>Some(fields),
+                    #rd::Input::ParsedFields(_)=>{__rydantic_ctx.push(#rd::ValidationError::new("type_error","expected object").with_stage(#rd::Stage::Parse));return None;},
+                    raw=>{__rydantic_object=raw.object(__rydantic_ctx)?;None}
+                };
+            }
+        }
         Shape::Named => {
             let check = layout_check(fields, rd, tag);
             quote! {let mut __rydantic_object=__rydantic_raw.object(__rydantic_ctx)?;#check}
@@ -462,7 +489,7 @@ fn encode_shape(
         } else if field.attr.flatten || field.attr.extra {
             entries.push(quote!{let value=#encoded;#rd::__private::merge(&mut __rydantic_object,value,__rydantic_ctx);});
         } else {
-            entries.push(quote!{let value=__rydantic_ctx.at(#key,|__rydantic_ctx|#encoded);#rd::__private::merge(&mut __rydantic_object,#rd::__private::serde_json::json!({#key:value}),__rydantic_ctx);});
+            entries.push(quote!{let value=__rydantic_ctx.at_static(#key,|__rydantic_ctx|#encoded);#rd::__private::merge(&mut __rydantic_object,#rd::__private::serde_json::json!({#key:value}),__rydantic_ctx);});
         }
     }
     if shape == Shape::Tuple {
@@ -650,6 +677,7 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
     let tr = mode.tr();
     let mut all_fields = Vec::new();
     let mut object_impl = None;
+    let mut direct_json_stage = quote!();
     let (decode, encode, encode_input, validate, schema, asynchronous, kind) = match &input.data {
         Data::Struct(data) => {
             if container.tag.is_some() || container.untagged {
@@ -661,7 +689,26 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
             let fields = fields(&data.fields, None, &container)?;
             let shape = shape(&data.fields);
             let ctor = constructor(&fields, shape, quote!(Self));
-            let decode = parse_shape(&fields, shape, ctor, &container, &mode, None);
+            // Keep one field-validation body (including its rule caches) for both
+            // inputs. Only fixed named structs can replace borrowed maps with slots.
+            let fixed_slots = shape == Shape::Named
+                && !fields
+                    .iter()
+                    .any(|field| field.attr.flatten || field.attr.extra);
+            if fixed_slots {
+                let count = fields.len();
+                let indices = fields.iter().enumerate().map(|(i, field)| {
+                    let name = &field.input;
+                    quote!(#name => Some(#i),)
+                });
+                let ignore = container.ignore_extra;
+                direct_json_stage = quote! {
+                    fn stage_json<'__rydantic_json>(__rydantic_input:&'__rydantic_json str,__rydantic_ctx:&mut #rd::Context)->::core::option::Option<#rd::Input<'__rydantic_json>>{
+                        #rd::__private::stage_borrowed_fields(__rydantic_input,__rydantic_ctx,#count,|key|match key{#(#indices)* _=>None},#ignore)
+                    }
+                };
+            }
+            let decode = parse_shape(&fields, shape, ctor, &container, &mode, None, fixed_slots);
             let values = fields
                 .iter()
                 .map(|f| {
@@ -785,7 +832,7 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
                 asyncs.push(quote!(#pat=>{#checks}));
                 schemas.push(schema);
                 if container.untagged {
-                    let body = parse_shape(fields, *shape, ctor, &container, &mode, None);
+                    let body = parse_shape(fields, *shape, ctor, &container, &mode, None, false);
                     decodes.push(quote!{
                         {let mut trial=__rydantic_ctx.trial();let result={let __rydantic_ctx=&mut trial;let __rydantic_raw=__rydantic_raw.clone();(||{#body})()};
                         match trial.finish(result){Ok(value)=>return Some(value),Err(errors)=>__rydantic_branches.push(#rd::__private::serde_json::json!({"variant":#wire,"errors":errors.to_json()}))}}
@@ -798,6 +845,7 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
                         &container,
                         &mode,
                         container.tag.as_deref(),
+                        false,
                     );
                     decodes.push(quote!(#wire=>{let __rydantic_raw=#rd::Input::Object(__rydantic_object);#body}));
                 } else {
@@ -812,8 +860,8 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
                 )
             } else if let Some(tag) = &container.tag {
                 (
-                    quote! {let mut __rydantic_object=__rydantic_raw.object(__rydantic_ctx)?;let tag=match __rydantic_object.remove(#tag){Some(raw)=>{let value=raw.into_value(__rydantic_ctx)?;match value{#rd::Value::String(value)=>value,_=>{__rydantic_ctx.at(#tag,|ctx|ctx.push(#rd::ValidationError::new("union_tag_type","discriminator must be a string").with_stage(#rd::Stage::Parse)));return None;}}},None=>{__rydantic_ctx.at(#tag,|ctx|ctx.push(#rd::ValidationError::new("union_tag_missing","discriminator is required").with_stage(#rd::Stage::Parse)));return None;}};
-                    match tag.as_str(){#(#decodes,)* _=>{__rydantic_ctx.at(#tag,|ctx|ctx.push(#rd::ValidationError::new("union_tag_invalid","unknown discriminator").with_stage(#rd::Stage::Parse).with_param("expected",#rd::__private::serde_json::json!([#(#wires),*]))));None}}},
+                    quote! {let mut __rydantic_object=__rydantic_raw.object(__rydantic_ctx)?;let tag=match __rydantic_object.remove(#tag){Some(raw)=>{let value=raw.into_value(__rydantic_ctx)?;match value{#rd::Value::String(value)=>value,_=>{__rydantic_ctx.at_static(#tag,|ctx|ctx.push(#rd::ValidationError::new("union_tag_type","discriminator must be a string").with_stage(#rd::Stage::Parse)));return None;}}},None=>{__rydantic_ctx.at_static(#tag,|ctx|ctx.push(#rd::ValidationError::new("union_tag_missing","discriminator is required").with_stage(#rd::Stage::Parse)));return None;}};
+                    match tag.as_str(){#(#decodes,)* _=>{__rydantic_ctx.at_static(#tag,|ctx|ctx.push(#rd::ValidationError::new("union_tag_invalid","unknown discriminator").with_stage(#rd::Stage::Parse).with_param("expected",#rd::__private::serde_json::json!([#(#wires),*]))));None}}},
                     quote!(#rd::__private::serde_json::json!({"oneOf":[#((#schemas)),*],"discriminator":{"propertyName":#tag}})),
                     quote!(#rd::TypeKind::Object),
                 )
@@ -1009,6 +1057,7 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
         quote! {
             fn decode(raw:#rd::Value,ctx:&mut #rd::Context,coerce:bool)->::core::option::Option<Self>{<Self as #rd::JsonType>::decode_input(#rd::Input::Owned(raw),ctx,coerce)}
             fn decode_input(__rydantic_raw:#rd::Input<'_>,__rydantic_ctx:&mut #rd::Context,_coerce:bool)->::core::option::Option<Self>{#body}
+            #direct_json_stage
         }
     };
     Ok(quote! {
@@ -1040,6 +1089,66 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
 #[cfg(test)]
 mod static_layout_tests {
     use super::*;
+
+    #[test]
+    fn fixed_named_slots_stage_raw_values_and_keep_the_map_body() {
+        let inputs: [DeriveInput; 4] = [
+            parse_quote!(
+                struct Plain {
+                    id: i64,
+                    name: String,
+                }
+            ),
+            parse_quote!(
+                struct Empty {}
+            ),
+            parse_quote!(
+                struct Generic<'a, T> {
+                    name: &'a str,
+                    value: T,
+                }
+            ),
+            parse_quote!(
+                #[model(extra = "ignore")]
+                struct Ignore {
+                    id: i64,
+                }
+            ),
+        ];
+        for input in inputs {
+            let container = attrs::container(&input.attrs).unwrap();
+            let fields = parsed(input, None).unwrap();
+            let rd = quote!(rydantic);
+            let mode = Mode {
+                rd: &rd,
+                borrow: false,
+            };
+            let slots = parse_shape(
+                &fields,
+                Shape::Named,
+                quote!(Self),
+                &container,
+                &mode,
+                None,
+                true,
+            )
+            .to_string();
+            assert!(slots.contains("borrowed_fields"), "{slots}");
+            assert!(slots.contains("object (__rydantic_ctx)"), "{slots}");
+            let map = parse_shape(
+                &fields,
+                Shape::Named,
+                quote!(Self),
+                &container,
+                &mode,
+                None,
+                false,
+            )
+            .to_string();
+            assert!(map.contains("object (__rydantic_ctx)"), "{map}");
+            assert!(!map.contains("borrowed_fields"), "{map}");
+        }
+    }
 
     fn parsed(input: DeriveInput, tag: Option<&str>) -> syn::Result<Vec<Field>> {
         let Data::Struct(data) = &input.data else {

@@ -1,5 +1,21 @@
 # Unreleased
 
+- Source-only borrowed JSON validation optimizations (PR #131): fixed-layout
+  staging, streamed arrays, direct scalar/rule paths, and borrowed static error
+  labels. Complete syntax validation still precedes callbacks; default JSON
+  entry points retain custom raw-entry policy dispatch (issue #150).
+- **Breaking source API:** `Input` adds the doc-hidden `ParsedFields` variant.
+  Downstream exhaustive `match Input` expressions must handle the new variant;
+  hidden does not mean private. Prefer supported decoding entry points rather
+  than constructing staged fields. No compatibility layer is supplied.
+  This is not part of published 0.8.0. A future release must use a breaking
+  minor version and beta validation first; this change publishes no version.
+  No persisted-data migration is performed or claimed lossless. Review custom
+  decoders and validation behavior and back up deployment data before upgrading.
+- Historical performance and allocation receipts remain scoped to their exact
+  measured source/workloads; integration and policy-dispatch repairs do not
+  establish new latency, allocation, or universal speedup claims.
+
 - Add opt-in `jsonrpc`: transport-neutral synchronous JSON-RPC 2.0 typed method
   parameters/results, sequential batches, notification suppression and redacted
   model errors. Explicit named/positional parameter mode; no network listener,
