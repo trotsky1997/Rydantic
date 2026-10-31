@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::{any::Any, collections::BTreeMap, fmt, sync::Arc};
+use std::{any::Any, borrow::Cow, collections::BTreeMap, fmt, sync::Arc};
 
 /// A location in a nested input. Object keys and array indices remain distinct.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -23,6 +23,33 @@ impl From<String> for PathSegment {
 impl From<usize> for PathSegment {
     fn from(value: usize) -> Self {
         Self::Index(value)
+    }
+}
+
+#[derive(Clone)]
+enum ContextPathSegment {
+    Field(Cow<'static, str>),
+    Index(usize),
+}
+impl From<PathSegment> for ContextPathSegment {
+    fn from(value: PathSegment) -> Self {
+        match value {
+            PathSegment::Field(field) => Self::Field(Cow::Owned(field)),
+            PathSegment::Index(index) => Self::Index(index),
+        }
+    }
+}
+impl ContextPathSegment {
+    fn owned(&self) -> PathSegment {
+        match self {
+            Self::Field(field) => PathSegment::Field(field.to_string()),
+            Self::Index(index) => PathSegment::Index(*index),
+        }
+    }
+}
+impl fmt::Debug for ContextPathSegment {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.owned().fmt(f)
     }
 }
 
@@ -134,7 +161,7 @@ impl std::error::Error for ValidationErrors {}
 /// Shared error collector used by generated code and custom `JsonType` implementations.
 #[derive(Default)]
 pub struct Context {
-    path: Vec<PathSegment>,
+    path: Vec<ContextPathSegment>,
     errors: Vec<ValidationError>,
     data: Option<Arc<dyn Any + Send + Sync>>,
 }
@@ -180,7 +207,11 @@ impl Context {
         self.errors.len()
     }
     pub fn push(&mut self, mut error: ValidationError) {
-        let mut path = self.path.clone();
+        let mut path = self
+            .path
+            .iter()
+            .map(ContextPathSegment::owned)
+            .collect::<Vec<_>>();
         path.append(&mut error.loc);
         error.loc = path;
         self.errors.push(error);
@@ -191,7 +222,15 @@ impl Context {
         }
     }
     pub fn at<T>(&mut self, segment: impl Into<PathSegment>, f: impl FnOnce(&mut Self) -> T) -> T {
-        self.path.push(segment.into());
+        self.path.push(segment.into().into());
+        let result = f(self);
+        self.path.pop();
+        result
+    }
+    #[doc(hidden)]
+    pub fn at_static<T>(&mut self, segment: &'static str, f: impl FnOnce(&mut Self) -> T) -> T {
+        self.path
+            .push(ContextPathSegment::Field(Cow::Borrowed(segment)));
         let result = f(self);
         self.path.pop();
         result
@@ -199,7 +238,7 @@ impl Context {
     pub fn child(&self, segment: Option<PathSegment>) -> Self {
         let mut path = self.path.clone();
         if let Some(segment) = segment {
-            path.push(segment);
+            path.push(segment.into());
         }
         Self {
             path,

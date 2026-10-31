@@ -2,11 +2,11 @@ use crate::{
     rules::Rules, AsyncCheck, Context, LengthType, SchemaContext, SchemaMode, SchemaReport, Stage,
     StringType, TypeKind, ValidationError, ValidationErrors, Value,
 };
-use serde::de::{self, Visitor};
+use serde::de::{self, DeserializeSeed, Visitor};
 use serde_json::{json, value::RawValue};
 use std::{
     borrow::Cow,
-    collections::{BTreeMap, HashMap, HashSet},
+    collections::{BTreeMap, BTreeSet, HashMap, HashSet},
     fmt,
     hash::BuildHasher,
     marker::PhantomData,
@@ -16,6 +16,8 @@ use std::{
 #[derive(Debug, Clone)]
 pub enum Input<'de> {
     Borrowed(&'de RawValue),
+    #[doc(hidden)]
+    ParsedFields(BorrowedFields<'de>),
     Owned(Value),
     Object(BTreeMap<String, Input<'de>>),
 }
@@ -24,6 +26,10 @@ impl<'de> Input<'de> {
         match self {
             Self::Object(object) => Self::from_object(object, ctx),
             Self::Owned(value) => Some(value),
+            Self::ParsedFields(_) => {
+                ctx.push(type_error("object"));
+                None
+            }
             Self::Borrowed(raw) => serde_json::from_str(raw.get())
                 .map_err(|e| ctx.push(json_error(e)))
                 .ok(),
@@ -69,10 +75,94 @@ impl<'de> Input<'de> {
         match self {
             Self::Borrowed(raw) => raw.get() == "null",
             Self::Owned(v) => v.is_null(),
-            Self::Object(_) => false,
+            Self::Object(_) | Self::ParsedFields(_) => false,
         }
     }
 }
+
+struct BorrowedArraySeed<'ctx, 'de, T, F> {
+    ctx: &'ctx mut Context,
+    coerce: bool,
+    decode: F,
+    marker: PhantomData<fn(&'de RawValue) -> T>,
+}
+impl<'de, 'ctx, T, F> DeserializeSeed<'de> for BorrowedArraySeed<'ctx, 'de, T, F>
+where
+    F: Fn(Input<'de>, &mut Context, bool) -> Option<T>,
+{
+    type Value = Option<Vec<T>>;
+
+    fn deserialize<D: serde::Deserializer<'de>>(
+        self,
+        deserializer: D,
+    ) -> Result<Self::Value, D::Error> {
+        deserializer.deserialize_seq(BorrowedArrayVisitor {
+            ctx: self.ctx,
+            coerce: self.coerce,
+            decode: self.decode,
+            marker: PhantomData,
+        })
+    }
+}
+struct BorrowedArrayVisitor<'ctx, 'de, T, F> {
+    ctx: &'ctx mut Context,
+    coerce: bool,
+    decode: F,
+    marker: PhantomData<fn(&'de RawValue) -> T>,
+}
+impl<'de, 'ctx, T, F> Visitor<'de> for BorrowedArrayVisitor<'ctx, 'de, T, F>
+where
+    F: Fn(Input<'de>, &mut Context, bool) -> Option<T>,
+{
+    type Value = Option<Vec<T>>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("an array")
+    }
+
+    fn visit_seq<A: de::SeqAccess<'de>>(self, mut access: A) -> Result<Self::Value, A::Error> {
+        let mut values = Vec::new();
+        let mut complete = true;
+        let mut index = 0;
+        while let Some(raw) = access.next_element::<&'de RawValue>()? {
+            let decode = &self.decode;
+            let coerce = self.coerce;
+            match self
+                .ctx
+                .at(index, |ctx| decode(Input::Borrowed(raw), ctx, coerce))
+            {
+                Some(value) => values.push(value),
+                None => complete = false,
+            }
+            index += 1;
+        }
+        Ok(complete.then_some(values))
+    }
+}
+pub(crate) fn borrowed_array<'de, T, F>(
+    raw: &'de RawValue,
+    ctx: &mut Context,
+    coerce: bool,
+    decode: F,
+) -> Option<Vec<T>>
+where
+    F: Fn(Input<'de>, &mut Context, bool) -> Option<T>,
+{
+    let mut deserializer = serde_json::Deserializer::from_str(raw.get());
+    serde::de::DeserializeSeed::deserialize(
+        BorrowedArraySeed {
+            ctx,
+            coerce,
+            decode,
+            marker: PhantomData,
+        },
+        &mut deserializer,
+    )
+    .and_then(|values| deserializer.end().map(|()| values))
+    .map_err(|_| ctx.push(type_error("array")))
+    .ok()?
+}
+
 // Deserialize a typed map, rather than `deserialize_any`: JSON objects whose keys
 // resemble serde_json's private number/raw-value markers must remain objects.
 // Values stay raw and borrowed; insertion preserves BTreeMap ordering and the
@@ -102,6 +192,152 @@ impl<'de> serde::Deserialize<'de> for BorrowedObject<'de> {
         }
         deserializer.deserialize_map(ObjectVisitor)
     }
+}
+
+/// Raw staging for generated fixed-layout models, before any field validation.
+#[derive(Debug, Clone)]
+#[doc(hidden)]
+pub struct BorrowedFields<'de> {
+    pub values: Box<[Option<&'de RawValue>]>,
+    pub unknown: BTreeSet<String>,
+}
+
+fn deserialize_borrowed_fields<'de, D, F>(
+    deserializer: D,
+    field_count: usize,
+    field_index: F,
+    ignore_extra: bool,
+) -> Result<BorrowedFields<'de>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    F: Fn(&str) -> Option<usize>,
+{
+    struct FieldsVisitor<F> {
+        field_count: usize,
+        field_index: F,
+        ignore_extra: bool,
+    }
+    enum Key {
+        Field(usize),
+        Unknown(String),
+        Ignored,
+    }
+    struct KeySeed<'a, F> {
+        field_index: &'a F,
+        ignore_extra: bool,
+    }
+    impl<'de, F: Fn(&str) -> Option<usize>> Visitor<'de> for KeySeed<'_, F> {
+        type Value = Key;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter.write_str("a string key")
+        }
+
+        fn visit_str<E: de::Error>(self, key: &str) -> Result<Key, E> {
+            Ok(match (self.field_index)(key) {
+                Some(index) => Key::Field(index),
+                None if self.ignore_extra => Key::Ignored,
+                None => Key::Unknown(key.to_owned()),
+            })
+        }
+    }
+    impl<'de, F: Fn(&str) -> Option<usize>> DeserializeSeed<'de> for KeySeed<'_, F> {
+        type Value = Key;
+
+        fn deserialize<D: serde::Deserializer<'de>>(
+            self,
+            deserializer: D,
+        ) -> Result<Key, D::Error> {
+            deserializer.deserialize_str(self)
+        }
+    }
+    impl<'de, F: Fn(&str) -> Option<usize>> Visitor<'de> for FieldsVisitor<F> {
+        type Value = BorrowedFields<'de>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter.write_str("a map")
+        }
+
+        fn visit_map<A: de::MapAccess<'de>>(self, mut access: A) -> Result<Self::Value, A::Error> {
+            let mut fields = BorrowedFields {
+                // Heap-backed slots avoid width-dependent stack growth in nested
+                // models. Nonempty models retain one exact-length allocation.
+                values: vec![None; self.field_count].into_boxed_slice(),
+                unknown: BTreeSet::new(),
+            };
+            while let Some(key) = access.next_key_seed(KeySeed {
+                field_index: &self.field_index,
+                ignore_extra: self.ignore_extra,
+            })? {
+                // Even ignored and overwritten values must be consumed as raw JSON.
+                // Do not run field callbacks until the entire object has succeeded.
+                let value = access.next_value::<&'de RawValue>()?;
+                match key {
+                    Key::Field(index) => fields.values[index] = Some(value),
+                    Key::Unknown(key) => {
+                        fields.unknown.insert(key);
+                    }
+                    Key::Ignored => {}
+                }
+            }
+            Ok(fields)
+        }
+    }
+
+    // Use deserialize_map, not deserialize_any: private serde_json marker keys
+    // remain ordinary object keys.
+    serde::Deserializer::deserialize_map(
+        deserializer,
+        FieldsVisitor {
+            field_count,
+            field_index,
+            ignore_extra,
+        },
+    )
+}
+
+#[doc(hidden)]
+pub fn borrowed_fields<'de, F>(
+    raw: &'de RawValue,
+    ctx: &mut Context,
+    field_count: usize,
+    field_index: F,
+    ignore_extra: bool,
+) -> Option<BorrowedFields<'de>>
+where
+    F: Fn(&str) -> Option<usize>,
+{
+    let mut deserializer = serde_json::Deserializer::from_str(raw.get());
+    deserialize_borrowed_fields(&mut deserializer, field_count, field_index, ignore_extra)
+        .and_then(|fields| deserializer.end().map(|()| fields))
+        .map_err(|_| ctx.push(type_error("object")))
+        .ok()
+}
+
+#[doc(hidden)]
+pub fn stage_borrowed_fields<'de, F>(
+    input: &'de str,
+    ctx: &mut Context,
+    field_count: usize,
+    field_index: F,
+    ignore_extra: bool,
+) -> Option<Input<'de>>
+where
+    F: Fn(&str) -> Option<usize>,
+{
+    let mut deserializer = serde_json::Deserializer::from_str(input);
+    if let Ok(fields) =
+        deserialize_borrowed_fields(&mut deserializer, field_count, field_index, ignore_extra)
+    {
+        if deserializer.end().is_ok() {
+            return Some(Input::ParsedFields(fields));
+        }
+    }
+    // Keep the existing raw-object error mapping for roots the staged visitor rejects.
+    serde_json::from_str::<&'de RawValue>(input)
+        .map(Input::Borrowed)
+        .map_err(|error| ctx.push(json_error(error)))
+        .ok()
 }
 
 pub(crate) fn json_error(error: serde_json::Error) -> ValidationError {
@@ -330,6 +566,9 @@ owned!(
 owned!(rust_decimal::Decimal);
 
 impl<'de: 'a, 'a> BorrowType<'de> for &'a str {
+    fn validate_rules(&self, rules: &Rules, ctx: &mut Context) {
+        rules.validate_string(self, ctx);
+    }
     fn decode(value: Input<'de>, ctx: &mut Context, _: bool) -> Option<Self> {
         match value {
             Input::Borrowed(raw) => serde_json::from_str::<&'de str>(raw.get())
@@ -402,6 +641,9 @@ impl<'de> Visitor<'de> for CowVisitor {
     }
 }
 impl<'de: 'a, 'a> BorrowType<'de> for Cow<'a, str> {
+    fn validate_rules(&self, rules: &Rules, ctx: &mut Context) {
+        rules.validate_string(self, ctx);
+    }
     fn decode(value: Input<'de>, ctx: &mut Context, coerce: bool) -> Option<Self> {
         match value {
             Input::Borrowed(raw) if raw.get().starts_with('"') => {
@@ -551,7 +793,10 @@ impl<'de, T: BorrowType<'de>> BorrowType<'de> for Vec<T> {
         complete.then_some(result)
     }
     fn decode(value: Input<'de>, ctx: &mut Context, coerce: bool) -> Option<Self> {
-        let items = value.array(ctx)?;
+        let items = match value {
+            Input::Borrowed(raw) => return borrowed_array(raw, ctx, coerce, T::decode),
+            value => value.array(ctx)?,
+        };
         let mut result = Vec::with_capacity(items.len());
         let mut complete = true;
         for (i, value) in items.into_iter().enumerate() {
@@ -756,6 +1001,76 @@ owned!(Box<RawValue>);
 mod object_materialization_tests {
     use super::*;
 
+    fn compare_slots(text: &str) {
+        const NAMES: [&str; 4] = ["a", "a/b~c", "中文", "$serde_json::private::Number"];
+        let raw: &RawValue = serde_json::from_str(text).unwrap();
+        for ignore in [false, true] {
+            let mut old_ctx = Context::new();
+            let old = Input::Borrowed(raw).object(&mut old_ctx);
+            let mut new_ctx = Context::new();
+            let new = borrowed_fields(
+                raw,
+                &mut new_ctx,
+                4,
+                |key| NAMES.iter().position(|name| *name == key),
+                ignore,
+            );
+            assert_eq!(
+                serde_json::to_value(old_ctx.result()).unwrap(),
+                serde_json::to_value(new_ctx.result()).unwrap()
+            );
+            match (old, new) {
+                (Some(mut old), Some(new)) => {
+                    for (index, name) in NAMES.iter().enumerate() {
+                        let old = old.remove(*name).map(|value| match value {
+                            Input::Borrowed(raw) => raw,
+                            _ => panic!("lost borrow"),
+                        });
+                        assert_eq!(old.map(RawValue::get), new.values[index].map(RawValue::get));
+                        assert_eq!(
+                            old.map(|raw| raw.get().as_ptr()),
+                            new.values[index].map(|raw| raw.get().as_ptr())
+                        );
+                    }
+                    let unknown = if ignore {
+                        BTreeSet::new()
+                    } else {
+                        old.into_keys().collect()
+                    };
+                    assert_eq!(unknown, new.unknown);
+                }
+                (None, None) => {}
+                _ => panic!("different acceptance: {text}"),
+            }
+        }
+    }
+
+    #[test]
+    fn fixed_slots_preserve_raw_values_and_unknown_keys() {
+        for text in [
+            "{}",
+            "null",
+            "true",
+            "42",
+            "1e9999",
+            "[]",
+            "\"text\"",
+            r#"{"a":0,"\u0061":1e9999,"a":340282366920938463463374607431768211455}"#,
+            r#"{"中文":"borrow me","a/b~c": {"x": 1, "x": 2},"z":1,"a":-0.000e+9,"z":2}"#,
+            r#"{"$serde_json::private::Number":"42","$serde_json::private::RawValue":"{}"}"#,
+            r#"{"unknown":{},"\u0075nknown":[],"escaped\"\\\n":1,"":""}"#,
+        ] {
+            compare_slots(text);
+        }
+        for depth in [1, 32, 127, 128, 129, 256] {
+            compare_slots(&format!(
+                "{{\"a\":{}0{}}}",
+                "[".repeat(depth),
+                "]".repeat(depth)
+            ));
+        }
+    }
+
     fn compare(text: &str) {
         let old = serde_json::from_str::<BTreeMap<String, &RawValue>>(text);
         let new = serde_json::from_str::<BorrowedObject<'_>>(text);
@@ -869,6 +1184,7 @@ mod object_materialization_tests {
             }
             let input = format!("{{{}}}", entries.join(","));
             compare(&input);
+            compare_slots(&input);
             // Truncations and trailing invalid bytes must fail in the same way.
             compare(&input[..input.len() - 1]);
             compare(&(input + "!"));
