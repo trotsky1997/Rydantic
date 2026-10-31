@@ -100,7 +100,8 @@ class ToolkitPackagingTests(unittest.TestCase):
         knowledge = {v: json.loads((CLI / f"knowledge/stable-{v}.json").read_text()) for v in ("0.6.0", "0.7.0", "0.8.0")}
         schema = json.loads((CLI / "protocol-v1.schema.json").read_text())
         self.assertEqual(compat["cli"]["version"], crate["package"]["version"])
-        self.assertFalse(crate["package"]["publish"])
+        self.assertEqual(crate["package"]["publish"], ["crates-io"])
+        self.assertEqual((CLI / "LICENSE").read_bytes(), (ROOT / "LICENSE").read_bytes())
         self.assertEqual(compat["cli"]["protocol"], schema["properties"]["schema_version"]["const"])
         for version, bundle in knowledge.items():
             self.assertEqual(bundle["core_version"], version)

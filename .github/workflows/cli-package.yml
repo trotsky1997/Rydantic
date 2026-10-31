@@ -1,0 +1,56 @@
+name: CLI package acceptance
+
+"on":
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Builds and acceptance only: no upload to crates.io, tag or GitHub Release.
+permissions:
+  contents: read
+
+concurrency:
+  group: cli-package-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    name: Standalone CLI / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    env:
+      RUSTUP_TOOLCHAIN: 1.98.1
+      CARGO_INCREMENTAL: "0"
+      CARGO_PROFILE_DEV_DEBUG: "0"
+      CARGO_PROFILE_TEST_DEBUG: "0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install tested Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - name: Install tested Rust toolchain
+        run: rustup toolchain install 1.98.1 --profile minimal
+      - name: Verify CLI release manifest and distribution checks
+        run: |
+          python scripts/release_cli.py check-manifest --tag cli-v0.1.0
+          python -m unittest discover -s scripts -p 'test_cli_distribution.py' -v
+          python -m unittest discover -s scripts -p 'test_release_cli.py' -v
+      - name: Package and verify without publication
+        run: cargo package --locked -p rydantic-cli
+      - name: Fresh Cargo home, extracted package tests and installed executable
+        run: python scripts/check_cli_distribution.py --archive target/package/rydantic-cli-0.1.0.crate --work-parent "${{ runner.temp }}" --receipt cli-package-receipt.json
+      - name: Retain exact package and acceptance receipt (not a release)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: cli-package-${{ matrix.os }}
+          path: |
+            target/package/rydantic-cli-0.1.0.crate
+            cli-package-receipt.json
+          if-no-files-found: error
