@@ -24,6 +24,7 @@ From this directory:
 npm ci --ignore-scripts --no-audit --no-fund
 npm test
 npm ls undici --all
+npm ls minimatch --all
 ```
 
 The tests use synthetic data and loopback HTTP servers. They do not log in,
@@ -64,3 +65,40 @@ When upgrading pi, re-evaluate the version-qualified override, installed lockfil
 and tests together. Remove it only when the upstream dependency resolves to an
 appropriate patched release. Do not silently broaden it to every package or
 accept an untested parent downgrade.
+
+## Scoped minimatch override (2026-10-31)
+
+Issue [#154](https://github.com/trotsky1997/Rydantic/issues/154) tracks a separate
+Dependabot update failure: pi-coding-agent 1.3.0 pins minimatch 10.2.6. A second
+override under **that parent/version only** selects **11.0.1**. It does not change
+the pi versions, the undici override above, or the supported Node baselines.
+Reinstall with `npm ci`; the lockfile includes the official artifact integrity
+and the new `@isaacs/nonrecursive-glob-match` dependency.
+
+[GHSA-g3hv-75wg-m249 / CVE-2026-118764](https://github.com/isaacs/minimatch/security/advisories/GHSA-g3hv-75wg-m249)
+identifies 10.2.6 as affected and 11.0.1 as patched for excessive CPU/memory use
+from attacker-controlled globs with `optimizationLevel >= 2`. This is an affected
+installed dependency, **not a demonstrated bridge exploit**. The inspected pi
+1.3.0 unbundled callers are model-resolver (`nocase: true`) and package-manager
+(default options); neither opts into level 2. The bridge does not directly call
+minimatch. This source inspection is not an exhaustive reachability proof.
+
+**Major dependency upgrade warning:** minimatch 11 changes matcher internals and
+removes APIs such as `makeRe` and `AST`; it is not a general drop-in replacement
+for arbitrary minimatch consumers. The inspected pi callers use the retained
+named `minimatch` function. Level-2 preprocessing now caps generated alternatives
+using `braceExpandMax` (default 100,000), so exceeding the cap can discard
+alternatives and change matching results. Do not describe this as lossless or as
+preserving all v10 glob semantics. Users extending the SDK's glob behavior should
+check their own patterns and API usage before upgrading; no stored application
+data or credentials are migrated by this dependency update.
+
+Regressions cover SDK-local resolution, the real SDK model-glob selector's order,
+deduplication and no-match diagnostics, representative package-path globs, and a
+small capped level-2 fixture in a time-limited subprocess. Existing real
+ModelRuntime loopback tests cover bridge transport behavior. These checks do not
+prove universal performance bounds, live provider acceptance, or package-manager
+installation behavior. pi's CLI/RPC bundles contain embedded matcher code;
+**npm overrides do not rewrite it**, and this change makes no bundled-entrypoint
+security claim. Keep the bundle boundary and remaining dependency advisories
+separate from the installed unbundled SDK fix.
