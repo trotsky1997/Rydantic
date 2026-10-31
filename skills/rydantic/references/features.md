@@ -63,7 +63,7 @@ the desired alternative and preserve final typed validation where it is required
 Select [stable 0.7.0](stable-0.7.0.md) only for that exact core/derive pair.
 It additionally provides `settings`, `partial-json`, `phone`, `country` and
 `currency`; the 0.6.0 absences above must not be applied to 0.7.0. The optional
-CLI supports exact 0.6.0 and 0.7.0 knowledge; check capabilities for older builds.
+CLI supports exact 0.6.0, 0.7.0 and 0.8.0 knowledge; check capabilities for older builds.
 Track-specific manifests, locks and
 feature lists are recorded in [compatibility data](../compatibility.json).
 Do not replace frozen evaluation cohorts when adding a newer supported track.
@@ -76,3 +76,10 @@ core and derive. Do not select it merely because a manifest says
 `0.8.0-beta.1`: the published beta predates the workspace OpenAPI feature.
 Missing lock/source evidence or another revision means unverified, not supported.
 No CLI knowledge is added by this source track.
+
+## Published 0.8.0 track
+
+Select [stable 0.8.0](stable-0.8.0.md) for the exact registry pair. It adds
+`openapi` to the 0.7.0 feature names and provides validation context/pipelines
+without new feature flags. Context auto-trait changes require migration review.
+This is not the source snapshot or a beta; unknown versions remain unverified.

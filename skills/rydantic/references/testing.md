@@ -86,3 +86,22 @@ rejection compiled but failed two of these tests. This is fixture sensitivity,
 not mutation testing of Rydantic itself. The unchanged registry consumers also
 passed their six (0.6.0) and eight (0.7.0) tests with `--locked` after explicit
 cache preparation. These local receipts do not pre-claim CI or other platforms.
+
+## Independent 0.8.0 consumer
+
+`assets/stable-0.8.0/` pins registry core and derive 0.8.0 independently. It retains
+the eight 0.7-style typed/dynamic/settings/partial-JSON contracts on the new release,
+and adds context, pipelines, OpenAPI components and negative unwind-safety checks.
+The old consumers and frozen evaluation fixtures are unchanged.
+
+    cargo +1.98.1 test --manifest-path assets/stable-0.8.0/Cargo.toml --frozen
+
+CI includes this consumer separately. Report its actual run outcome; no other
+platform, CLI distribution or real Agent evaluation is implied.
+
+On 2026-10-31, Linux x86_64, Rust 1.98.1: the 0.8.0 registry consumer passed
+16 integration tests and four compile-fail doc tests with `--frozen` after explicit
+registry cache preparation. Both core/derive resolved from crates.io, not local
+paths or Git. The unchanged 0.6.0 and 0.7.0 consumers passed six and eight tests
+respectively with `--locked`. These receipts are local, not pre-claims about CI,
+macOS, all optional features, distribution or Agent efficacy.

@@ -97,7 +97,7 @@ class ToolkitPackagingTests(unittest.TestCase):
     def test_versioned_compatibility_matches_actual_artifacts(self):
         compat = json.loads((SKILL / "compatibility.json").read_text())
         crate = tomllib.loads((CLI / "Cargo.toml").read_text())
-        knowledge = {v: json.loads((CLI / f"knowledge/stable-{v}.json").read_text()) for v in ("0.6.0", "0.7.0")}
+        knowledge = {v: json.loads((CLI / f"knowledge/stable-{v}.json").read_text()) for v in ("0.6.0", "0.7.0", "0.8.0")}
         schema = json.loads((CLI / "protocol-v1.schema.json").read_text())
         self.assertEqual(compat["cli"]["version"], crate["package"]["version"])
         self.assertFalse(crate["package"]["publish"])
@@ -109,7 +109,7 @@ class ToolkitPackagingTests(unittest.TestCase):
         self.assertEqual(compat["beta_tracks"], [])
         self.assertEqual(compat["cli"]["core_versions"], list(knowledge))
         tracks = compat["core_tracks"]
-        self.assertEqual([t["version"] for t in tracks], ["0.6.0", "0.7.0"])
+        self.assertEqual([t["version"] for t in tracks], ["0.6.0", "0.7.0", "0.8.0"])
         for track in tracks:
             with self.subTest(version=track["version"]):
                 if track["version"] in compat["cli"]["core_versions"]:
