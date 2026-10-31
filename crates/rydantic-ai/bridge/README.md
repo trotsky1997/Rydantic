@@ -6,9 +6,19 @@ crates. It is a local development bridge, not a production service.
 
 ## Install and test
 
-Use an up-to-date, security-patched Node release on a supported release line.
-`engines.node` (`>=22.19.0`) describes API compatibility, **not** a minimum secure
-Node version. From this directory:
+Use an up-to-date, security-patched Node **22.x >=22.23.4** or **24.x >=24.22.1**.
+These are the audited support baselines, not a guarantee against future security
+issues. CI tests both exact baselines and the moving `22` / `24` release tracks.
+Other Node major versions are not currently supported by this bridge.
+
+**Breaking runtime requirement:** the previous `>=22.19.0` API-only range is no
+longer the bridge support policy. Upgrade Node itself before reinstalling with
+`npm ci`; an npm override cannot update Node's built-in fetch implementation.
+No application data or credentials are migrated. npm normally only warns about
+unsupported engines; this is not a startup security enforcement mechanism.
+See [the dated runtime audit](RUNTIME-SECURITY.md) for evidence and limits.
+
+From this directory:
 
 ```sh
 npm ci --ignore-scripts --no-audit --no-fund
@@ -27,7 +37,8 @@ They do not establish live OAuth/provider acceptance.
 Issue [#107](https://github.com/trotsky1997/Rydantic/issues/107) tracks an affected
 transitive dependency: pi-coding-agent 1.3.0 pins undici 8.10.2. The bridge overrides
 **that parent/version only** to undici **8.12.2**, retaining the existing pi package
-versions and Node engine floor. The lockfile pins the official registry artifact
+versions and the upstream undici API floor (not the bridge support baseline).
+The lockfile pins the official registry artifact
 and integrity; the regression test checks SDK-local resolution and dispatcher API
 exports. A clean `npm ci` is required to update an existing installation.
 

@@ -13,13 +13,13 @@ const sdkRequire = createRequire(import.meta.resolve('@earendil-works/pi-coding-
 const undici = sdkRequire('undici');
 const nativeFetch = globalThis.fetch;
 
-test('SDK resolves the narrowly pinned patched undici with the same Node engine floor', () => {
+test('SDK resolves the narrowly pinned patched undici without changing its upstream engine floor', () => {
   const manifest = JSON.parse(readFileSync(new URL('./package.json', import.meta.url)));
   const lock = JSON.parse(readFileSync(new URL('./package-lock.json', import.meta.url)));
   const installed = sdkRequire('undici/package.json');
   assert.equal(manifest.overrides['@earendil-works/pi-coding-agent@1.3.0'].undici, '8.12.2');
   assert.equal(installed.version, '8.12.2');
-  assert.equal(installed.engines.node, manifest.engines.node);
+  assert.equal(installed.engines.node, '>=22.19.0');
   const entries = Object.entries(lock.packages).filter(([path]) => path.endsWith('/undici'));
   assert.equal(entries.length, 1);
   assert.equal(entries[0][1].version, installed.version);
