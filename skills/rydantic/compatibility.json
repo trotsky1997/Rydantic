@@ -20,7 +20,8 @@
     ],
     "core_versions": [
       "0.6.0",
-      "0.7.0"
+      "0.7.0",
+      "0.8.0"
     ]
   },
   "core_tracks": [
@@ -86,6 +87,43 @@
         "partial-json"
       ],
       "consumer_toolchain": "1.98.1"
+    },
+    {
+      "version": "0.8.0",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "derive_version": "0.8.0",
+      "reference": "references/stable-0.8.0.md",
+      "consumer_manifest": "assets/stable-0.8.0/Cargo.toml",
+      "consumer_lock": "assets/stable-0.8.0/Cargo.lock",
+      "default_features": [
+        "derive"
+      ],
+      "available_features": [
+        "axum",
+        "capnp",
+        "chrono",
+        "country",
+        "currency",
+        "decimal",
+        "derive",
+        "dynamic",
+        "mysql",
+        "openapi",
+        "partial-json",
+        "phone",
+        "postgres",
+        "settings",
+        "sqlite",
+        "sqlx"
+      ],
+      "consumer_features": [
+        "derive",
+        "dynamic",
+        "settings",
+        "partial-json",
+        "openapi"
+      ],
+      "consumer_toolchain": "1.98.1"
     }
   ],
   "beta_tracks": [],
@@ -116,6 +154,22 @@
         "test",
         "--manifest-path",
         "assets/stable-0.7.0/Cargo.toml",
+        "--frozen"
+      ],
+      "working_directory": "skill-root",
+      "requires_execution_authorization": true,
+      "verification": "typed-tests-and-explicit-structural-assertions"
+    },
+    {
+      "id": "stable-080-contracts",
+      "core_version": "0.8.0",
+      "manifest": "assets/stable-0.8.0/Cargo.toml",
+      "command": [
+        "cargo",
+        "+1.98.1",
+        "test",
+        "--manifest-path",
+        "assets/stable-0.8.0/Cargo.toml",
         "--frozen"
       ],
       "working_directory": "skill-root",
