@@ -1,7 +1,8 @@
-# Rydantic CLI (P0, unpublished)
+# Rydantic CLI (P0, registry publication pending)
 
 Thin, static, offline discovery and exact-version explanations for Coding Agents.
-This crate is `publish = false`. It links no Rydantic validation/codegen engine and
+This independent package is prepared for crates.io, but has not been published.
+It links no Rydantic validation/codegen engine and
 never starts Cargo, rustup, a shell, a build script, a proc macro or project code.
 It makes no network requests and writes no files. Running the executable is
 read-only; building it with Cargo is a separate, explicit code-execution step.
@@ -14,8 +15,10 @@ cargo run -p rydantic-cli --frozen -- doctor --workspace . --format json
 cargo run -p rydantic-cli --frozen -- explain RD_LOCAL_RULES_REQUIRED --core-version 0.6.0 --format json
 ```
 
-Do not run `cargo install rydantic-cli`: there is no registry release. No global
-installation, credentials or telemetry are needed. `--offline` is accepted for
+Do not run `cargo install rydantic-cli` yet: there is no verified registry release.
+See [standalone distribution](DISTRIBUTION.md) for the selected installation path,
+prepublication checks and remaining release gates. No global installation,
+credentials or telemetry are needed to use the workspace build. `--offline` is accepted for
 clarity, but all commands are always offline. It is not an OS sandbox.
 
 ## Commands and limits
