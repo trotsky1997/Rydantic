@@ -54,7 +54,8 @@ test('SDK-local minimatch retains representative package path matching', () => {
 });
 
 test('level-2 glob preprocessing respects a small expansion bound', () => {
-  // Short fixture + small cap, isolated with a wall-time limit. Never run an
+  // Short fixture + small cap, isolated with a generous startup wall-time limit.
+  // This is an expansion-bound check, not a speed benchmark. Never run an
   // unbounded DoS payload. This fails on 10.2.6 (12 rows) and passes on 11.0.1 (8).
   const result = spawnSync(process.execPath, ['--input-type=module', '-e', `
     import { createRequire } from 'node:module';
@@ -64,7 +65,7 @@ test('level-2 glob preprocessing respects a small expansion bound', () => {
       { optimizationLevel: 2, braceExpandMax: 8 });
     if (match.globParts.length > 8) process.exit(1);
     console.log(match.globParts.length);
-  `], { encoding: 'utf8', timeout: 2000, maxBuffer: 1024 });
+  `], { encoding: 'utf8', timeout: 10_000, maxBuffer: 1024 });
   assert.equal(result.error, undefined);
   assert.equal(result.status, 0, result.stderr);
   assert.equal(result.stdout.trim(), '8');
