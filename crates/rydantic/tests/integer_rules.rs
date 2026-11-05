@@ -51,15 +51,15 @@ fn check<T: JsonType + Debug>(value: &T, rules: &Rules) {
     at_value(&mut frozen, |ctx| {
         original_numeric_rules(encoded.as_number().unwrap(), rules, ctx)
     });
-    let actual = serde_json::to_value(actual.result()).unwrap();
+    let actual = actual.result().map_err(|errors| errors.to_json());
     assert_eq!(
         actual,
-        serde_json::to_value(generic.result()).unwrap(),
+        generic.result().map_err(|errors| errors.to_json()),
         "native vs generic: value={value:?}, rules={rules:?}"
     );
     assert_eq!(
         actual,
-        serde_json::to_value(frozen.result()).unwrap(),
+        frozen.result().map_err(|errors| errors.to_json()),
         "native vs frozen: value={value:?}, rules={rules:?}"
     );
 }

@@ -1019,8 +1019,8 @@ mod object_materialization_tests {
                 ignore,
             );
             assert_eq!(
-                serde_json::to_value(old_ctx.result()).unwrap(),
-                serde_json::to_value(new_ctx.result()).unwrap()
+                old_ctx.result().map_err(|errors| errors.to_json()),
+                new_ctx.result().map_err(|errors| errors.to_json())
             );
             match (old, new) {
                 (Some(mut old), Some(new)) => {
