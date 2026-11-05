@@ -17,6 +17,7 @@ all-features = true
 [features]
 default = ["derive"]
 derive = ["dep:rydantic-derive"]
+serde = ["dep:serde", "rydantic-derive?/serde"]
 partial-json = ["dep:jiter"]
 settings = []
 jsonrpc = []
@@ -30,17 +31,18 @@ currency = ["dep:iso_currency"]
 capnp = ["dep:capnp", "rydantic-derive?/capnp"]
 grpc = ["capnp", "dep:tonic", "dep:bytes"]
 axum = ["dep:axum"]
-sqlx = ["dep:sqlx", "dep:sha2"]
+sqlx = ["dep:sqlx", "dep:sha2", "serde"]
 sqlite = ["sqlx", "sqlx/sqlite-bundled"]
 postgres = ["sqlx", "sqlx/postgres", "sqlx/tls-rustls-ring"]
 mysql = ["sqlx", "sqlx/mysql-rsa", "sqlx/tls-rustls-ring"]
 
 [dependencies]
 jiter = { version = "=0.17.0", default-features = false, optional = true }
-serde.workspace = true
+serde = { workspace = true, optional = true }
+serde_core.workspace = true
 serde_json.workspace = true
 regex.workspace = true
-email_address = "0.2"
+email_address = { version = "0.2", default-features = false }
 phonenumber = { version = "=0.3.10", optional = true }
 rust_iso3166 = { version = "=0.2.0", default-features = false, optional = true }
 iso_currency = { version = "=0.7.1", default-features = false, optional = true }
@@ -71,6 +73,10 @@ workspace = true
 [[example]]
 name = "dates_decimal"
 required-features = ["chrono", "decimal"]
+
+[[example]]
+name = "pydantic_benchmark"
+required-features = ["serde"]
 
 [[example]]
 name = "auto_capnp"

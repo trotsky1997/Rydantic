@@ -169,13 +169,55 @@ fn number(expr: Expr) -> syn::Result<String> {
             "numeric constraint must be a finite numeric literal",
         )
     })?;
-    value.parse::<serde_json::Number>().map_err(|_| {
-        syn::Error::new(
+    if !valid_json_number(&value) || !value.parse::<f64>().is_ok_and(f64::is_finite) {
+        return Err(syn::Error::new(
             expr.span(),
             "numeric constraint must be representable in JSON",
-        )
-    })?;
+        ));
+    }
     Ok(value)
+}
+
+fn valid_json_number(value: &str) -> bool {
+    let bytes = value.as_bytes();
+    let mut index = 0;
+    if bytes.get(index) == Some(&b'-') {
+        index += 1;
+    }
+    match bytes.get(index).copied() {
+        Some(b'0') => index += 1,
+        Some(b'1'..=b'9') => {
+            index += 1;
+            while bytes.get(index).is_some_and(|digit| digit.is_ascii_digit()) {
+                index += 1;
+            }
+        }
+        _ => return false,
+    }
+    if bytes.get(index) == Some(&b'.') {
+        index += 1;
+        let start = index;
+        while bytes.get(index).is_some_and(|digit| digit.is_ascii_digit()) {
+            index += 1;
+        }
+        if index == start {
+            return false;
+        }
+    }
+    if matches!(bytes.get(index), Some(b'e' | b'E')) {
+        index += 1;
+        if matches!(bytes.get(index), Some(b'+' | b'-')) {
+            index += 1;
+        }
+        let start = index;
+        while bytes.get(index).is_some_and(|digit| digit.is_ascii_digit()) {
+            index += 1;
+        }
+        if index == start {
+            return false;
+        }
+    }
+    index == bytes.len()
 }
 
 pub fn field(attrs: &[Attribute]) -> syn::Result<Field> {

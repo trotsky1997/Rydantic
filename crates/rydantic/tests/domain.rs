@@ -1,19 +1,13 @@
 #![cfg(any(feature = "phone", feature = "country", feature = "currency"))]
 use rydantic::{Context, JsonType, SchemaContext, SchemaMode, Value};
-use serde::{de::DeserializeOwned, Serialize};
 use std::{fmt::Debug, str::FromStr};
-fn contract<T: JsonType + Serialize + DeserializeOwned + FromStr + Debug>(
-    good: &[&str],
-    bad: &[&str],
-) {
+fn contract<T: JsonType + FromStr + Debug>(good: &[&str], bad: &[&str]) {
     for s in good {
         let value = Value::String((*s).into());
         let mut ctx = Context::new();
         let decoded = T::decode(value.clone(), &mut ctx, false);
         let decoded = ctx.finish(decoded).unwrap();
-        assert_eq!(serde_json::to_value(&decoded).unwrap(), value);
         assert_eq!(decoded.encode(&mut Context::new()), value);
-        assert!(serde_json::from_value::<T>(value.clone()).is_ok());
         for mode in [SchemaMode::Input, SchemaMode::Output] {
             let schema = T::schema(&mut SchemaContext::new(mode), false);
             assert!(schema.get("format").is_none());
@@ -28,7 +22,6 @@ fn contract<T: JsonType + Serialize + DeserializeOwned + FromStr + Debug>(
         serde_json::json!([]),
         serde_json::json!({}),
     ]) {
-        assert!(serde_json::from_value::<T>(value.clone()).is_err());
         for coerce in [false, true] {
             let mut ctx = Context::new();
             let result = T::decode(value.clone(), &mut ctx, coerce);

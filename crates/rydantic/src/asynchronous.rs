@@ -142,6 +142,7 @@ impl<T: Model + AsyncCheck> std::ops::Deref for AsyncValidated<T> {
         &self.0
     }
 }
+#[cfg(feature = "serde")]
 impl<T: Model + AsyncCheck> serde::Serialize for AsyncValidated<T> {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut ctx = Context::new();

@@ -22,7 +22,7 @@ fn check<T: JsonType + FromStr + PartialEq + Debug>(text: &str, name: &str) {
             );
         });
     }
-    let expected_errors = serde_json::to_value(expected_context.result()).unwrap();
+    let expected_errors = expected_context.result();
     let raw: &RawValue = serde_json::from_str(text).unwrap();
     for input in [Input::Owned(Value::Number(number)), Input::Borrowed(raw)] {
         for coerce in [false, true] {
@@ -30,7 +30,7 @@ fn check<T: JsonType + FromStr + PartialEq + Debug>(text: &str, name: &str) {
             let actual = context.at("value", |ctx| T::decode_input(input.clone(), ctx, coerce));
             assert_eq!(actual, expected, "{name}: {text}, coerce={coerce}");
             assert_eq!(
-                serde_json::to_value(context.result()).unwrap(),
+                context.result(),
                 expected_errors,
                 "{name}: {text}, coerce={coerce}"
             );
@@ -106,7 +106,7 @@ fn integer_string_coercion_and_non_number_errors_are_unchanged() {
             assert_eq!(actual,text.parse::<$ty>().ok());
             let mut expected=Context::new();
             if actual.is_none() { expected.push(ValidationError::new("int_parsing",concat!("string must contain a valid ",stringify!($ty))).with_stage(Stage::Parse)); }
-            assert_eq!(serde_json::to_value(ctx.result()).unwrap(),serde_json::to_value(expected.result()).unwrap());
+            assert_eq!(ctx.result(), expected.result());
         }
         for value in [Value::Null, Value::Bool(true), Value::String("42".into()),serde_json::json!([]),serde_json::json!({})] {
             let mut ctx=Context::new();assert!(<$ty>::decode(value,&mut ctx,false).is_none());

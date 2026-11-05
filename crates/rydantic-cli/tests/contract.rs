@@ -77,8 +77,10 @@ fn capabilities_are_honest() {
     assert!(v["data"]["linked_engines"]["core"].is_null());
     assert_eq!(
         v["data"]["commands"],
-        json!(["capabilities", "doctor", "explain"])
+        json!(["capabilities", "doctor", "explain", "tsp"])
     );
+    assert_eq!(v["data"]["type_server_protocol_version"], "0.4.1");
+    assert_eq!(v["data"]["type_server_multi_connection"], false);
 }
 #[test]
 fn invalid_calls_are_single_envelopes() {

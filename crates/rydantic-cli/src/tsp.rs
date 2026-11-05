@@ -1,0 +1,631 @@
+use serde_json::{json, Map, Value};
+use std::{
+    collections::{HashMap, HashSet},
+    env, fs,
+    io::{self, BufRead, BufReader, BufWriter, Write},
+    path::{Path, PathBuf},
+};
+use url::Url;
+
+const VERSION: &str = "0.4.1";
+const MAX_HEADER_BYTES: usize = 8 * 1024;
+const MAX_FRAME_BYTES: usize = 8 * 1024 * 1024;
+
+pub fn run() -> i32 {
+    let stdin = io::stdin();
+    let stdout = io::stdout();
+    let mut input = BufReader::new(stdin.lock());
+    let mut output = BufWriter::new(stdout.lock());
+    match serve(&mut input, &mut output) {
+        Ok(code) => code,
+        Err(_) => {
+            let _ = writeln!(io::stderr().lock(), "rydantic TSP transport failed");
+            4
+        }
+    }
+}
+
+fn serve<R: BufRead, W: Write>(input: &mut R, output: &mut W) -> io::Result<i32> {
+    let mut server = Server::default();
+    loop {
+        let Some(frame) = read_frame(input)? else {
+            return Ok(if server.shutdown { 0 } else { 1 });
+        };
+        let message = match serde_json::from_slice::<Value>(&frame) {
+            Ok(message) => message,
+            Err(_) => {
+                write_frame(output, &rpc_error(Value::Null, -32700, "Parse error."))?;
+                continue;
+            }
+        };
+        let outcome = server.dispatch(&message);
+        for notification in outcome.notifications {
+            write_frame(output, &notification)?;
+        }
+        if let Some(response) = outcome.response {
+            write_frame(output, &response)?;
+        }
+        if let Some(code) = outcome.exit {
+            return Ok(code);
+        }
+    }
+}
+
+fn read_frame<R: BufRead>(input: &mut R) -> io::Result<Option<Vec<u8>>> {
+    let mut content_length = None;
+    let mut header_bytes = 0;
+    let mut line = String::new();
+    loop {
+        line.clear();
+        let bytes = input.read_line(&mut line)?;
+        if bytes == 0 {
+            if header_bytes == 0 {
+                return Ok(None);
+            }
+            return Err(io::Error::new(
+                io::ErrorKind::UnexpectedEof,
+                "incomplete JSON-RPC header",
+            ));
+        }
+        header_bytes += bytes;
+        if header_bytes > MAX_HEADER_BYTES {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "JSON-RPC header is too large",
+            ));
+        }
+        if line == "\r\n" || line == "\n" {
+            break;
+        }
+        let (name, value) = line
+            .trim_end_matches(['\r', '\n'])
+            .split_once(':')
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "invalid JSON-RPC header"))?;
+        if name.eq_ignore_ascii_case("content-length") {
+            if content_length.is_some() {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "duplicate Content-Length",
+                ));
+            }
+            content_length = Some(value.trim().parse::<usize>().map_err(|_| {
+                io::Error::new(io::ErrorKind::InvalidData, "invalid Content-Length")
+            })?);
+        }
+    }
+    let length = content_length
+        .filter(|length| *length <= MAX_FRAME_BYTES)
+        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "invalid Content-Length"))?;
+    let mut frame = vec![0; length];
+    input.read_exact(&mut frame)?;
+    Ok(Some(frame))
+}
+
+fn write_frame<W: Write>(output: &mut W, message: &Value) -> io::Result<()> {
+    let body = serde_json::to_vec(message)
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "invalid JSON-RPC response"))?;
+    write!(output, "Content-Length: {}\r\n\r\n", body.len())?;
+    output.write_all(&body)?;
+    output.flush()
+}
+
+struct RpcError {
+    code: i64,
+    message: &'static str,
+}
+
+struct Outcome {
+    response: Option<Value>,
+    notifications: Vec<Value>,
+    exit: Option<i32>,
+}
+
+#[derive(Default)]
+struct Server {
+    root: Option<PathBuf>,
+    documents: HashMap<String, i64>,
+    snapshot: u64,
+    initialized: bool,
+    shutdown: bool,
+}
+
+impl Server {
+    fn dispatch(&mut self, message: &Value) -> Outcome {
+        let id = message.get("id").cloned();
+        let mut notifications = Vec::new();
+        let method = message.get("method").and_then(Value::as_str);
+        let valid_id = id
+            .as_ref()
+            .is_none_or(|id| id.is_string() || id.is_number() || id.is_null());
+        if message.get("jsonrpc").and_then(Value::as_str) != Some("2.0")
+            || method.is_none()
+            || !valid_id
+        {
+            return Outcome {
+                response: Some(rpc_error(
+                    if valid_id {
+                        id.unwrap_or(Value::Null)
+                    } else {
+                        Value::Null
+                    },
+                    -32600,
+                    "Invalid request.",
+                )),
+                notifications,
+                exit: None,
+            };
+        }
+        let method = method.unwrap_or_default();
+        let params = message.get("params").unwrap_or(&Value::Null);
+        if method == "exit" {
+            return Outcome {
+                response: None,
+                notifications,
+                exit: Some(if self.shutdown { 0 } else { 1 }),
+            };
+        }
+        let result = self.handle(method, params, &mut notifications);
+        let response = id.map(|id| match result {
+            Ok(Some(result)) => rpc_result(id, result),
+            Ok(None) => rpc_error(id, -32601, "Method not found."),
+            Err(error) => rpc_error(id, error.code, error.message),
+        });
+        Outcome {
+            response,
+            notifications,
+            exit: None,
+        }
+    }
+
+    fn handle(
+        &mut self,
+        method: &str,
+        params: &Value,
+        notifications: &mut Vec<Value>,
+    ) -> Result<Option<Value>, RpcError> {
+        match method {
+            "initialize" => {
+                let params = object(params)?;
+                if self.initialized {
+                    return Err(RpcError {
+                        code: -32600,
+                        message: "Server is already initialized.",
+                    });
+                }
+                self.root = root_from_initialize(params).or_else(|| env::current_dir().ok());
+                self.initialized = true;
+                Ok(Some(json!({
+                    "capabilities": {
+                        "textDocumentSync": {"openClose": true, "change": 1}
+                    },
+                    "serverInfo": {
+                        "name": "rydantic",
+                        "version": env!("CARGO_PKG_VERSION")
+                    }
+                })))
+            }
+            "initialized" | "$/cancelRequest" => Ok(None),
+            "shutdown" => {
+                self.shutdown = true;
+                Ok(Some(Value::Null))
+            }
+            "textDocument/didOpen" => {
+                let document = params
+                    .get("textDocument")
+                    .ok_or(RpcError::invalid_params())?;
+                let document = object(document)?;
+                let uri = required_string(document, "uri")?;
+                if document.get("text").and_then(Value::as_str).is_none() {
+                    return Err(RpcError::invalid_params());
+                }
+                let version = document
+                    .get("version")
+                    .and_then(Value::as_i64)
+                    .ok_or(RpcError::invalid_params())?;
+                self.documents.insert(uri.to_owned(), version);
+                self.advance_snapshot(notifications)?;
+                Ok(None)
+            }
+            "textDocument/didChange" => {
+                let document = params
+                    .get("textDocument")
+                    .ok_or(RpcError::invalid_params())?;
+                let document = object(document)?;
+                let uri = required_string(document, "uri")?;
+                let changes = params
+                    .get("contentChanges")
+                    .and_then(Value::as_array)
+                    .ok_or(RpcError::invalid_params())?;
+                if changes
+                    .last()
+                    .and_then(|change| change.get("text"))
+                    .and_then(Value::as_str)
+                    .is_none()
+                {
+                    return Err(RpcError::invalid_params());
+                }
+                let version = document
+                    .get("version")
+                    .and_then(Value::as_i64)
+                    .ok_or(RpcError::invalid_params())?;
+                self.documents.insert(uri.to_owned(), version);
+                self.advance_snapshot(notifications)?;
+                Ok(None)
+            }
+            "textDocument/didClose" => {
+                let document = params
+                    .get("textDocument")
+                    .ok_or(RpcError::invalid_params())?;
+                let document = object(document)?;
+                let uri = required_string(document, "uri")?;
+                self.documents.remove(uri);
+                self.advance_snapshot(notifications)?;
+                Ok(None)
+            }
+            "workspace/didChangeConfiguration" | "workspace/didChangeWatchedFiles" => {
+                object(params)?;
+                self.advance_snapshot(notifications)?;
+                Ok(None)
+            }
+            "workspace/didChangeWorkspaceFolders" => {
+                let params = object(params)?;
+                let event = object(params.get("event").ok_or(RpcError::invalid_params())?)?;
+                if let Some(uri) = event
+                    .get("added")
+                    .and_then(Value::as_array)
+                    .and_then(|folders| folders.first())
+                    .and_then(|folder| folder.get("uri"))
+                    .and_then(Value::as_str)
+                {
+                    self.root = file_uri_path(uri);
+                }
+                self.advance_snapshot(notifications)?;
+                Ok(None)
+            }
+            "typeServer/getSupportedProtocolVersion" => Ok(Some(json!(VERSION))),
+            "typeServer/getSnapshot" => Ok(Some(json!(self.snapshot))),
+            "typeServer/getPythonSearchPaths" => {
+                let params = object(params)?;
+                let from_uri = required_string(params, "fromUri")?;
+                self.check_snapshot(params)?;
+                Ok(Some(json!(self.search_paths(from_uri))))
+            }
+            "typeServer/resolveImport" => {
+                let params = object(params)?;
+                let source_uri = required_string(params, "sourceUri")?;
+                self.check_snapshot(params)?;
+                let descriptor = params
+                    .get("moduleDescriptor")
+                    .ok_or(RpcError::invalid_params())?;
+                let leading_dots = descriptor
+                    .get("leadingDots")
+                    .and_then(Value::as_u64)
+                    .ok_or(RpcError::invalid_params())?;
+                let name_parts = descriptor
+                    .get("nameParts")
+                    .and_then(Value::as_array)
+                    .ok_or(RpcError::invalid_params())?;
+                let mut parts = Vec::with_capacity(name_parts.len());
+                for part in name_parts {
+                    let part = part.as_str().ok_or(RpcError::invalid_params())?;
+                    if part.is_empty()
+                        || part
+                            .bytes()
+                            .any(|byte| matches!(byte, 0 | b'.' | b'/' | b'\\' | b':'))
+                    {
+                        return Err(RpcError::invalid_params());
+                    }
+                    parts.push(part.to_owned());
+                }
+                let options = params.get("options").map(object).transpose()?;
+                let skip_file_check =
+                    match options.and_then(|options| options.get("skipFileNeededCheck")) {
+                        Some(value) => value.as_bool().ok_or(RpcError::invalid_params())?,
+                        None => false,
+                    };
+                if leading_dots > 128 {
+                    return Err(RpcError::invalid_params());
+                }
+                let resolved = self
+                    .resolve_import(source_uri, leading_dots as usize, &parts, skip_file_check)
+                    .and_then(|path| file_path_uri(&path));
+                Ok(Some(resolved.map_or(Value::Null, Value::String)))
+            }
+            "typeServer/getComputedType"
+            | "typeServer/getDeclaredType"
+            | "typeServer/getExpectedType" => {
+                let params = object(params)?;
+                self.check_snapshot(params)?;
+                if params.get("arg").and_then(Value::as_object).is_none() {
+                    return Err(RpcError::invalid_params());
+                }
+                // shortcut: type queries return no result, until a Python type analyzer is added.
+                Ok(Some(Value::Null))
+            }
+            "typeServer/connection" => {
+                let params = object(params)?;
+                let kind = required_string(params, "kind")?;
+                let operation = required_string(params, "type")?;
+                if !["open", "close"].contains(&operation) || kind != "ipc" {
+                    return Err(RpcError::invalid_params());
+                }
+                if let Some(args) = params.get("args") {
+                    let Some(args) = args.as_array() else {
+                        return Err(RpcError::invalid_params());
+                    };
+                    if ![1, 2].contains(&args.len()) || args.iter().any(|arg| !arg.is_string()) {
+                        return Err(RpcError::invalid_params());
+                    }
+                }
+                Ok(Some(json!({
+                    "success": false,
+                    "message": "Multi-connection is not supported."
+                })))
+            }
+            _ => Err(RpcError {
+                code: -32601,
+                message: "Method not found.",
+            }),
+        }
+    }
+
+    fn check_snapshot(&self, params: &Map<String, Value>) -> Result<(), RpcError> {
+        let snapshot = params
+            .get("snapshot")
+            .and_then(Value::as_u64)
+            .ok_or(RpcError::invalid_params())?;
+        if snapshot != self.snapshot {
+            return Err(RpcError {
+                code: -32802,
+                message: "Snapshot is stale.",
+            });
+        }
+        Ok(())
+    }
+
+    fn advance_snapshot(&mut self, notifications: &mut Vec<Value>) -> Result<(), RpcError> {
+        let old = self.snapshot;
+        let new = old.checked_add(1).ok_or(RpcError {
+            code: -32603,
+            message: "Snapshot counter exhausted.",
+        })?;
+        self.snapshot = new;
+        notifications.push(json!({
+            "jsonrpc": "2.0",
+            "method": "typeServer/snapshotChanged",
+            "params": {"old": old, "new": new}
+        }));
+        Ok(())
+    }
+
+    fn search_paths(&self, from_uri: &str) -> Vec<String> {
+        let context = file_uri_path(from_uri);
+        let root = self.root.clone().or_else(|| {
+            context.as_ref().map(|path| {
+                if path.is_dir() {
+                    path.clone()
+                } else {
+                    path.parent().unwrap_or(path).to_path_buf()
+                }
+            })
+        });
+        let mut paths = Vec::new();
+        let mut seen = HashSet::new();
+        if let Some(root) = root {
+            push_directory(&mut paths, &mut seen, root.clone());
+            push_directory(&mut paths, &mut seen, root.join("src"));
+            for environment in [root.join(".venv"), root.join("venv")] {
+                add_environment_paths(&mut paths, &mut seen, &environment);
+            }
+        }
+        if let Some(python_path) = env::var_os("PYTHONPATH") {
+            for path in env::split_paths(&python_path) {
+                push_directory(&mut paths, &mut seen, path);
+            }
+        }
+        if let Some(environment) = env::var_os("VIRTUAL_ENV") {
+            add_environment_paths(&mut paths, &mut seen, &PathBuf::from(environment));
+        }
+        paths
+            .into_iter()
+            .map(|path| path.to_string_lossy().into_owned())
+            .collect()
+    }
+
+    fn resolve_import(
+        &self,
+        source_uri: &str,
+        leading_dots: usize,
+        parts: &[String],
+        skip_file_check: bool,
+    ) -> Option<PathBuf> {
+        if leading_dots == 0 {
+            return self
+                .search_paths(source_uri)
+                .into_iter()
+                .map(PathBuf::from)
+                .find_map(|root| resolve_module(&root, parts, skip_file_check));
+        }
+        let source_path = file_uri_path(source_uri)?;
+        let mut root = source_path.parent()?.to_path_buf();
+        for _ in 1..leading_dots {
+            root = root.parent()?.to_path_buf();
+        }
+        resolve_module(&root, parts, skip_file_check)
+    }
+}
+
+impl RpcError {
+    fn invalid_params() -> Self {
+        Self {
+            code: -32602,
+            message: "Invalid parameters.",
+        }
+    }
+}
+
+fn object(value: &Value) -> Result<&Map<String, Value>, RpcError> {
+    value.as_object().ok_or_else(RpcError::invalid_params)
+}
+
+fn required_string<'a>(value: &'a Map<String, Value>, key: &str) -> Result<&'a str, RpcError> {
+    value
+        .get(key)
+        .and_then(Value::as_str)
+        .ok_or_else(RpcError::invalid_params)
+}
+
+fn rpc_result(id: Value, result: Value) -> Value {
+    json!({"jsonrpc":"2.0","id":id,"result":result})
+}
+
+fn rpc_error(id: Value, code: i64, message: &'static str) -> Value {
+    json!({"jsonrpc":"2.0","id":id,"error":{"code":code,"message":message}})
+}
+
+fn root_from_initialize(params: &Map<String, Value>) -> Option<PathBuf> {
+    params
+        .get("workspaceFolders")
+        .and_then(Value::as_array)
+        .and_then(|folders| folders.first())
+        .and_then(|folder| folder.get("uri"))
+        .and_then(Value::as_str)
+        .and_then(file_uri_path)
+        .or_else(|| {
+            params
+                .get("rootUri")
+                .and_then(Value::as_str)
+                .and_then(file_uri_path)
+        })
+        .or_else(|| {
+            params
+                .get("rootPath")
+                .and_then(Value::as_str)
+                .map(PathBuf::from)
+        })
+}
+
+fn file_uri_path(uri: &str) -> Option<PathBuf> {
+    Url::parse(uri).ok()?.to_file_path().ok()
+}
+
+fn file_path_uri(path: &Path) -> Option<String> {
+    let absolute = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        env::current_dir().ok()?.join(path)
+    };
+    Url::from_file_path(absolute)
+        .ok()
+        .map(|uri| uri.to_string())
+}
+
+fn push_directory(paths: &mut Vec<PathBuf>, seen: &mut HashSet<PathBuf>, path: PathBuf) {
+    if !path.is_dir() {
+        return;
+    }
+    let path = if path.is_absolute() {
+        path
+    } else if let Ok(current_dir) = env::current_dir() {
+        current_dir.join(path)
+    } else {
+        return;
+    };
+    let key = fs::canonicalize(&path).unwrap_or_else(|_| path.clone());
+    if seen.insert(key) {
+        paths.push(path);
+    }
+}
+
+fn add_environment_paths(
+    paths: &mut Vec<PathBuf>,
+    seen: &mut HashSet<PathBuf>,
+    environment: &Path,
+) {
+    push_directory(paths, seen, environment.join("Lib").join("site-packages"));
+    let lib = environment.join("lib");
+    push_directory(paths, seen, lib.join("site-packages"));
+    if let Ok(entries) = fs::read_dir(lib) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if entry.file_name().to_string_lossy().starts_with("python") {
+                push_directory(paths, seen, path.join("site-packages"));
+            }
+        }
+    }
+}
+
+fn resolve_module(root: &Path, parts: &[String], skip_file_check: bool) -> Option<PathBuf> {
+    let mut module = root.to_path_buf();
+    for part in parts {
+        module.push(part);
+    }
+    let candidates = [
+        module.with_extension("pyi"),
+        module.with_extension("py"),
+        module.join("__init__.pyi"),
+        module.join("__init__.py"),
+    ];
+    for candidate in &candidates {
+        if candidate.is_file() {
+            return Some(candidate.clone());
+        }
+    }
+    if parts.is_empty() && module.is_dir() {
+        return Some(module);
+    }
+    if skip_file_check {
+        return Some(if parts.is_empty() {
+            module.join("__init__.py")
+        } else {
+            module.with_extension("py")
+        });
+    }
+    None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Cursor;
+
+    fn frame(message: Value) -> Vec<u8> {
+        let body = serde_json::to_vec(&message).unwrap();
+        format!("Content-Length: {}\r\n\r\n", body.len())
+            .into_bytes()
+            .into_iter()
+            .chain(body)
+            .collect()
+    }
+
+    #[test]
+    fn speaks_tsp_and_advances_stale_snapshots() {
+        let input = [
+            frame(json!({"jsonrpc":"2.0","id":1,"method":"initialize","params":{}})),
+            frame(json!({"jsonrpc":"2.0","method":"initialized","params":{}})),
+            frame(json!({"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/model.py","version":1,"text":""}}})),
+            frame(json!({"jsonrpc":"2.0","id":2,"method":"typeServer/getSupportedProtocolVersion"})),
+            frame(json!({"jsonrpc":"2.0","id":3,"method":"typeServer/getPythonSearchPaths","params":{"fromUri":"file:///tmp/model.py","snapshot":0}})),
+            frame(json!({"jsonrpc":"2.0","id":4,"method":"shutdown"})),
+            frame(json!({"jsonrpc":"2.0","method":"exit"})),
+        ]
+        .concat();
+        let mut reader = BufReader::new(Cursor::new(input));
+        let mut output = Vec::new();
+        assert_eq!(serve(&mut reader, &mut output).unwrap(), 0);
+
+        let mut reader = BufReader::new(output.as_slice());
+        let mut responses = Vec::new();
+        while let Some(frame) = read_frame(&mut reader).unwrap() {
+            responses.push(serde_json::from_slice::<Value>(&frame).unwrap());
+        }
+        assert_eq!(
+            responses[0]["result"]["capabilities"]["textDocumentSync"]["change"],
+            1
+        );
+        assert_eq!(responses[1]["params"], json!({"old":0,"new":1}));
+        assert_eq!(responses[2]["result"], VERSION);
+        assert_eq!(responses[3]["error"]["code"], -32802);
+        assert_eq!(responses[4]["result"], Value::Null);
+    }
+}

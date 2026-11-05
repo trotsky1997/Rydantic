@@ -16,10 +16,7 @@ struct Account {
 #[tokio::main]
 async fn main() -> Result<(), rydantic::ValidationErrors> {
     let account = Account::parse_validated_json_async(r#"{"name":" Alice "}"#).await?;
-    println!(
-        "{}",
-        serde_json::to_string(&account).expect("validated account")
-    );
+    println!("{}", account.get().dump_json_async().await?);
     let errors = Account::parse_json_async(r#"{"name":"taken"}"#)
         .await
         .unwrap_err();

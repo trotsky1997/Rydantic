@@ -131,9 +131,12 @@ impl Router {
     /// -32700; valid JSON with an invalid envelope produces -32600.
     /// As with serde_json::Value, duplicate object keys use the last value.
     pub fn handle_json(&self, input: &str) -> Option<Value> {
-        match serde_json::from_str::<&crate::RawValue>(input).and_then(|raw| materialize(raw, 0)) {
-            Ok(value) => self.handle_value(value),
-            Err(_) => Some(response(
+        match serde_json::from_str::<&crate::RawValue>(input)
+            .ok()
+            .and_then(|raw| materialize(raw, 0).ok())
+        {
+            Some(value) => self.handle_value(value),
+            None => Some(response(
                 Value::Null,
                 Err(Error::standard(-32700, "Parse error")),
             )),
@@ -221,29 +224,28 @@ fn response(id: Value, outcome: Result<Value, Error>) -> Value {
 // Deserialize containers as raw children: Value's arbitrary_precision/raw_value
 // visitor recognizes private object keys as internal type markers. Those keys
 // are ordinary client data, never permission to change an envelope's JSON type.
-fn materialize(raw: &crate::RawValue, depth: usize) -> Result<Value, serde_json::Error> {
+fn materialize(raw: &crate::RawValue, depth: usize) -> Result<Value, ()> {
     if depth >= 128 {
-        return Err(<serde_json::Error as serde::de::Error>::custom(
-            "JSON nesting limit exceeded",
-        ));
+        return Err(());
     }
     match raw.get().as_bytes().first() {
         Some(b'{') => {
-            let fields: BTreeMap<String, &crate::RawValue> = serde_json::from_str(raw.get())?;
+            let fields: BTreeMap<String, &crate::RawValue> =
+                serde_json::from_str(raw.get()).map_err(|_| ())?;
             fields
                 .into_iter()
                 .map(|(key, child)| Ok((key, materialize(child, depth + 1)?)))
-                .collect::<Result<serde_json::Map<String, Value>, _>>()
+                .collect::<Result<serde_json::Map<String, Value>, ()>>()
                 .map(Value::Object)
         }
         Some(b'[') => {
-            let items: Vec<&crate::RawValue> = serde_json::from_str(raw.get())?;
+            let items: Vec<&crate::RawValue> = serde_json::from_str(raw.get()).map_err(|_| ())?;
             items
                 .into_iter()
                 .map(|child| materialize(child, depth + 1))
                 .collect::<Result<Vec<_>, _>>()
                 .map(Value::Array)
         }
-        _ => serde_json::from_str(raw.get()),
+        _ => serde_json::from_str(raw.get()).map_err(|_| ()),
     }
 }

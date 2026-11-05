@@ -10,11 +10,11 @@
 //! let currency: CurrencyCode = "CNY".parse().unwrap();
 //! let phone = PhoneNumber::parse_with_region("(202) 555-0123", "US").unwrap();
 //! assert_eq!(phone.as_str(), "+12025550123");
-//! assert_eq!(serde_json::to_string(&country).unwrap(), "\"CN\"");
 //! assert_eq!(currency.as_str(), "CNY");
 //! # }
 //! ```
 use crate::{Context, JsonType, SchemaContext, Stage, TypeKind, ValidationError, Value};
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::{fmt, str::FromStr};
 
@@ -38,11 +38,13 @@ macro_rules! string_domain {
         impl fmt::Display for $name {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { f.write_str(self.as_str()) }
         }
+        #[cfg(feature = "serde")]
         impl Serialize for $name {
             fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
                 serializer.serialize_str(self.as_str())
             }
         }
+        #[cfg(feature = "serde")]
         impl<'de> Deserialize<'de> for $name {
             fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
                 String::deserialize(deserializer)?.parse().map_err(serde::de::Error::custom)

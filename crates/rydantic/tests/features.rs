@@ -25,7 +25,7 @@ fn borrowed_strings_keep_input_addresses_and_cow_allocates_when_needed() {
     assert!(matches!(user.note, Cow::Borrowed("hello")));
     assert_eq!(user.tags, ["one", "two"]);
     let user: Borrowed<'_> =
-        serde_json::from_str(r#"{"name":"ok","note":"HE\nLLO","tags":[]}"#).unwrap();
+        Borrowed::parse_json(r#"{"name":"ok","note":"HE\nLLO","tags":[]}"#).unwrap();
     assert!(matches!(user.note, Cow::Owned(_)));
     assert_eq!(user.note, "he\nllo");
     let dump = user.dump().unwrap();
@@ -491,6 +491,7 @@ fn flatten_defaults_and_invalid_layouts_export_matching_schemas() {
     );
 }
 
+#[cfg(feature = "serde")]
 #[test]
 fn borrowed_validated_wrapper_supports_serde() {
     use rydantic::BorrowValidated;

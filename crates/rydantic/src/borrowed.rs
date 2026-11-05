@@ -2,7 +2,10 @@ use crate::{
     rules::Rules, AsyncCheck, Context, LengthType, SchemaContext, SchemaMode, SchemaReport, Stage,
     StringType, TypeKind, ValidationError, ValidationErrors, Value,
 };
-use serde::de::{self, DeserializeSeed, Visitor};
+use serde_core::{
+    de::{self, DeserializeSeed, Visitor},
+    Deserialize,
+};
 use serde_json::{json, value::RawValue};
 use std::{
     borrow::Cow,
@@ -92,7 +95,7 @@ where
 {
     type Value = Option<Vec<T>>;
 
-    fn deserialize<D: serde::Deserializer<'de>>(
+    fn deserialize<D: serde_core::Deserializer<'de>>(
         self,
         deserializer: D,
     ) -> Result<Self::Value, D::Error> {
@@ -149,7 +152,7 @@ where
     F: Fn(Input<'de>, &mut Context, bool) -> Option<T>,
 {
     let mut deserializer = serde_json::Deserializer::from_str(raw.get());
-    serde::de::DeserializeSeed::deserialize(
+    serde_core::de::DeserializeSeed::deserialize(
         BorrowedArraySeed {
             ctx,
             coerce,
@@ -169,8 +172,8 @@ where
 // previous last-value-wins policy without constructing an intermediate map.
 struct BorrowedObject<'de>(BTreeMap<String, Input<'de>>);
 
-impl<'de> serde::Deserialize<'de> for BorrowedObject<'de> {
-    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+impl<'de> Deserialize<'de> for BorrowedObject<'de> {
+    fn deserialize<D: serde_core::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         struct ObjectVisitor;
         impl<'de> Visitor<'de> for ObjectVisitor {
             type Value = BorrowedObject<'de>;
@@ -209,7 +212,7 @@ fn deserialize_borrowed_fields<'de, D, F>(
     ignore_extra: bool,
 ) -> Result<BorrowedFields<'de>, D::Error>
 where
-    D: serde::Deserializer<'de>,
+    D: serde_core::Deserializer<'de>,
     F: Fn(&str) -> Option<usize>,
 {
     struct FieldsVisitor<F> {
@@ -244,7 +247,7 @@ where
     impl<'de, F: Fn(&str) -> Option<usize>> DeserializeSeed<'de> for KeySeed<'_, F> {
         type Value = Key;
 
-        fn deserialize<D: serde::Deserializer<'de>>(
+        fn deserialize<D: serde_core::Deserializer<'de>>(
             self,
             deserializer: D,
         ) -> Result<Key, D::Error> {
@@ -286,7 +289,7 @@ where
 
     // Use deserialize_map, not deserialize_any: private serde_json marker keys
     // remain ordinary object keys.
-    serde::Deserializer::deserialize_map(
+    serde_core::Deserializer::deserialize_map(
         deserializer,
         FieldsVisitor {
             field_count,
@@ -506,15 +509,15 @@ impl<'de, T: BorrowModel<'de>> std::ops::Deref for BorrowValidated<'de, T> {
         &self.0
     }
 }
+#[cfg(feature = "serde")]
 impl<'de, T: BorrowModel<'de>> serde::Serialize for BorrowValidated<'de, T> {
     fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
-        self.0
-            .dump()
-            .map_err(serde::ser::Error::custom)?
-            .serialize(s)
+        let value = self.0.dump().map_err(serde::ser::Error::custom)?;
+        serde::Serialize::serialize(&value, s)
     }
 }
 
+#[cfg(feature = "serde")]
 impl<'de, T: BorrowModel<'de>> serde::Deserialize<'de> for BorrowValidated<'de, T> {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let raw = <&'de RawValue as serde::Deserialize>::deserialize(deserializer)?;
@@ -648,7 +651,7 @@ impl<'de: 'a, 'a> BorrowType<'de> for Cow<'a, str> {
         match value {
             Input::Borrowed(raw) if raw.get().starts_with('"') => {
                 let mut deserializer = serde_json::Deserializer::from_str(raw.get());
-                serde::Deserializer::deserialize_str(&mut deserializer, CowVisitor)
+                serde_core::Deserializer::deserialize_str(&mut deserializer, CowVisitor)
                     .map_err(|e| ctx.push(json_error(e)))
                     .ok()
             }

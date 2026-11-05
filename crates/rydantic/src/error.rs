@@ -1,10 +1,10 @@
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{any::Any, borrow::Cow, collections::BTreeMap, fmt, sync::Arc};
 
 /// A location in a nested input. Object keys and array indices remain distinct.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(untagged)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(untagged))]
 pub enum PathSegment {
     Field(String),
     Index(usize),
@@ -53,8 +53,9 @@ impl fmt::Debug for ContextPathSegment {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
 pub enum Stage {
     Parse,
     Validate,
@@ -62,13 +63,17 @@ pub enum Stage {
 }
 
 /// Machine-readable validation failure. Raw input is deliberately not retained.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ValidationError {
     pub loc: Vec<PathSegment>,
     pub code: String,
     pub message: String,
     pub stage: Stage,
-    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, skip_serializing_if = "BTreeMap::is_empty")
+    )]
     pub params: BTreeMap<String, Value>,
 }
 
@@ -118,8 +123,9 @@ impl fmt::Display for ValidationError {
 }
 impl std::error::Error for ValidationError {}
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(transparent)]
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(transparent))]
 pub struct ValidationErrors(pub Vec<ValidationError>);
 
 impl ValidationErrors {
@@ -136,7 +142,35 @@ impl ValidationErrors {
         self.0.is_empty()
     }
     pub fn to_json(&self) -> Value {
-        serde_json::to_value(self).expect("error fields are JSON-compatible")
+        Value::Array(
+            self.0
+                .iter()
+                .map(|error| {
+                    let loc = error
+                        .loc
+                        .iter()
+                        .map(|part| match part {
+                            PathSegment::Field(field) => Value::String(field.clone()),
+                            PathSegment::Index(index) => Value::from(*index as u64),
+                        })
+                        .collect::<Vec<_>>();
+                    let mut value = serde_json::json!({
+                        "loc": loc,
+                        "code": error.code,
+                        "message": error.message,
+                        "stage": match error.stage {
+                            Stage::Parse => "parse",
+                            Stage::Validate => "validate",
+                            Stage::Serialize => "serialize",
+                        },
+                    });
+                    if !error.params.is_empty() {
+                        value["params"] = Value::Object(error.params.clone().into_iter().collect());
+                    }
+                    value
+                })
+                .collect(),
+        )
     }
 }
 impl From<ValidationError> for ValidationErrors {

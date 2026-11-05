@@ -38,7 +38,7 @@ improvement is claimed. Nothing is installed or executed automatically.
 | Capability | What it does |
 | --- | --- |
 | **Validated JSON** | Explicit coercion, string normalization, defaults, nested models, and structured errors. |
-| **Serde + JSON Schema** | Generated serialization/deserialization and input/output schemas from the same model. |
+| **JSON Schema** | Input/output schemas and structured errors from the same validated model. |
 | **HTTP with Axum** | Validated request extractors, responses, and structured rejections. |
 | **SQL with SQLx** | Model metadata, validated CRUD, queries, and migration planning for SQLite, PostgreSQL, and MySQL. |
 | **Native Cap'n Proto** | Generate schemas and official Rust bindings, or connect an existing protocol. |
@@ -46,6 +46,7 @@ improvement is claimed. Nothing is installed or executed automatically.
 | **RydanticAI** | Independently versioned `rydantic-ai`: typed agents and tools, [image inputs](https://rydantic.mintlify.site/integrations/images), [PDF inputs in the published 0.7.0 release](https://rydantic.mintlify.site/integrations/pdf), [structured output streams](https://rydantic.mintlify.site/integrations/structured-output), resumable graphs, an authenticated three-protocol gateway, and a [TypeSafe Jev SDK](https://rydantic.mintlify.site/integrations/jev). |
 
 Integrations are opt-in Cargo features. The default `derive` feature covers the core model API.
+Serde trait implementations are available with the opt-in `serde` feature; core parsing and dumping use Rydantic's own validation API.
 
 ## Start with a validated model
 
@@ -84,7 +85,11 @@ fn main() -> Result<(), rydantic::ValidationErrors> {
 }
 ```
 
-`coerce` makes conversion explicit. Invalid fields produce structured errors with locations and codes. `Model` also generates Serde implementations: deserialization validates input, and serialization revalidates the current object.
+`coerce` makes conversion explicit. Invalid fields produce structured errors with locations and codes. `Model::parse_json` and `Model::dump_json` run Rydantic validation without requiring Serde trait implementations. Enable `features = ["serde"]` to generate Serde implementations for model types and wrappers.
+
+```toml
+rydantic = { version = "=0.8.0", features = ["serde"] }
+```
 
 Continue with [validation rules](https://rydantic.mintlify.site/models/validation), [model shapes](https://rydantic.mintlify.site/models/structure), or [JSON Schema](https://rydantic.mintlify.site/models/schema).
 

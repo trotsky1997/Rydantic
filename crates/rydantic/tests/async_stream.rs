@@ -46,7 +46,7 @@ async fn async_checks_are_awaited_and_nested_errors_are_collected() {
             .code,
         "async_validation_required"
     );
-    assert!(serde_json::from_str::<Account>(r#"{"name":"ok","other":"free"}"#).is_err());
+    assert!(Account::parse_json(r#"{"name":"ok","other":"free"}"#).is_err());
     let result = tokio::spawn(async {
         Batch::parse_json_async(r#"{"items":[{"name":"taken","other":"taken"}]}"#).await
     })
@@ -72,7 +72,7 @@ async fn async_checks_are_awaited_and_nested_errors_are_collected() {
     let checked = Account::parse_validated_json_async(r#"{"name":"ok","other":"free"}"#)
         .await
         .unwrap();
-    assert_eq!(serde_json::to_value(&checked).unwrap()["name"], "ok");
+    assert_eq!(checked.get().dump_async().await.unwrap()["name"], "ok");
     let report = Account::schema_report(SchemaMode::Input);
     assert!(report
         .local_rules
