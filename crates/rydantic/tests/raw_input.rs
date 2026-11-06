@@ -55,11 +55,14 @@ fn owned_entry_points_and_constraints_preserve_raw_subtrees() {
     assert_eq!(parsed.defaulted.value.0, "default");
     assert_eq!(Root::parse_slice(INPUT.as_bytes()).unwrap(), parsed);
     assert_eq!(Root::parse_reader(INPUT.as_bytes()).unwrap(), parsed);
-    assert_eq!(serde_json::from_str::<Root>(INPUT).unwrap(), parsed);
-    assert_eq!(
-        serde_json::from_reader::<_, Root>(INPUT.as_bytes()).unwrap(),
-        parsed
-    );
+    #[cfg(feature = "serde")]
+    {
+        assert_eq!(serde_json::from_str::<Root>(INPUT).unwrap(), parsed);
+        assert_eq!(
+            serde_json::from_reader::<_, Root>(INPUT.as_bytes()).unwrap(),
+            parsed
+        );
+    }
     assert_eq!(
         rydantic::stream::ndjson::<_, Root>(std::io::Cursor::new(INPUT))
             .next()

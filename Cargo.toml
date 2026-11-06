@@ -11,6 +11,7 @@ repository = "https://github.com/trotsky1997/Rydantic"
 
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }
+serde_core = "1"
 serde_json = { version = "1", features = ["raw_value", "arbitrary_precision"] }
 regex = "1"
 jsonschema = { version = "0.33", default-features = false }

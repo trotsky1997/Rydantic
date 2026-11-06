@@ -20,9 +20,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let errors =
         User::parse_value(json!({"name":"A", "age":17, "email":"invalid", "unknown":true}))
             .unwrap_err();
-    println!("{}", serde_json::to_string_pretty(&errors)?);
+    println!("{}", errors.to_json());
 
     let report = User::schema_report(SchemaMode::Input);
-    println!("{}", serde_json::to_string_pretty(&report)?);
+    let local_rules = report
+        .local_rules
+        .iter()
+        .map(|rule| json!({"schema_path": rule.schema_path, "rule": rule.rule}))
+        .collect::<Vec<_>>();
+    println!(
+        "{}",
+        json!({"schema": report.schema, "local_rules": local_rules})
+    );
     Ok(())
 }

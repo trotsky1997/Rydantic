@@ -13,6 +13,7 @@ From a prepared repository checkout:
 cargo run -p rydantic-cli --frozen -- capabilities --format json --protocol-version 1
 cargo run -p rydantic-cli --frozen -- doctor --workspace . --format json
 cargo run -p rydantic-cli --frozen -- explain RD_LOCAL_RULES_REQUIRED --core-version 0.6.0 --format json
+cargo run -p rydantic-cli --frozen -- tsp
 ```
 
 Do not run `cargo install rydantic-cli` yet: there is no verified registry release.
@@ -36,7 +37,15 @@ clarity, but all commands are always offline. It is not an OS sandbox.
   attributed to Rydantic using text matching. Unknown input codes are replaced
   by `unknown` so callback-controlled content is not echoed.
 
-All commands accept `--format text|json`, `--protocol-version 1`, `--offline`.
+The tsp command serves Type Server Protocol 0.4.1 over stdio. It handles LSP
+initialization, document snapshots, Python search paths and local import
+resolution. Computed, declared and expected type queries return JSON null; this
+command implements the protocol surface without a Python type analyzer. Search
+paths include workspace/src, PYTHONPATH and conventional virtual-environment
+site-packages. Multi-connection support is not advertised.
+
+The tsp command reserves stdout for JSON-RPC messages. Other commands accept
+`--format text|json`, `--protocol-version 1`, and `--offline`.
 Repeated/unknown/inapplicable options and stray arguments fail. Text mode is a
 pretty-printed version of the same envelope. P0 does **not** implement `--resolve`,
 `--config`, Cargo invocation, validation, codegen, schema diff or typed adapters.

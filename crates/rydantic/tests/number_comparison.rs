@@ -165,8 +165,8 @@ fn boundary_cartesian_comparison_and_full_rule_errors_match_original() {
                 }
             }
             assert_eq!(
-                serde_json::to_value(actual.result().unwrap_err()).unwrap(),
-                serde_json::to_value(expected.result().unwrap_err()).unwrap(),
+                actual.result().unwrap_err(),
+                expected.result().unwrap_err(),
                 "{left} vs {right}"
             );
         }

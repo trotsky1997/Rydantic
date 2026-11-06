@@ -133,7 +133,7 @@ fn snapshot<T: Debug>(result: &Result<T, ValidationErrors>) -> Value {
     match result {
         Ok(value) => json!({"ok":format!("{value:?}")}),
         Err(errors) => {
-            json!({"errors":serde_json::to_string(errors).unwrap(), "display":errors.to_string()})
+            json!({"errors":errors.to_json().to_string(), "display":errors.to_string()})
         }
     }
 }
@@ -467,7 +467,7 @@ fn owned_object_fallbacks_preserve_full_results_and_prior_context() {
             assert_eq!(errors.errors()[0].message, "existing");
             println!(
                 "SLOT_ORACLE {}",
-                json!({"prior":text,"map":map,"errors":serde_json::to_string(&errors).unwrap(),"events":take_events()})
+                json!({"prior":text,"map":map,"errors":errors.to_json().to_string(),"events":take_events()})
             );
         }
     }

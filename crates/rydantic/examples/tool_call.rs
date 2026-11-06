@@ -25,16 +25,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .nth(1)
         .unwrap_or_else(|| r#"{"kind":"search","query":"Rust","limit":2}"#.into());
     if input == "--schema" {
-        println!(
-            "{}",
-            serde_json::to_string_pretty(&ToolCall::json_schema(SchemaMode::Input))?
-        );
+        println!("{}", ToolCall::json_schema(SchemaMode::Input));
         return Ok(());
     }
     let call = match ToolCall::parse_json(&input) {
         Ok(call) => call,
         Err(errors) => {
-            eprintln!("{}", serde_json::to_string_pretty(&errors)?);
+            eprintln!("{}", errors.to_json());
             std::process::exit(2);
         }
     };

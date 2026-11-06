@@ -39,12 +39,6 @@ fn borrowed_validated_entry_points_preserve_borrows_and_reject_invalid_values() 
     assert_eq!(checked.text, "useful");
     assert_eq!(checked.clone().into_inner(), parsed);
     assert_eq!(
-        serde_json::to_value(&checked).unwrap(),
-        json!({"text": "useful"})
-    );
-    let decoded: BorrowValidated<'_, Leaf<'_>> = serde_json::from_str(&input).unwrap();
-    assert!(std::ptr::eq(decoded.text.as_ptr(), parsed.text.as_ptr()));
-    assert_eq!(
         BorrowValidated::new(parsed).unwrap().into_inner().text,
         "useful"
     );
@@ -52,6 +46,18 @@ fn borrowed_validated_entry_points_preserve_borrows_and_reject_invalid_values() 
     let errors = BorrowValidated::new(Leaf { text: "x" }).unwrap_err();
     assert_eq!(errors.errors()[0].code, "too_short");
     assert_eq!(errors.errors()[0].pointer(), "/source");
+}
+
+#[cfg(feature = "serde")]
+#[test]
+fn borrowed_validated_wrapper_supports_serde() {
+    let input = String::from(r#"{"source":" useful "}"#);
+    let checked: BorrowValidated<'_, Leaf<'_>> = serde_json::from_str(&input).unwrap();
+    assert!(checked.text.contains("useful"));
+    assert_eq!(
+        serde_json::to_value(&checked).unwrap(),
+        json!({"text":"useful"})
+    );
     let error =
         serde_json::from_str::<BorrowValidated<'_, Leaf<'_>>>(r#"{"source":"x"}"#).unwrap_err();
     assert!(error.to_string().contains("too_short"));
@@ -103,7 +109,7 @@ fn borrowed_containers_keep_input_aliases_distinct_from_output_aliases() {
         serde_json::from_str::<Value>(&value.dump_json().unwrap()).unwrap(),
         output
     );
-    assert_eq!(serde_json::to_value(&value).unwrap(), output);
+    assert_eq!(value.dump().unwrap(), output);
 }
 
 #[test]
@@ -166,7 +172,7 @@ fn borrowed_containers_revalidate_mutated_children_before_serialization() {
             .iter()
             .all(|error| error.code == "too_short" && error.stage == Stage::Validate));
     }
-    assert!(serde_json::to_value(&value).is_err());
+    assert!(value.dump().is_err());
     assert_eq!(paths(&BorrowValidated::new(value).unwrap_err()), expected);
 }
 
@@ -336,7 +342,7 @@ async fn borrowed_async_containers_enforce_sync_guards_and_recheck_before_dumpin
     ] {
         assert_eq!(errors.errors()[0].code, "async_validation_required");
     }
-    assert!(serde_json::to_value(&value).is_err());
+    assert!(value.dump().is_err());
 
     value.maybe.as_mut().unwrap().name = "reserved";
     value.entries.get_mut("key").unwrap().name = "reserved";

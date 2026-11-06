@@ -539,12 +539,14 @@ impl<T: Model> std::ops::Deref for Validated<T> {
         &self.0
     }
 }
+#[cfg(feature = "serde")]
 impl<T: Model> serde::Serialize for Validated<T> {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let value = self.0.dump().map_err(serde::ser::Error::custom)?;
         serde::Serialize::serialize(&value, serializer)
     }
 }
+#[cfg(feature = "serde")]
 impl<'de, T: Model> serde::Deserialize<'de> for Validated<T> {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let raw = <Box<RawValue> as serde::Deserialize>::deserialize(deserializer)?;
@@ -560,8 +562,9 @@ pub mod __private {
     pub use crate::borrowed::stage_borrowed_fields;
     pub use crate::object::{check_names, flatten_schema, merge};
     pub use regex;
+    #[cfg(feature = "serde")]
     pub use serde;
-    pub use serde_json;
+    pub use serde_json::Map;
     pub fn number(literal: &str) -> serde_json::Number {
         literal
             .parse()

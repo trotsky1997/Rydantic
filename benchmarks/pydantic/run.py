@@ -99,7 +99,7 @@ def main():
     if not (1 <= args.iterations <= 10_000_000 and 0 <= args.warmup <= 1_000_000 and 1 <= args.repeats <= 100):
         parser.error("iterations 1..10000000, warmup 0..1000000, repeats 1..100 required")
     sources_before = source_snapshot()
-    build_command = ["cargo", "build", "--release", "--locked", "-p", "rydantic", "--example", "pydantic_benchmark", "--message-format=json"]
+    build_command = ["cargo", "build", "--release", "--locked", "-p", "rydantic", "--example", "pydantic_benchmark", "--features", "serde", "--message-format=json"]
     build = subprocess.run(build_command, cwd=ROOT, capture_output=True, text=True, check=True)
     artifacts = [json.loads(line) for line in build.stdout.splitlines() if line.strip()]
     artifacts = [item for item in artifacts if item.get("reason") == "compiler-artifact"

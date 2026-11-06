@@ -1,6 +1,6 @@
 //! Incremental JSON sequences, NDJSON and array visitors. Readers are synchronous.
 use crate::{BorrowModel, Context, Model, ValidationError, ValidationErrors};
-use serde::{
+use serde_core::{
     de::{DeserializeSeed, SeqAccess, Visitor},
     Deserialize,
 };
@@ -127,7 +127,7 @@ impl<'de, T: Model, F: FnMut(Result<T, ValidationErrors>) -> Result<(), Validati
     DeserializeSeed<'de> for ArraySeed<'_, T, F>
 {
     type Value = usize;
-    fn deserialize<D: serde::Deserializer<'de>>(self, d: D) -> Result<usize, D::Error> {
+    fn deserialize<D: serde_core::Deserializer<'de>>(self, d: D) -> Result<usize, D::Error> {
         d.deserialize_seq(self)
     }
 }
@@ -146,7 +146,7 @@ impl<'de, T: Model, F: FnMut(Result<T, ValidationErrors>) -> Result<(), Validati
             count += 1;
             if let Err(error) = (self.callback)(item) {
                 *self.error = Some(error);
-                return Err(serde::de::Error::custom("array visitor stopped"));
+                return Err(serde_core::de::Error::custom("array visitor stopped"));
             }
         }
         Ok(count)
@@ -209,7 +209,7 @@ impl<
     > DeserializeSeed<'de> for BorrowArraySeed<'_, 'de, T, F>
 {
     type Value = usize;
-    fn deserialize<D: serde::Deserializer<'de>>(self, d: D) -> Result<usize, D::Error> {
+    fn deserialize<D: serde_core::Deserializer<'de>>(self, d: D) -> Result<usize, D::Error> {
         d.deserialize_seq(self)
     }
 }
@@ -230,7 +230,7 @@ impl<
             count += 1;
             if let Err(error) = (self.callback)(item) {
                 *self.error = Some(error);
-                return Err(serde::de::Error::custom("array visitor stopped"));
+                return Err(serde_core::de::Error::custom("array visitor stopped"));
             }
         }
         Ok(count)

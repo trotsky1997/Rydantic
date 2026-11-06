@@ -1,11 +1,13 @@
 use rydantic::{
-    json, AsyncCheck, AsyncValidated, Context, JsonType, Model, PathSegment, SchemaContext, Stage,
-    Validated, ValidationError, ValidationErrors, Value,
+    json, AsyncCheck, AsyncValidated, Context, JsonType, Model, SchemaContext, Stage, Validated,
+    ValidationError, ValidationErrors, Value,
 };
 use std::io::{self, Read};
 
+#[cfg(feature = "serde")]
 #[test]
 fn error_paths_escape_json_pointer_tokens_without_losing_segment_types() {
+    use rydantic::PathSegment;
     let error = ValidationError::custom("invalid")
         .at("")
         .at("a/b~c")
@@ -29,6 +31,7 @@ fn error_paths_escape_json_pointer_tokens_without_losing_segment_types() {
     );
 }
 
+#[cfg(feature = "serde")]
 #[test]
 fn error_serde_defaults_omitted_params_and_preserves_explicit_metadata() {
     let error = ValidationError::new("type_error", "expected integer");
@@ -203,8 +206,11 @@ fn model_entry_points_report_silent_decoder_failures_instead_of_succeeding() {
         assert_eq!(errors.len(), 1);
         assert_eq!(errors.errors()[0].code, "internal");
     }
-    let error = serde_json::from_str::<Validated<SilentDecoder>>("null").unwrap_err();
-    assert!(error.to_string().contains("internal"));
+    #[cfg(feature = "serde")]
+    {
+        let error = serde_json::from_str::<Validated<SilentDecoder>>("null").unwrap_err();
+        assert!(error.to_string().contains("internal"));
+    }
 }
 
 #[tokio::test]
@@ -267,7 +273,7 @@ fn dumps_and_validated_serde_propagate_custom_encoder_failures() {
     }
     let checked = Validated::new(model).unwrap();
     assert!(!checked.get().invalid);
-    let error = serde_json::to_value(&checked).unwrap_err();
+    let error = checked.get().dump().unwrap_err();
     assert!(error.to_string().contains("encode_failure"));
     assert!(error.to_string().contains("/payload"));
 }
@@ -296,7 +302,7 @@ async fn async_dump_and_async_validated_serde_propagate_encoder_failures() {
     }
     let checked = AsyncValidated::new(model).await.unwrap();
     assert!(!checked.get().invalid);
-    let error = serde_json::to_value(&checked).unwrap_err();
+    let error = checked.get().dump_async().await.unwrap_err();
     assert!(error.to_string().contains("encode_failure"));
     assert!(!checked.into_inner().invalid);
 

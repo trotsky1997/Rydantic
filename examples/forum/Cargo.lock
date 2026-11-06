@@ -1337,9 +1337,6 @@ name = "email_address"
 version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e079f19b08ca6239f47f8ba8509c11cf3ea30095831f7fed61441475edd8c449"
-dependencies = [
- "serde",
-]
 
 [[package]]
 name = "encoding_rs"
@@ -2918,6 +2915,7 @@ dependencies = [
  "regex",
  "rydantic-derive",
  "serde",
+ "serde_core",
  "serde_json",
  "sha2",
  "sqlx",
@@ -2932,7 +2930,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "regex",
- "serde_json",
  "syn 2.0.119",
 ]
 

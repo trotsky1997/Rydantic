@@ -1,6 +1,5 @@
 use rydantic::{
-    json, Model, PathSegment, SchemaMode, Stage, Validated, ValidationError, ValidationErrors,
-    Value,
+    json, Model, PathSegment, SchemaMode, Stage, ValidationError, ValidationErrors, Value,
 };
 use std::collections::{BTreeMap, HashMap};
 
@@ -463,6 +462,7 @@ fn floating_constraints_and_non_finite_values_are_checked() {
     .is_err());
 }
 
+#[cfg(feature = "serde")]
 #[test]
 fn mutated_values_and_serde_serialization_are_revalidated() {
     let mut user = User::parse_value(valid_user()).unwrap();
@@ -472,6 +472,7 @@ fn mutated_values_and_serde_serialization_are_revalidated() {
     assert!(serde_json::to_string(&user).is_err());
 }
 
+#[cfg(feature = "serde")]
 #[test]
 fn serde_deserialization_cannot_skip_validation() {
     let user: User = serde_json::from_value(valid_user()).unwrap();
@@ -481,8 +482,10 @@ fn serde_deserialization_cannot_skip_validation() {
     assert_eq!(output, user.dump().unwrap());
 }
 
+#[cfg(feature = "serde")]
 #[test]
 fn validated_wrapper_supports_serde_and_owned_extraction() {
+    use rydantic::Validated;
     let value = User::parse_validated_json(&valid_user().to_string()).unwrap();
     assert_eq!(value.age, 25);
     let encoded = serde_json::to_string(&value).unwrap();

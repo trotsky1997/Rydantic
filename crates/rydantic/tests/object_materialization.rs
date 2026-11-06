@@ -46,10 +46,7 @@ fn aliases_flatten_nested_errors_and_duplicates_match_previous_object_path() {
                 assert_eq!(old.child.name.as_ptr(), new.child.name.as_ptr());
                 assert_eq!(old.dump().unwrap(), new.dump().unwrap());
             }
-            (Err(old), Err(new)) => assert_eq!(
-                serde_json::to_value(old).unwrap(),
-                serde_json::to_value(new).unwrap()
-            ),
+            (Err(old), Err(new)) => assert_eq!(old.to_json(), new.to_json()),
             _ => panic!("acceptance differs: {text}"),
         }
     }

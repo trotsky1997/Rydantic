@@ -8,8 +8,7 @@ use rydantic::axum::{
 };
 use rydantic::grpc::Limits;
 use rydantic::schema::openapi::OpenApiComponents;
-use rydantic::{json, CapnpModel, SchemaMode};
-use serde_json::Value;
+use rydantic::{json, CapnpModel, SchemaMode, Value};
 use std::error::Error;
 
 #[derive(Clone)]
@@ -52,6 +51,10 @@ pub fn openapi_document() -> Result<Value, Box<dyn Error>> {
         .insert::<grpc_capnp::models::Greeting>("GreetingResponse", SchemaMode::Output)?;
     let mut local_rules = request.local_rules;
     local_rules.extend(response.local_rules);
+    let local_rules = local_rules
+        .into_iter()
+        .map(|rule| json!({"schema_path": rule.schema_path, "rule": rule.rule}))
+        .collect::<Vec<_>>();
 
     Ok(json!({
         "openapi": "3.1.1",

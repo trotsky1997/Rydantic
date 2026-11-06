@@ -1,6 +1,7 @@
 mod doctor;
 mod explain;
 mod input;
+mod tsp;
 
 use serde_json::{json, Value};
 use std::{
@@ -137,12 +138,12 @@ impl Args {
     }
 }
 fn usage() -> Failure {
-    fail(2,"RD_USAGE_INVALID","Invalid invocation. Use capabilities, doctor [--workspace PATH] [--package NAME] [--schema FILE], or explain CODE --core-version VERSION (or --diagnostics FILE --input-format envelope|validation-errors|cargo). Common flags: --format text|json --protocol-version 1 --offline. Discovery is static only; --resolve and --config are not supported.")
+    fail(2,"RD_USAGE_INVALID","Invalid invocation. Use capabilities, doctor [--workspace PATH] [--package NAME] [--schema FILE], or tsp (stdio server), or explain CODE --core-version VERSION (or --diagnostics FILE --input-format envelope|validation-errors|cargo). Common flags: --format text|json --protocol-version 1 --offline. Discovery is static only; --resolve and --config are not supported.")
 }
 fn run(a: &Args) -> Result<Report> {
     match a.command.as_str() {
         "capabilities" => Ok(Report::new(
-            json!({"commands":["capabilities","doctor","explain"],"protocol_versions":[1],"knowledge_versions":KNOWLEDGE_VERSIONS,"linked_engines":{"core":null,"codegen":null,"backend":null},"typed_adapter":false,"resolve":false,"configuration":false,"offline":true,"project_code_executed":false,"schema_dialects":[],"schema_inspection":"annotations_only","limits":{"file_bytes":LIMIT,"schema_bytes":65536,"diagnostics":100},"exit_codes":{"0":"success","1":"check_failed_reserved","2":"invalid_input","3":"unsupported","4":"io","5":"environment","6":"execution_reserved","7":"resource_limit","8":"policy_reserved","70":"internal"}}),
+            json!({"commands":["capabilities","doctor","explain","tsp"],"protocol_versions":[1],"type_server_protocol_version":"0.4.1","type_server_multi_connection":false,"knowledge_versions":KNOWLEDGE_VERSIONS,"linked_engines":{"core":null,"codegen":null,"backend":null},"typed_adapter":false,"resolve":false,"configuration":false,"offline":true,"project_code_executed":false,"schema_dialects":[],"schema_inspection":"annotations_only","limits":{"file_bytes":LIMIT,"schema_bytes":65536,"diagnostics":100},"exit_codes":{"0":"success","1":"check_failed_reserved","2":"invalid_input","3":"unsupported","4":"io","5":"environment","6":"execution_reserved","7":"resource_limit","8":"policy_reserved","70":"internal"}}),
         )),
         "doctor" => doctor::run(a),
         "explain" => explain::run(a),
@@ -156,10 +157,17 @@ fn main() {
         .iter()
         .map(|s| s.to_string_lossy().into_owned())
         .collect();
+    if raw.first().is_some_and(|arg| arg == "tsp") {
+        if invalid_encoding || raw.len() != 1 {
+            eprintln!("usage: rydantic tsp");
+            std::process::exit(2);
+        }
+        std::process::exit(tsp::run());
+    }
     let as_json = raw.windows(2).any(|w| w[0] == "--format" && w[1] == "json");
     let command = raw
         .iter()
-        .find(|x| ["doctor", "explain", "capabilities"].contains(&x.as_str()))
+        .find(|x| ["doctor", "explain", "capabilities", "tsp"].contains(&x.as_str()))
         .map(String::as_str)
         .unwrap_or("unknown");
     let parsed = if invalid_encoding {

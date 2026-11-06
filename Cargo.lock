@@ -2148,6 +2148,7 @@ dependencies = [
  "rust_iso3166",
  "rydantic-derive",
  "serde",
+ "serde_core",
  "serde_json",
  "sha2 0.10.9",
  "sqlx",
@@ -2207,6 +2208,7 @@ dependencies = [
  "serde",
  "serde_json",
  "toml",
+ "url",
 ]
 
 [[package]]
@@ -2228,7 +2230,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "regex",
- "serde_json",
  "sha2 0.10.9",
  "syn 2.0.119",
  "tempfile",

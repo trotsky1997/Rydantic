@@ -140,6 +140,6 @@ fn discriminator_errors_keep_full_paths_and_payloads() {
         .with_stage(Stage::Parse);
     assert_eq!(
         Tagged::parse_json("{}").unwrap_err().to_json(),
-        json!([expected])
+        rydantic::ValidationErrors::from(expected).to_json()
     );
 }

@@ -489,14 +489,16 @@ fn encode_shape(
         } else if field.attr.flatten || field.attr.extra {
             entries.push(quote!{let value=#encoded;#rd::__private::merge(&mut __rydantic_object,value,__rydantic_ctx);});
         } else {
-            entries.push(quote!{let value=__rydantic_ctx.at_static(#key,|__rydantic_ctx|#encoded);#rd::__private::merge(&mut __rydantic_object,#rd::__private::serde_json::json!({#key:value}),__rydantic_ctx);});
+            entries.push(quote!{let value=__rydantic_ctx.at_static(#key,|__rydantic_ctx|#encoded);#rd::__private::merge(&mut __rydantic_object,#rd::json!({#key:value}),__rydantic_ctx);});
         }
     }
     if shape == Shape::Tuple {
         quote! {let mut __rydantic_items=::std::vec::Vec::new();#(#entries)* #rd::Value::Array(__rydantic_items)}
     } else {
-        let tag=tag.map(|(tag,wire)|quote!{__rydantic_object.insert(#tag.to_owned(),#rd::__private::serde_json::json!(#wire));});
-        quote! {let mut __rydantic_object=#rd::__private::serde_json::Map::new();#tag #(#entries)* #rd::Value::Object(__rydantic_object)}
+        let tag = tag.map(
+            |(tag, wire)| quote! {__rydantic_object.insert(#tag.to_owned(),#rd::json!(#wire));},
+        );
+        quote! {let mut __rydantic_object=#rd::__private::Map::new();#tag #(#entries)* #rd::Value::Object(__rydantic_object)}
     }
 }
 fn validate_fields(fields: &[Field], values: &[Tokens], shape: Shape, mode: &Mode) -> Tokens {
@@ -532,7 +534,7 @@ fn property_schema(field: &Field, mode: &Mode) -> Tokens {
     let coerce = field.attr.coerce;
     let rule = rules(field, rd);
     let before_annotations=field.attr.before.iter().map(|path|quote!{#rd::schema::annotate_local(&mut property,concat!("before:",stringify!(#path)));});
-    let before=(!field.attr.before.is_empty()).then(||quote!{if __rydantic_ctx.mode==#rd::SchemaMode::Input{property=#rd::__private::serde_json::json!({});#(#before_annotations)*}});
+    let before=(!field.attr.before.is_empty()).then(||quote!{if __rydantic_ctx.mode==#rd::SchemaMode::Input{property=#rd::json!({});#(#before_annotations)*}});
     let condition = if !field.attr.before.is_empty() {
         quote!(__rydantic_ctx.mode==#rd::SchemaMode::Output)
     } else {
@@ -543,28 +545,43 @@ fn property_schema(field: &Field, mode: &Mode) -> Tokens {
     let desc = field
         .doc
         .as_ref()
-        .map(|text| quote!(property["description"]=#rd::__private::serde_json::json!(#text);));
-    let literal = field.attr.default.as_ref().and_then(|expr| match expr {
+        .map(|text| quote!(property["description"]=#rd::json!(#text);));
+    let annotation = field.attr.default.as_ref().and_then(|expr| match expr {
         Expr::Lit(v) => match &v.lit {
-            syn::Lit::Str(v) => Some(serde_json::json!(v.value())),
-            syn::Lit::Bool(v) => Some(serde_json::json!(v.value)),
-            syn::Lit::Int(v) => v
-                .base10_digits()
-                .parse()
-                .ok()
-                .map(serde_json::Value::Number),
-            syn::Lit::Float(v) => v
-                .base10_digits()
-                .parse()
-                .ok()
-                .map(serde_json::Value::Number),
+            syn::Lit::Str(v) => {
+                let value = v.value();
+                Some(quote!(if __rydantic_ctx.mode==#rd::SchemaMode::Input{property["default"]=#rd::json!(#value);}))
+            }
+            syn::Lit::Bool(v) => {
+                let value = v.value;
+                Some(quote!(if __rydantic_ctx.mode==#rd::SchemaMode::Input{property["default"]=#rd::json!(#value);}))
+            }
+            syn::Lit::Int(v) => {
+                let value = v.base10_digits();
+                Some(quote!(if __rydantic_ctx.mode==#rd::SchemaMode::Input{property["default"]=#rd::Value::Number(#rd::__private::number(#value));}))
+            }
+            syn::Lit::Float(v) => {
+                let value = normalize_float_literal_for_json(v.base10_digits());
+                Some(quote!(if __rydantic_ctx.mode==#rd::SchemaMode::Input{property["default"]=#rd::Value::Number(#rd::__private::number(#value));}))
+            }
             _ => None,
         },
         _ => None,
     });
-    let annotation=literal.map(|v|{let text=v.to_string();quote!(if __rydantic_ctx.mode==#rd::SchemaMode::Input{property["default"]=#rd::__private::serde_json::from_str::<#rd::Value>(#text).expect("literal default");})});
     quote! {{let mut property=<#ty as #tr>::schema(__rydantic_ctx,#coerce);#before if #condition{#rule.apply_schema(&mut property,__rydantic_ctx.mode,#coerce,<#ty as #tr>::kind());}#custom #(#asynchronous)* #desc #annotation property}}
 }
+
+fn normalize_float_literal_for_json(literal: &str) -> String {
+    let exponent = literal.find(['e', 'E']).unwrap_or(literal.len());
+    let (significand, exponent) = literal.split_at(exponent);
+    let (integer, fraction) = significand.split_once('.').unwrap_or((significand, ""));
+    let integer = integer.trim_start_matches('0');
+    let integer = if integer.is_empty() { "0" } else { integer };
+    let fraction = fraction.trim_end_matches('.');
+    let fraction = if fraction.is_empty() { "0" } else { fraction };
+    format!("{integer}.{fraction}{exponent}")
+}
+
 fn schema_shape(
     fields: &[Field],
     shape: Shape,
@@ -575,31 +592,31 @@ fn schema_shape(
     let rd = mode.rd;
     let tr = mode.tr();
     if shape == Shape::Unit {
-        return quote!(#rd::__private::serde_json::json!({"type":"null"}));
+        return quote!(#rd::json!({"type":"null"}));
     }
     if shape == Shape::Tuple {
         let props = fields.iter().map(|f| property_schema(f, mode));
         let count = fields.len();
         if count == 0 {
-            return quote!(#rd::__private::serde_json::json!({"type":"array","items":false,"maxItems":0}));
+            return quote!(#rd::json!({"type":"array","items":false,"maxItems":0}));
         }
         if count == 1 {
             return props.into_iter().next().expect("one field");
         }
-        return quote!(#rd::__private::serde_json::json!({"type":"array","prefixItems":[#((#props)),*],"items":false,"minItems":#count,"maxItems":#count}));
+        return quote!(#rd::json!({"type":"array","prefixItems":[#((#props)),*],"items":false,"minItems":#count,"maxItems":#count}));
     }
     let ignore = container.ignore_extra;
     let known_names = object_names(fields, rd, tag.map(|(key, _)| key));
     let captures=fields.iter().filter(|f|f.attr.flatten||f.attr.extra).map(|f|{let ty=&f.ty;quote!(usize::from(<#ty as #rd::ObjectType>::captures_extra(&mut ::std::collections::HashSet::new())))});
-    let tag=tag.map(|(key,value)|quote!{schema["properties"][#key]=#rd::__private::serde_json::json!({"type":"string","const":#value});schema["required"].as_array_mut().expect("required").push(#rd::__private::serde_json::json!(#key));});
+    let tag=tag.map(|(key,value)|quote!{schema["properties"][#key]=#rd::json!({"type":"string","const":#value});schema["required"].as_array_mut().expect("required").push(#rd::json!(#key));});
     let inserts=fields.iter().map(|f|{let ty=&f.ty;let input=&f.input;let output=&f.output;let exclude=f.attr.exclude;let required=f.attr.required;let default=f.attr.has_default();let property=property_schema(f,mode);
         let insert=if f.attr.flatten||f.attr.extra{
             let optional=quote!((__rydantic_ctx.mode==#rd::SchemaMode::Input&&#default)||((!#required||__rydantic_ctx.mode==#rd::SchemaMode::Output)&&<#ty as #tr>::allows_missing()));
             quote!{let child=#property;#rd::__private::flatten_schema(&mut schema,child,(#optional),<#ty as #rd::ObjectType>::captures_extra(&mut ::std::collections::HashSet::new()),__rydantic_ctx);}
-        }else{quote!{let key=if __rydantic_ctx.mode==#rd::SchemaMode::Input{#input}else{#output};let property=#property;schema["properties"].as_object_mut().expect("properties").insert(key.to_owned(),property);if __rydantic_ctx.mode==#rd::SchemaMode::Output||#required||(!#default&&!<#ty as #tr>::allows_missing()){schema["required"].as_array_mut().expect("required").push(#rd::__private::serde_json::json!(key));}}};
+        }else{quote!{let key=if __rydantic_ctx.mode==#rd::SchemaMode::Input{#input}else{#output};let property=#property;schema["properties"].as_object_mut().expect("properties").insert(key.to_owned(),property);if __rydantic_ctx.mode==#rd::SchemaMode::Output||#required||(!#default&&!<#ty as #tr>::allows_missing()){schema["required"].as_array_mut().expect("required").push(#rd::json!(key));}}};
         quote!{if !(__rydantic_ctx.mode==#rd::SchemaMode::Output&&#exclude){#insert}}
     });
-    quote! {{let mut schema=#rd::__private::serde_json::json!({"type":"object","properties":{},"required":[],"allOf":[],"additionalProperties":(#ignore&&__rydantic_ctx.mode==#rd::SchemaMode::Input)});#tag #(#inserts)*
+    quote! {{let mut schema=#rd::json!({"type":"object","properties":{},"required":[],"allOf":[],"additionalProperties":(#ignore&&__rydantic_ctx.mode==#rd::SchemaMode::Input)});#tag #(#inserts)*
     let captures=0usize #(+ #captures)*;
     if captures>1 { schema["allOf"].as_array_mut().expect("allOf").push(#rd::Value::Bool(false)); }
     let mut views=::std::vec::Vec::new();
@@ -813,8 +830,8 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
                 let (encode, encode_input, schema) =
                     if !container.untagged && container.tag.is_none() {
                         (
-                            quote!(#rd::__private::serde_json::json!(#wire)),
-                            quote!(#rd::__private::serde_json::json!(#wire)),
+                            quote!(#rd::json!(#wire)),
+                            quote!(#rd::json!(#wire)),
                             quote!(),
                         )
                     } else {
@@ -835,7 +852,7 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
                     let body = parse_shape(fields, *shape, ctor, &container, &mode, None, false);
                     decodes.push(quote!{
                         {let mut trial=__rydantic_ctx.trial();let result={let __rydantic_ctx=&mut trial;let __rydantic_raw=__rydantic_raw.clone();(||{#body})()};
-                        match trial.finish(result){Ok(value)=>return Some(value),Err(errors)=>__rydantic_branches.push(#rd::__private::serde_json::json!({"variant":#wire,"errors":errors.to_json()}))}}
+                        match trial.finish(result){Ok(value)=>return Some(value),Err(errors)=>__rydantic_branches.push(#rd::json!({"variant":#wire,"errors":errors.to_json()}))}}
                     });
                 } else if container.tag.is_some() {
                     let body = parse_shape(
@@ -855,20 +872,20 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
             let (decode, schema, kind) = if container.untagged {
                 (
                     quote! {let mut __rydantic_branches=::std::vec::Vec::<#rd::Value>::new();#(#decodes)* __rydantic_ctx.push(#rd::ValidationError::new("union_no_match","no untagged variant accepted the value").with_stage(#rd::Stage::Parse).with_param("branches",#rd::Value::Array(__rydantic_branches)));None},
-                    quote!(#rd::__private::serde_json::json!({"anyOf":[#((#schemas)),*]})),
+                    quote!(#rd::json!({"anyOf":[#((#schemas)),*]})),
                     quote!(#rd::TypeKind::Any),
                 )
             } else if let Some(tag) = &container.tag {
                 (
-                    quote! {let mut __rydantic_object=__rydantic_raw.object(__rydantic_ctx)?;let tag=match __rydantic_object.remove(#tag){Some(raw)=>{let value=raw.into_value(__rydantic_ctx)?;match value{#rd::Value::String(value)=>value,_=>{__rydantic_ctx.at_static(#tag,|ctx|ctx.push(#rd::ValidationError::new("union_tag_type","discriminator must be a string").with_stage(#rd::Stage::Parse)));return None;}}},None=>{__rydantic_ctx.at_static(#tag,|ctx|ctx.push(#rd::ValidationError::new("union_tag_missing","discriminator is required").with_stage(#rd::Stage::Parse)));return None;}};
-                    match tag.as_str(){#(#decodes,)* _=>{__rydantic_ctx.at_static(#tag,|ctx|ctx.push(#rd::ValidationError::new("union_tag_invalid","unknown discriminator").with_stage(#rd::Stage::Parse).with_param("expected",#rd::__private::serde_json::json!([#(#wires),*]))));None}}},
-                    quote!(#rd::__private::serde_json::json!({"oneOf":[#((#schemas)),*],"discriminator":{"propertyName":#tag}})),
+                    quote! {let mut __rydantic_object=__rydantic_raw.object(__rydantic_ctx)?;let tag=match __rydantic_object.remove(#tag){Some(raw)=>{let value=raw.into_value(__rydantic_ctx)?;match value{#rd::Value::String(value)=>value,_=>{__rydantic_ctx.at(#tag,|ctx|ctx.push(#rd::ValidationError::new("union_tag_type","discriminator must be a string").with_stage(#rd::Stage::Parse)));return None;}}},None=>{__rydantic_ctx.at(#tag,|ctx|ctx.push(#rd::ValidationError::new("union_tag_missing","discriminator is required").with_stage(#rd::Stage::Parse)));return None;}};
+                    match tag.as_str(){#(#decodes,)* _=>{__rydantic_ctx.at(#tag,|ctx|ctx.push(#rd::ValidationError::new("union_tag_invalid","unknown discriminator").with_stage(#rd::Stage::Parse).with_param("expected",#rd::json!([#(#wires),*]))));None}}},
+                    quote!(#rd::json!({"oneOf":[#((#schemas)),*],"discriminator":{"propertyName":#tag}})),
                     quote!(#rd::TypeKind::Object),
                 )
             } else {
                 (
-                    quote! {let raw=__rydantic_raw.into_value(__rydantic_ctx)?;match raw.as_str(){Some(wire)=>match wire{#(#decodes,)* _=>{__rydantic_ctx.push(#rd::ValidationError::new("enum","unknown enum value").with_stage(#rd::Stage::Parse).with_param("expected",#rd::__private::serde_json::json!([#(#wires),*])));None}},None=>{__rydantic_ctx.push(#rd::ValidationError::new("type_error","expected enum string").with_stage(#rd::Stage::Parse));None}}},
-                    quote!(#rd::__private::serde_json::json!({"type":"string","enum":[#(#wires),*]})),
+                    quote! {let raw=__rydantic_raw.into_value(__rydantic_ctx)?;match raw.as_str(){Some(wire)=>match wire{#(#decodes,)* _=>{__rydantic_ctx.push(#rd::ValidationError::new("enum","unknown enum value").with_stage(#rd::Stage::Parse).with_param("expected",#rd::json!([#(#wires),*])));None}},None=>{__rydantic_ctx.push(#rd::ValidationError::new("type_error","expected enum string").with_stage(#rd::Stage::Parse));None}}},
+                    quote!(#rd::json!({"type":"string","enum":[#(#wires),*]})),
                     quote!(#rd::TypeKind::String),
                 )
             };
@@ -1007,16 +1024,29 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
     } else {
         quote!(impl #impl_generics #rd::Model for #name #ty_generics #where_clause {})
     };
-    let dump = if borrowed {
-        quote!(<Self as #rd::BorrowModel<'__rydantic_de>>::dump(self))
-    } else {
-        quote!(<Self as #rd::Model>::dump(self))
+    #[cfg(feature = "serde")]
+    let serde_impl = {
+        let dump = if borrowed {
+            quote!(<Self as #rd::BorrowModel<'__rydantic_de>>::dump(self))
+        } else {
+            quote!(<Self as #rd::Model>::dump(self))
+        };
+        let deserialize = if borrowed {
+            quote! {let raw=<&'__rydantic_de #rd::RawValue as #rd::__private::serde::Deserialize>::deserialize(deserializer)?;<Self as #rd::BorrowModel<'__rydantic_de>>::parse_raw(raw).map_err(#rd::__private::serde::de::Error::custom)}
+        } else {
+            quote! {let raw=<::std::boxed::Box<#rd::RawValue> as #rd::__private::serde::Deserialize>::deserialize(deserializer)?;<Self as #rd::Model>::parse_raw(&raw).map_err(#rd::__private::serde::de::Error::custom)}
+        };
+        quote! {
+            impl #impl_generics #rd::__private::serde::Serialize for #name #ty_generics #where_clause{
+                fn serialize<S:#rd::__private::serde::Serializer>(&self,serializer:S)->::core::result::Result<S::Ok,S::Error>{let value=#dump.map_err(#rd::__private::serde::ser::Error::custom)?;#rd::__private::serde::Serialize::serialize(&value,serializer)}
+            }
+            impl #de_impl_generics #rd::__private::serde::Deserialize<'__rydantic_de> for #name #ty_generics #de_where_clause{
+                fn deserialize<D:#rd::__private::serde::Deserializer<'__rydantic_de>>(deserializer:D)->::core::result::Result<Self,D::Error>{#deserialize}
+            }
+        }
     };
-    let deserialize = if borrowed {
-        quote! {let raw=<&'__rydantic_de #rd::__private::serde_json::value::RawValue as #rd::__private::serde::Deserialize>::deserialize(deserializer)?;<Self as #rd::BorrowModel<'__rydantic_de>>::parse_raw(raw).map_err(#rd::__private::serde::de::Error::custom)}
-    } else {
-        quote! {let raw=<::std::boxed::Box<#rd::RawValue> as #rd::__private::serde::Deserialize>::deserialize(deserializer)?;<Self as #rd::Model>::parse_raw(&raw).map_err(#rd::__private::serde::de::Error::custom)}
-    };
+    #[cfg(not(feature = "serde"))]
+    let serde_impl = quote!();
     let object_impl=object_impl.map(|body|quote!(impl #impl_generics #rd::ObjectType for #name #ty_generics #where_clause{#body}));
     let bridge=(!borrowed).then(||quote!{
         impl #de_impl_generics #rd::BorrowType<'__rydantic_de> for #name #ty_generics #de_where_clause{
@@ -1067,7 +1097,7 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
             fn encode(&self,__rydantic_ctx:&mut #rd::Context)->#rd::Value{#encode}
             fn encode_input(&self,__rydantic_ctx:&mut #rd::Context)->#rd::Value{#encode_input}
             fn validate_into(&self,__rydantic_ctx:&mut #rd::Context){let start=__rydantic_ctx.error_count();#validate #custom_validate}
-            fn schema(__rydantic_ctx:&mut #rd::SchemaContext,_coerce:bool)->#rd::Value{__rydantic_ctx.reference(::core::any::type_name::<Self>(),|__rydantic_ctx|{let mut schema=#schema;schema["title"]=#rd::__private::serde_json::json!(#title);#schema_custom #schema_async schema})}
+            fn schema(__rydantic_ctx:&mut #rd::SchemaContext,_coerce:bool)->#rd::Value{__rydantic_ctx.reference(::core::any::type_name::<Self>(),|__rydantic_ctx|{let mut schema=#schema;schema["title"]=#rd::json!(#title);#schema_custom #schema_async schema})}
             fn kind()->#rd::TypeKind{#kind}
             fn async_required(seen:&mut ::std::collections::HashSet<&'static str>)->bool{if !seen.insert(::core::any::type_name::<Self>()){return false;}#direct_async #(|| #nested_async)*}
         }
@@ -1077,12 +1107,7 @@ fn expand(input: DeriveInput) -> syn::Result<Tokens> {
                 ::std::boxed::Box::pin(async move{let start=__rydantic_ctx.error_count();#asynchronous #custom_async})
             }
         }
-        impl #impl_generics #rd::__private::serde::Serialize for #name #ty_generics #where_clause{
-            fn serialize<S:#rd::__private::serde::Serializer>(&self,serializer:S)->::core::result::Result<S::Ok,S::Error>{let value=#dump.map_err(#rd::__private::serde::ser::Error::custom)?;#rd::__private::serde::Serialize::serialize(&value,serializer)}
-        }
-        impl #de_impl_generics #rd::__private::serde::Deserialize<'__rydantic_de> for #name #ty_generics #de_where_clause{
-            fn deserialize<D:#rd::__private::serde::Deserializer<'__rydantic_de>>(deserializer:D)->::core::result::Result<Self,D::Error>{#deserialize}
-        }
+        #serde_impl
     })
 }
 
