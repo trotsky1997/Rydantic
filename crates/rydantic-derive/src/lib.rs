@@ -572,9 +572,7 @@ fn property_schema(field: &Field, mode: &Mode) -> Tokens {
 }
 
 fn normalize_float_literal_for_json(literal: &str) -> String {
-    let exponent = literal
-        .find(|character| matches!(character, 'e' | 'E'))
-        .unwrap_or(literal.len());
+    let exponent = literal.find(['e', 'E']).unwrap_or(literal.len());
     let (significand, exponent) = literal.split_at(exponent);
     let (integer, fraction) = significand.split_once('.').unwrap_or((significand, ""));
     let integer = integer.trim_start_matches('0');
