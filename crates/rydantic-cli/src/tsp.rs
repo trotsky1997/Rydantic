@@ -750,12 +750,10 @@ mod tests {
         let source_uri = temp.uri(&second.join("src/main.py"));
         let paths = server.search_paths(&source_uri);
         assert!(paths.contains(&second.to_string_lossy().into_owned()));
-        assert!(paths.contains(
-            &second
-                .join(".venv/lib/python3.12/site-packages")
-                .to_string_lossy()
-                .into_owned()
-        ));
+        let site_packages = second.join(".venv/lib/python3.12/site-packages");
+        assert!(paths
+            .iter()
+            .any(|path| same_path(Path::new(path), &site_packages)));
         assert!(!paths.contains(&first.to_string_lossy().into_owned()));
         assert_eq!(
             server.resolve_import(&source_uri, 0, &["only_second".into()], false),
