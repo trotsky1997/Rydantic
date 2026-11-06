@@ -257,6 +257,23 @@ fn schema_keeps_large_integer_constraints_exact() {
     }
 }
 
+#[derive(Model)]
+struct WideExponentConstraints {
+    #[model(ge = "1e400")]
+    above: u128,
+    #[model(le = "-1e400")]
+    below: u128,
+}
+
+#[test]
+fn numeric_constraints_preserve_large_exponents() {
+    let schema = WideExponentConstraints::json_schema(SchemaMode::Input);
+    let properties = &definition(&schema)["properties"];
+    assert_eq!(properties["above"]["minimum"].to_string(), "1e+400");
+    assert_eq!(properties["below"]["maximum"].to_string(), "-1e+400");
+    assert!(WideExponentConstraints::parse_value(json!({"above":0,"below":0})).is_err());
+}
+
 #[test]
 fn weaker_length_rules_preserve_fixed_array_bounds() {
     #[derive(Model)]
@@ -287,4 +304,19 @@ fn schema_report_treats_defaults_and_examples_as_data() {
         "properties":{"name":{"type":"string"}}
     }));
     assert!(report.is_portable());
+}
+
+#[derive(Model)]
+struct TrailingDecimalDefault {
+    #[model(default = 1.)]
+    value: f64,
+}
+
+#[test]
+fn float_default_with_trailing_decimal_point_generates_schema() {
+    let schema = TrailingDecimalDefault::json_schema(SchemaMode::Input);
+    assert_eq!(
+        definition(&schema)["properties"]["value"]["default"],
+        json!(1.0)
+    );
 }

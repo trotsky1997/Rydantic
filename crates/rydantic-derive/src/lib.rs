@@ -561,7 +561,7 @@ fn property_schema(field: &Field, mode: &Mode) -> Tokens {
                 Some(quote!(if __rydantic_ctx.mode==#rd::SchemaMode::Input{property["default"]=#rd::Value::Number(#rd::__private::number(#value));}))
             }
             syn::Lit::Float(v) => {
-                let value = v.base10_digits();
+                let value = normalize_float_literal_for_json(v.base10_digits());
                 Some(quote!(if __rydantic_ctx.mode==#rd::SchemaMode::Input{property["default"]=#rd::Value::Number(#rd::__private::number(#value));}))
             }
             _ => None,
@@ -570,6 +570,18 @@ fn property_schema(field: &Field, mode: &Mode) -> Tokens {
     });
     quote! {{let mut property=<#ty as #tr>::schema(__rydantic_ctx,#coerce);#before if #condition{#rule.apply_schema(&mut property,__rydantic_ctx.mode,#coerce,<#ty as #tr>::kind());}#custom #(#asynchronous)* #desc #annotation property}}
 }
+
+fn normalize_float_literal_for_json(literal: &str) -> String {
+    let exponent = literal
+        .find(|character| matches!(character, 'e' | 'E'))
+        .unwrap_or(literal.len());
+    let (significand, exponent) = literal.split_at(exponent);
+    match significand.strip_suffix('.') {
+        Some(significand) => format!("{significand}.0{exponent}"),
+        None => literal.to_owned(),
+    }
+}
+
 fn schema_shape(
     fields: &[Field],
     shape: Shape,

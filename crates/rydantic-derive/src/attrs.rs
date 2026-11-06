@@ -169,7 +169,7 @@ fn number(expr: Expr) -> syn::Result<String> {
             "numeric constraint must be a finite numeric literal",
         )
     })?;
-    if !valid_json_number(&value) || !value.parse::<f64>().is_ok_and(f64::is_finite) {
+    if !valid_json_number(&value) {
         return Err(syn::Error::new(
             expr.span(),
             "numeric constraint must be representable in JSON",

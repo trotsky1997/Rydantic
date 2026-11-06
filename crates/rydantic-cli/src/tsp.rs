@@ -54,11 +54,10 @@ fn serve<R: BufRead, W: Write>(input: &mut R, output: &mut W) -> io::Result<i32>
 fn read_frame<R: BufRead>(input: &mut R) -> io::Result<Option<Vec<u8>>> {
     let mut content_length = None;
     let mut header_bytes = 0;
-    let mut line = String::new();
+    let mut line = Vec::new();
     loop {
         line.clear();
-        let bytes = input.read_line(&mut line)?;
-        if bytes == 0 {
+        if !read_header_line(input, &mut line, MAX_HEADER_BYTES - header_bytes)? {
             if header_bytes == 0 {
                 return Ok(None);
             }
@@ -67,13 +66,9 @@ fn read_frame<R: BufRead>(input: &mut R) -> io::Result<Option<Vec<u8>>> {
                 "incomplete JSON-RPC header",
             ));
         }
-        header_bytes += bytes;
-        if header_bytes > MAX_HEADER_BYTES {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                "JSON-RPC header is too large",
-            ));
-        }
+        header_bytes += line.len();
+        let line = std::str::from_utf8(&line)
+            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "invalid JSON-RPC header"))?;
         if line == "\r\n" || line == "\n" {
             break;
         }
@@ -101,6 +96,37 @@ fn read_frame<R: BufRead>(input: &mut R) -> io::Result<Option<Vec<u8>>> {
     Ok(Some(frame))
 }
 
+fn read_header_line<R: BufRead>(
+    input: &mut R,
+    line: &mut Vec<u8>,
+    limit: usize,
+) -> io::Result<bool> {
+    loop {
+        let (read, newline) = {
+            let available = input.fill_buf()?;
+            if available.is_empty() {
+                return Ok(!line.is_empty());
+            }
+            let read = available
+                .iter()
+                .position(|byte| *byte == b'\n')
+                .map_or(available.len(), |index| index + 1);
+            if line.len().saturating_add(read) > limit {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "JSON-RPC header is too large",
+                ));
+            }
+            line.extend_from_slice(&available[..read]);
+            (read, available[read - 1] == b'\n')
+        };
+        input.consume(read);
+        if newline {
+            return Ok(true);
+        }
+    }
+}
+
 fn write_frame<W: Write>(output: &mut W, message: &Value) -> io::Result<()> {
     let body = serde_json::to_vec(message)
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "invalid JSON-RPC response"))?;
@@ -109,6 +135,7 @@ fn write_frame<W: Write>(output: &mut W, message: &Value) -> io::Result<()> {
     output.flush()
 }
 
+#[derive(Debug)]
 struct RpcError {
     code: i64,
     message: &'static str,
@@ -122,7 +149,7 @@ struct Outcome {
 
 #[derive(Default)]
 struct Server {
-    root: Option<PathBuf>,
+    workspace_roots: Vec<PathBuf>,
     documents: HashMap<String, i64>,
     snapshot: u64,
     initialized: bool,
@@ -192,7 +219,10 @@ impl Server {
                         message: "Server is already initialized.",
                     });
                 }
-                self.root = root_from_initialize(params).or_else(|| env::current_dir().ok());
+                self.workspace_roots = workspace_roots_from_initialize(params);
+                if self.workspace_roots.is_empty() {
+                    self.workspace_roots.extend(env::current_dir());
+                }
                 self.initialized = true;
                 Ok(Some(json!({
                     "capabilities": {
@@ -258,8 +288,9 @@ impl Server {
                     .ok_or(RpcError::invalid_params())?;
                 let document = object(document)?;
                 let uri = required_string(document, "uri")?;
-                self.documents.remove(uri);
-                self.advance_snapshot(notifications)?;
+                if self.documents.remove(uri).is_some() {
+                    self.advance_snapshot(notifications)?;
+                }
                 Ok(None)
             }
             "workspace/didChangeConfiguration" | "workspace/didChangeWatchedFiles" => {
@@ -270,14 +301,32 @@ impl Server {
             "workspace/didChangeWorkspaceFolders" => {
                 let params = object(params)?;
                 let event = object(params.get("event").ok_or(RpcError::invalid_params())?)?;
-                if let Some(uri) = event
-                    .get("added")
-                    .and_then(Value::as_array)
-                    .and_then(|folders| folders.first())
-                    .and_then(|folder| folder.get("uri"))
-                    .and_then(Value::as_str)
-                {
-                    self.root = file_uri_path(uri);
+                if let Some(folders) = event.get("removed").and_then(Value::as_array) {
+                    for root in folders
+                        .iter()
+                        .filter_map(|folder| folder.get("uri"))
+                        .filter_map(Value::as_str)
+                        .filter_map(file_uri_path)
+                    {
+                        self.workspace_roots
+                            .retain(|existing| !same_path(existing, &root));
+                    }
+                }
+                if let Some(folders) = event.get("added").and_then(Value::as_array) {
+                    for root in folders
+                        .iter()
+                        .filter_map(|folder| folder.get("uri"))
+                        .filter_map(Value::as_str)
+                        .filter_map(file_uri_path)
+                    {
+                        if !self
+                            .workspace_roots
+                            .iter()
+                            .any(|existing| same_path(existing, &root))
+                        {
+                            self.workspace_roots.push(root);
+                        }
+                    }
                 }
                 self.advance_snapshot(notifications)?;
                 Ok(None)
@@ -400,15 +449,24 @@ impl Server {
 
     fn search_paths(&self, from_uri: &str) -> Vec<String> {
         let context = file_uri_path(from_uri);
-        let root = self.root.clone().or_else(|| {
-            context.as_ref().map(|path| {
-                if path.is_dir() {
-                    path.clone()
-                } else {
-                    path.parent().unwrap_or(path).to_path_buf()
-                }
-            })
+        let context = context.map(|path| {
+            if path.is_dir() {
+                path
+            } else {
+                path.parent().unwrap_or(&path).to_path_buf()
+            }
         });
+        let root = context
+            .as_ref()
+            .and_then(|context| {
+                self.workspace_roots
+                    .iter()
+                    .filter(|root| context.starts_with(root))
+                    .max_by_key(|root| root.components().count())
+            })
+            .cloned()
+            .or(context)
+            .or_else(|| self.workspace_roots.first().cloned());
         let mut paths = Vec::new();
         let mut seen = HashSet::new();
         if let Some(root) = root {
@@ -483,26 +541,36 @@ fn rpc_error(id: Value, code: i64, message: &'static str) -> Value {
     json!({"jsonrpc":"2.0","id":id,"error":{"code":code,"message":message}})
 }
 
-fn root_from_initialize(params: &Map<String, Value>) -> Option<PathBuf> {
-    params
+fn workspace_roots_from_initialize(params: &Map<String, Value>) -> Vec<PathBuf> {
+    let roots = params
         .get("workspaceFolders")
         .and_then(Value::as_array)
-        .and_then(|folders| folders.first())
-        .and_then(|folder| folder.get("uri"))
+        .into_iter()
+        .flatten()
+        .filter_map(|folder| folder.get("uri"))
+        .filter_map(Value::as_str)
+        .filter_map(file_uri_path)
+        .collect::<Vec<_>>();
+    if !roots.is_empty() {
+        return roots;
+    }
+    params
+        .get("rootUri")
         .and_then(Value::as_str)
         .and_then(file_uri_path)
-        .or_else(|| {
-            params
-                .get("rootUri")
-                .and_then(Value::as_str)
-                .and_then(file_uri_path)
-        })
         .or_else(|| {
             params
                 .get("rootPath")
                 .and_then(Value::as_str)
                 .map(PathBuf::from)
         })
+        .into_iter()
+        .collect()
+}
+
+fn same_path(left: &Path, right: &Path) -> bool {
+    fs::canonicalize(left).unwrap_or_else(|_| left.to_path_buf())
+        == fs::canonicalize(right).unwrap_or_else(|_| right.to_path_buf())
 }
 
 fn file_uri_path(uri: &str) -> Option<PathBuf> {
@@ -561,10 +629,10 @@ fn resolve_module(root: &Path, parts: &[String], skip_file_check: bool) -> Optio
         module.push(part);
     }
     let candidates = [
-        module.with_extension("pyi"),
-        module.with_extension("py"),
         module.join("__init__.pyi"),
         module.join("__init__.py"),
+        module.with_extension("pyi"),
+        module.with_extension("py"),
     ];
     for candidate in &candidates {
         if candidate.is_file() {
@@ -587,7 +655,35 @@ fn resolve_module(root: &Path, parts: &[String], skip_file_check: bool) -> Optio
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Cursor;
+    use std::{
+        io::Cursor,
+        sync::atomic::{AtomicU64, Ordering},
+    };
+
+    struct TempDir(PathBuf);
+
+    impl TempDir {
+        fn new() -> Self {
+            static NEXT: AtomicU64 = AtomicU64::new(0);
+            let path = env::temp_dir().join(format!(
+                "rydantic-tsp-{}-{}",
+                std::process::id(),
+                NEXT.fetch_add(1, Ordering::Relaxed)
+            ));
+            fs::create_dir_all(&path).unwrap();
+            Self(path)
+        }
+
+        fn uri(&self, path: &Path) -> String {
+            Url::from_file_path(path).unwrap().to_string()
+        }
+    }
+
+    impl Drop for TempDir {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.0);
+        }
+    }
 
     fn frame(message: Value) -> Vec<u8> {
         let body = serde_json::to_vec(&message).unwrap();
@@ -596,6 +692,91 @@ mod tests {
             .into_iter()
             .chain(body)
             .collect()
+    }
+
+    #[test]
+    fn bounds_header_allocation_before_newline() {
+        let input = Cursor::new(vec![b'x'; MAX_HEADER_BYTES + 1]);
+        let mut reader = BufReader::with_capacity(32, input);
+        let mut line = Vec::new();
+        let error = read_header_line(&mut reader, &mut line, MAX_HEADER_BYTES).unwrap_err();
+        assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+        assert_eq!(line.len(), MAX_HEADER_BYTES);
+    }
+
+    #[test]
+    fn duplicate_document_close_does_not_advance_snapshot() {
+        let mut server = Server::default();
+        let uri = "file:///project/model.py";
+        server.documents.insert(uri.to_owned(), 1);
+        let params = json!({"textDocument":{"uri":uri}});
+        let mut notifications = Vec::new();
+
+        server
+            .handle("textDocument/didClose", &params, &mut notifications)
+            .unwrap();
+        let snapshot = server.snapshot;
+        let notification_count = notifications.len();
+        server
+            .handle("textDocument/didClose", &params, &mut notifications)
+            .unwrap();
+
+        assert_eq!(snapshot, 1);
+        assert_eq!(server.snapshot, snapshot);
+        assert_eq!(notifications.len(), notification_count);
+    }
+
+    #[test]
+    fn search_paths_and_absolute_import_use_from_uri_workspace() {
+        let temp = TempDir::new();
+        let first = temp.0.join("first");
+        let second = temp.0.join("second");
+        fs::create_dir_all(first.join("src")).unwrap();
+        fs::create_dir_all(second.join("src")).unwrap();
+        fs::create_dir_all(second.join(".venv/lib/python3.12/site-packages")).unwrap();
+        fs::write(second.join("src/only_second.py"), "").unwrap();
+
+        let params = json!({
+            "workspaceFolders": [
+                {"uri":temp.uri(&first)},
+                {"uri":temp.uri(&second)}
+            ]
+        });
+        let mut server = Server::default();
+        server
+            .handle("initialize", &params, &mut Vec::new())
+            .unwrap();
+
+        let source_uri = temp.uri(&second.join("src/main.py"));
+        let paths = server.search_paths(&source_uri);
+        assert!(paths.contains(&second.to_string_lossy().into_owned()));
+        assert!(paths.contains(
+            &second
+                .join(".venv/lib/python3.12/site-packages")
+                .to_string_lossy()
+                .into_owned()
+        ));
+        assert!(!paths.contains(&first.to_string_lossy().into_owned()));
+        assert_eq!(
+            server.resolve_import(&source_uri, 0, &["only_second".into()], false),
+            Some(second.join("src/only_second.py"))
+        );
+    }
+
+    #[test]
+    fn package_initializer_precedes_same_named_module() {
+        let temp = TempDir::new();
+        let root = temp.0.join("root");
+        fs::create_dir_all(root.join("foo")).unwrap();
+        fs::write(root.join("foo.pyi"), "").unwrap();
+        fs::write(root.join("foo.py"), "").unwrap();
+        fs::write(root.join("foo/__init__.py"), "").unwrap();
+        fs::write(root.join("foo/__init__.pyi"), "").unwrap();
+
+        assert_eq!(
+            resolve_module(&root, &["foo".into()], false),
+            Some(root.join("foo/__init__.pyi"))
+        );
     }
 
     #[test]
@@ -623,6 +804,7 @@ mod tests {
             responses[0]["result"]["capabilities"]["textDocumentSync"]["change"],
             1
         );
+        assert_eq!(responses[1]["method"], "typeServer/snapshotChanged");
         assert_eq!(responses[1]["params"], json!({"old":0,"new":1}));
         assert_eq!(responses[2]["result"], VERSION);
         assert_eq!(responses[3]["error"]["code"], -32802);
