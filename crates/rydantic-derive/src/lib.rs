@@ -576,10 +576,12 @@ fn normalize_float_literal_for_json(literal: &str) -> String {
         .find(|character| matches!(character, 'e' | 'E'))
         .unwrap_or(literal.len());
     let (significand, exponent) = literal.split_at(exponent);
-    match significand.strip_suffix('.') {
-        Some(significand) => format!("{significand}.0{exponent}"),
-        None => literal.to_owned(),
-    }
+    let (integer, fraction) = significand.split_once('.').unwrap_or((significand, ""));
+    let integer = integer.trim_start_matches('0');
+    let integer = if integer.is_empty() { "0" } else { integer };
+    let fraction = fraction.trim_end_matches('.');
+    let fraction = if fraction.is_empty() { "0" } else { fraction };
+    format!("{integer}.{fraction}{exponent}")
 }
 
 fn schema_shape(

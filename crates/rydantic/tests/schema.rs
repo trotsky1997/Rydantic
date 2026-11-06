@@ -307,16 +307,22 @@ fn schema_report_treats_defaults_and_examples_as_data() {
 }
 
 #[derive(Model)]
-struct TrailingDecimalDefault {
+struct FloatLiteralDefaults {
     #[model(default = 1.)]
-    value: f64,
+    trailing_decimal: f64,
+    #[model(default = 01.0)]
+    leading_zero: f64,
 }
 
 #[test]
-fn float_default_with_trailing_decimal_point_generates_schema() {
-    let schema = TrailingDecimalDefault::json_schema(SchemaMode::Input);
+fn float_default_literals_generate_valid_schema_numbers() {
+    let schema = FloatLiteralDefaults::json_schema(SchemaMode::Input);
     assert_eq!(
-        definition(&schema)["properties"]["value"]["default"],
+        definition(&schema)["properties"]["trailing_decimal"]["default"],
+        json!(1.0)
+    );
+    assert_eq!(
+        definition(&schema)["properties"]["leading_zero"]["default"],
         json!(1.0)
     );
 }
