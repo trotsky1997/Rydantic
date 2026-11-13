@@ -6,13 +6,13 @@ crates. It is a local development bridge, not a production service.
 
 ## Install and test
 
-Use an up-to-date, security-patched Node **22.x >=22.23.4** or **24.x >=24.22.1**.
+Use an up-to-date, security-patched Node **22.x >=22.23.5** or **24.x >=24.22.3**.
 These are the audited support baselines, not a guarantee against future security
 issues. CI tests both exact baselines and the moving `22` / `24` release tracks.
 Other Node major versions are not currently supported by this bridge.
 
-**Breaking runtime requirement:** the previous `>=22.19.0` API-only range is no
-longer the bridge support policy. Upgrade Node itself before reinstalling with
+**Breaking runtime requirement (2026-11-13):** previous 22.23.4 / 24.22.1
+baselines no longer meet the bridge support policy. Upgrade Node itself before reinstalling with
 `npm ci`; an npm override cannot update Node's built-in fetch implementation.
 No application data or credentials are migrated. npm normally only warns about
 unsupported engines; this is not a startup security enforcement mechanism.
@@ -37,17 +37,25 @@ They do not establish live OAuth/provider acceptance.
 
 Issue [#107](https://github.com/trotsky1997/Rydantic/issues/107) tracks an affected
 transitive dependency: pi-coding-agent 1.3.0 pins undici 8.10.2. The bridge overrides
-**that parent/version only** to undici **8.12.2**, retaining the existing pi package
+**that parent/version only** to undici **8.12.4**, retaining the existing pi package
 versions and the upstream undici API floor (not the bridge support baseline).
 The lockfile pins the official registry artifact
 and integrity; the regression test checks SDK-local resolution and dispatcher API
 exports. A clean `npm ci` is required to update an existing installation.
 
-8.12.2 is the patched 8.x release for:
+8.12.4 includes the earlier 8.12.2 fixes for:
 
 - [GHSA-xjj6-f33q-929c](https://github.com/nodejs/undici/security/advisories/GHSA-xjj6-f33q-929c): excessive response content encodings.
 - [GHSA-4qv8-2p9j-2685](https://github.com/nodejs/undici/security/advisories/GHSA-4qv8-2p9j-2685): EventSource parser retained memory.
 - [GHSA-55wc-3pg8-jfw6](https://github.com/nodejs/undici/security/advisories/GHSA-55wc-3pg8-jfw6): decompress-interceptor exceptions.
+
+It also contains the six [November undici security fixes](https://github.com/nodejs/undici/releases/tag/v8.12.4)
+for redirect/cache composition, redirected credential headers, cached-response
+replay errors, and integrity metadata whitespace. The dated audit records exact
+ranges and the distinction between affected versions and bridge reachability.
+A bounded loopback regression verifies both matching and mismatching integrity
+metadata with ASCII whitespace using the installed npm undici package; it does
+not demonstrate a vulnerability in the bridge's default request path.
 
 This repairs the installed npm dependency, not every HTTP implementation:
 
