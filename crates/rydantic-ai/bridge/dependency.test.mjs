@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { once } from 'node:events';
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { gzipSync } from 'node:zlib';
@@ -17,8 +18,8 @@ test('SDK resolves the narrowly pinned patched undici without changing its upstr
   const manifest = JSON.parse(readFileSync(new URL('./package.json', import.meta.url)));
   const lock = JSON.parse(readFileSync(new URL('./package-lock.json', import.meta.url)));
   const installed = sdkRequire('undici/package.json');
-  assert.equal(manifest.overrides['@earendil-works/pi-coding-agent@1.3.0'].undici, '8.12.2');
-  assert.equal(installed.version, '8.12.2');
+  assert.equal(manifest.overrides['@earendil-works/pi-coding-agent@1.3.0'].undici, '8.12.4');
+  assert.equal(installed.version, '8.12.4');
   assert.equal(installed.engines.node, '>=22.19.0');
   const entries = Object.entries(lock.packages).filter(([path]) => path.endsWith('/undici'));
   assert.equal(entries.length, 1);
@@ -34,6 +35,22 @@ async function listen(t, server) {
   t.after(() => new Promise(resolve => { server.closeAllConnections(); server.close(resolve); }));
   return `http://127.0.0.1:${server.address().port}`;
 }
+
+test('npm undici verifies integrity metadata with ASCII whitespace', { timeout: 10_000 }, async t => {
+  const body = 'local integrity fixture';
+  const upstream = await listen(t, createServer((_req, res) => {
+    res.writeHead(200, { 'content-type': 'text/plain' });
+    res.end(body);
+  }));
+  const digest = createHash('sha256').update(body).digest('base64');
+  const valid = await undici.fetch(upstream, { integrity: `\tsha256-${digest}\n` });
+  assert.equal(await valid.text(), body);
+  const wrongDigest = Buffer.alloc(32).toString('base64');
+  await assert.rejects(
+    undici.fetch(upstream, { integrity: `\tsha256-${wrongDigest}\n` }),
+    error => error instanceof TypeError && error.cause?.message === 'integrity mismatch',
+  );
+});
 
 // This is a fixture string, not a credential. It is sent only to loopback.
 const token = `test.${Buffer.from(JSON.stringify({
